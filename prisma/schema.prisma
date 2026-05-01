@@ -1,0 +1,349 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User accounts for lecturers and administrators
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(LECTURER)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  exams     Exam[]
+  rubrics   Rubric[]
+  sessions  Session[]
+  results   Result[]
+  accounts  Account[]
+  verificationTokens VerificationToken[]
+
+  @@map("users")
+}
+
+// User roles for access control
+enum UserRole {
+  LECTURER
+  ADMIN
+}
+
+// Exam metadata and configuration
+model Exam {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  courseCode  String?
+  courseName  String?
+  totalMarks  Int
+  duration    Int?     // Duration in minutes
+  examDate    DateTime?
+  status      ExamStatus @default(DRAFT)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+  rubrics     Rubric[]
+  scripts     Script[]
+  results     Result[]
+  batches     Batch[]
+
+  @@map("exams")
+}
+
+enum ExamStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  ARCHIVED
+}
+
+// Rubric/Marking scheme for exams
+model Rubric {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  totalMarks  Int
+  isTemplate  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  createdBy   User      @relation(fields: [createdById], references: [id])
+  createdById String
+  exam        Exam?     @relation(fields: [examId], references: [id])
+  examId      String?
+  questions   RubricQuestion[]
+
+  @@map("rubrics")
+}
+
+// Individual questions within a rubric
+model RubricQuestion {
+  id          String @id @default(cuid())
+  questionId  String // e.g., "Q1", "2(a)", etc.
+  question    String
+  maxScore    Int
+  rubricId    String
+  
+  // Relations
+  rubric      Rubric @relation(fields: [rubricId], references: [id], onDelete: Cascade)
+  points      RubricPoint[]
+  results     QuestionResult[]
+
+  @@map("rubric_questions")
+}
+
+// Individual marking points within questions
+model RubricPoint {
+  id          String @id @default(cuid())
+  point       String
+  weight      Float  @default(1.0)
+  maxScore    Float
+  questionId  String
+  
+  // Relations
+  question    RubricQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  similarities SimilarityScore[]
+
+  @@map("rubric_points")
+}
+
+// Uploaded exam scripts (student answer sheets)
+model Script {
+  id          String       @id @default(cuid())
+  filename    String
+  originalName String
+  fileSize    Int
+  mimeType    String
+  filePath    String
+  studentId   String?      // Student identifier if extracted
+  studentName String?      // Student name if extracted
+  extractedText String?    // OCR extracted text
+  extractionMethod String? // "tesseract", "gpt4", "hybrid"
+  confidenceFlag  String?  // "acceptable", "low_quality_fallback_used"
+  status      ScriptStatus @default(PROCESSING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  examId      String
+  exam        Exam @relation(fields: [examId], references: [id])
+  results     Result[]
+  batchItems  BatchItem[]
+
+  @@map("scripts")
+}
+
+enum ScriptStatus {
+  PROCESSING
+  PROCESSED
+  FAILED
+  ARCHIVED
+}
+
+// Grading results for individual scripts
+model Result {
+  id          String   @id @default(cuid())
+  totalScore  Float
+  maxScore    Float
+  confidence  Float
+  gradedAt    DateTime @default(now())
+  feedback    String?
+  status      ResultStatus @default(PENDING)
+
+  // Relations
+  scriptId    String
+  script      Script @relation(fields: [scriptId], references: [id])
+  examId      String
+  exam        Exam @relation(fields: [examId], references: [id])
+  gradedBy    User   @relation(fields: [gradedById], references: [id])
+  gradedById  String
+  questions   QuestionResult[]
+
+  @@map("results")
+}
+
+enum ResultStatus {
+  PENDING
+  REVIEWED
+  APPROVED
+  REJECTED
+}
+
+// Individual question results within a grading result
+model QuestionResult {
+  id          String @id @default(cuid())
+  questionId  String
+  question    String
+  answer      String
+  score       Float
+  maxScore    Float
+  confidence  Float
+  breakdown   Json   // Similarity scores for each rubric point
+  feedback    String?
+  overridden  Boolean @default(false)
+  originalScore Float?
+
+  // Relations
+  resultId    String
+  result      Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
+  rubricQuestionId String
+  rubricQuestion RubricQuestion @relation(fields: [rubricQuestionId], references: [id])
+  similarityScores SimilarityScore[]
+
+  @@map("question_results")
+}
+
+// Similarity scores for detailed breakdown
+model SimilarityScore {
+  id        String @id @default(cuid())
+  score     Float
+  rubricPointId String
+  
+  // Relations
+  rubricPoint RubricPoint @relation(fields: [rubricPointId], references: [id])
+  questionResult QuestionResult @relation(fields: [questionResultId], references: [id])
+  questionResultId String
+
+  @@map("similarity_scores")
+}
+
+// Batch processing jobs
+model Batch {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  status      BatchStatus @default(PENDING)
+  totalFiles  Int
+  processedFiles Int @default(0)
+  failedFiles Int @default(0)
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  examId      String
+  exam        Exam @relation(fields: [examId], references: [id])
+  items       BatchItem[]
+
+  @@map("batches")
+}
+
+enum BatchStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// Individual items within a batch
+model BatchItem {
+  id          String     @id @default(cuid())
+  filename    String
+  status      BatchItemStatus @default(PENDING)
+  errorMessage String?
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  batchId     String
+  batch       Batch @relation(fields: [batchId], references: [id])
+  scriptId    String?
+  script      Script? @relation(fields: [scriptId], references: [id])
+
+  @@map("batch_items")
+}
+
+enum BatchItemStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+// Authentication sessions
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// System configuration and settings
+model Setting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value Json
+  description String?
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+// Activity logs for auditing
+model ActivityLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  resource    String?
+  resourceId  String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+
+  @@map("activity_logs")
+}
+
+// NextAuth.js Account model
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth.js VerificationToken model
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  userId     String?
+
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}

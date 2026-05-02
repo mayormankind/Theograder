@@ -12,9 +12,11 @@ import {
   ChevronDown,
   ArrowRight,
   FolderOpen,
+  FileWarning,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
+import { aiClient } from '@/lib/services/ai-client';
 
 interface UploadPageProps {
   onNavigate: (page: Page) => void;
@@ -27,6 +29,10 @@ interface FileItem {
   type: string;
   status: 'uploaded' | 'processing' | 'done' | 'error';
   progress: number;
+  file?: File;
+  errorMessage?: string;
+  extractedText?: string;
+  extractionMethod?: string;
 }
 
 const formatSize = (bytes: number) => {
@@ -52,6 +58,9 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [files, setFiles] = useState<FileItem[]>(mockFiles);
   const [selectedExam, setSelectedExam] = useState('Database Systems — Final Examination (CSC 401)');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -71,27 +80,129 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
   }, []);
 
   const addFiles = (newFiles: File[]) => {
-    const mapped: FileItem[] = newFiles.map((f, i) => ({
+    // Basic file validation
+    const validFiles = newFiles.filter(file => {
+      const isValidType = file.type.startsWith('image/') || file.type === 'application/pdf';
+      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+      return isValidType && isValidSize;
+    });
+
+    if (validFiles.length === 0) {
+      setError('Invalid file type or size. Please upload images or PDFs under 10MB.');
+      return;
+    }
+
+    const mapped: FileItem[] = validFiles.map((f, i) => ({
       id: `new-${Date.now()}-${i}`,
       name: f.name,
       size: f.size,
       type: f.name.endsWith('.pdf') ? 'pdf' : 'image',
       status: 'uploaded',
       progress: 100,
+      file: f,
     }));
     setFiles((prev) => [...prev, ...mapped]);
+    setError(null);
   };
 
   const removeFile = (id: string) => {
     setFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  const handleProcess = () => {
-    onNavigate('processing');
+  const handleProcess = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // Get only files that haven't been processed yet
+      const filesToProcess = files.filter(f => f.status === 'uploaded' || f.status === 'done');
+      const filesWithFiles = filesToProcess.filter(f => f.file);
+      
+      if (filesWithFiles.length === 0) {
+        setError('No files to process');
+        return;
+      }
+
+      // Process each file with OCR
+      for (const fileItem of filesWithFiles) {
+        try {
+          // Update status to processing
+          setFiles(prev => prev.map(f => 
+            f.id === fileItem.id 
+              ? { ...f, status: 'processing' as const, progress: 0 }
+              : f
+          ));
+
+          // Extract text using AI service
+          const ocrResult = await aiClient.extractTextFromImage(fileItem.file!);
+          
+          // Update file with OCR results
+          setFiles(prev => prev.map(f => 
+            f.id === fileItem.id 
+              ? { 
+                  ...f, 
+                  status: 'done' as const, 
+                  progress: 100,
+                  extractedText: ocrResult.extracted_text,
+                  extractionMethod: ocrResult.extraction_method,
+                  file: undefined
+                }
+              : f
+          ));
+        } catch (err) {
+          // Handle individual file errors
+          setFiles(prev => prev.map(f => 
+            f.id === fileItem.id 
+              ? { 
+                  ...f, 
+                  status: 'error' as const, 
+                  errorMessage: 'Failed to extract text',
+                  file: undefined
+                }
+              : f
+          ));
+        }
+      }
+
+      // Navigate to processing page after a delay
+      setTimeout(() => {
+        onNavigate('processing');
+      }, 2000);
+    } catch (err) {
+      setError('An unexpected error occurred during processing');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto w-full">
+      {/* Error Display */}
+      {error && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4">
+          <AlertCircle size={15} className="mt-0.5 shrink-0 text-red-500" />
+          <div>
+            <p className="text-xs font-semibold text-red-800">Error</p>
+            <p className="text-xs text-red-600 mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Validation Warnings */}
+      {validationWarnings.length > 0 && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4">
+          <FileWarning size={15} className="mt-0.5 shrink-0 text-amber-500" />
+          <div>
+            <p className="text-xs font-semibold text-amber-800">Warnings</p>
+            <div className="mt-1">
+              {validationWarnings.map((warning, index) => (
+                <p key={index} className="text-xs text-amber-600">• {warning}</p>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div>
         <h2 className="text-base font-semibold text-slate-800">Upload Examination Scripts</h2>
@@ -252,11 +363,15 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
         </div>
         <button
           onClick={handleProcess}
-          disabled={files.filter((f) => f.status === 'done' || f.status === 'uploaded').length === 0}
+          disabled={files.filter((f) => f.status === 'done' || f.status === 'uploaded').length === 0 || loading}
           className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
         >
-          Process Scripts
-          <ArrowRight size={14} />
+          {loading ? (
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+          ) : (
+            <ArrowRight size={14} />
+          )}
+          {loading ? 'Processing...' : 'Process Scripts'}
         </button>
       </div>
     </div>

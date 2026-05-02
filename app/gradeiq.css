@@ -2589,15 +2589,20 @@ img {
 .input-wrapper input,
 .input-wrapper select {
   width: 100%;
-  padding: 12px 14px 12px 42px;
+  padding: 12px 42px 12px 42px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  font-size: 14px;
+  border-radius: 8px;
   color: var(--text-primary);
+  font-size: 14px;
+  transition: all 0.2s ease;
+  outline: none;
   font-family: var(--font-sans);
   transition: var(--transition);
-  outline: none;
+}
+
+.input-wrapper input[type="password"] {
+  padding-right: 42px;
 }
 
 .input-wrapper input:focus,
@@ -2634,13 +2639,28 @@ img {
 
 .toggle-password {
   position: absolute;
-  right: 35px;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
   font-size: 14px;
   color: var(--text-muted);
-  padding: 4px;
+  padding: 8px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 .toggle-password:hover {
   color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+.toggle-password:active {
+  transform: translateY(-50%) scale(0.95);
 }
 
 .form-hint {

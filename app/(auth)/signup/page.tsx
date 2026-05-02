@@ -1,9 +1,71 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import AuthLayout from "@/components/auth/AuthLayout";
 
 export default function SignupPage() {
+  const router = useRouter();
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Validate passwords match
+      if (formData.password !== formData.confirmPassword) {
+        toast.error('Passwords do not match');
+        return;
+      }
+
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        toast.error(data.error || 'Failed to create account');
+        return;
+      }
+
+      toast.success(data.message);
+      
+      // Redirect to verification page after successful signup
+      setTimeout(() => {
+        router.push('/auth/verify-email');
+      }, 2000);
+
+    } catch (err) {
+      toast.error('An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
   const illustration = (
     <>
       <div className="auth-float-card afc-1">
@@ -40,69 +102,41 @@ export default function SignupPage() {
         <p>One account per lecturer. Full access to all features.</p>
       </div>
 
-      <button className="btn-oauth" id="googleSignup">
-        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-          <path
-            d="M19.6 10.23c0-.68-.06-1.36-.18-2.02H10v3.84h5.38a4.6 4.6 0 01-2 3.02v2.5h3.24c1.89-1.74 2.98-4.3 2.98-7.34z"
-            fill="#4285F4"
-          />
-          <path
-            d="M10 20c2.7 0 4.96-.9 6.62-2.43l-3.24-2.5c-.9.6-2.04.95-3.38.95-2.6 0-4.8-1.76-5.58-4.12H1.08v2.58A9.99 9.99 0 0010 20z"
-            fill="#34A853"
-          />
-          <path
-            d="M4.42 11.9a6.01 6.01 0 010-3.8V5.52H1.08a9.99 9.99 0 000 8.96l3.34-2.58z"
-            fill="#FBBC05"
-          />
-          <path
-            d="M10 3.98a5.42 5.42 0 013.84 1.5l2.88-2.88A9.64 9.64 0 0010 0 9.99 9.99 0 001.08 5.52l3.34 2.58C5.2 5.74 7.4 3.98 10 3.98z"
-            fill="#EA4335"
-          />
-        </svg>
-        Continue with Google
-      </button>
-
       <div className="auth-divider">
-        <span>or register with email</span>
+        <span>register with email</span>
       </div>
 
-      <form className="auth-form" onSubmit={(e) => e.preventDefault()}>
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="firstName">First name</label>
-            <div className="input-wrapper">
-              <i className="fas fa-user"></i>
-              <input
-                type="text"
-                id="firstName"
-                placeholder="Oluwaseun"
-                required
-              />
-            </div>
-          </div>
-          <div className="form-group">
-            <label htmlFor="lastName">Last name</label>
-            <div className="input-wrapper">
-              <i className="fas fa-user"></i>
-              <input
-                type="text"
-                id="lastName"
-                placeholder="Adeyemi"
-                required
-              />
-            </div>
+      <form className="auth-form" onSubmit={handleSubmit}>
+        <div className="form-group">
+          <label htmlFor="name">Full Name</label>
+          <div className="input-wrapper">
+            <i className="fas fa-user"></i>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              placeholder="Dr. Oluwaseun Adeyemi"
+              required
+              disabled={loading}
+            />
           </div>
         </div>
 
         <div className="form-group">
-          <label htmlFor="signupEmail">University email</label>
+          <label htmlFor="email">Email Address</label>
           <div className="input-wrapper">
             <i className="fas fa-envelope"></i>
             <input
               type="email"
-              id="signupEmail"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
               placeholder="lecturer@university.edu.ng"
               required
+              disabled={loading}
             />
           </div>
           <span className="form-hint">
@@ -111,80 +145,67 @@ export default function SignupPage() {
         </div>
 
         <div className="form-group">
-          <label htmlFor="university">University</label>
-          <div className="input-wrapper select-wrapper">
-            <i className="fas fa-building-columns"></i>
-            <select id="university" required defaultValue="">
-              <option value="" disabled>
-                Select your university
-              </option>
-              <option>University of Lagos</option>
-              <option>University of Ibadan</option>
-              <option>Obafemi Awolowo University</option>
-              <option>University of Nigeria, Nsukka</option>
-              <option>Ahmadu Bello University</option>
-              <option>Federal University of Technology, Akure</option>
-              <option>Lagos State University</option>
-              <option>Covenant University</option>
-              <option>Other</option>
-            </select>
-            <i className="fas fa-chevron-down select-arrow"></i>
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="department">Department</label>
-          <div className="input-wrapper">
-            <i className="fas fa-flask"></i>
-            <input
-              type="text"
-              id="department"
-              placeholder="e.g. Computer Science"
-              required
-            />
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="signupPassword">Password</label>
+          <label htmlFor="password">Password</label>
           <div className="input-wrapper">
             <i className="fas fa-lock"></i>
             <input
-              type="password"
-              id="signupPassword"
-              placeholder="Create a strong password"
+              type={showPassword ? "text" : "password"}
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleChange}
+              placeholder="Create a strong password (min. 8 characters)"
               required
               minLength={8}
+              disabled={loading}
             />
             <button
               type="button"
               className="toggle-password"
               aria-label="Toggle password"
+              onClick={() => setShowPassword(!showPassword)}
             >
-              <i className="fas fa-eye"></i>
+              <i className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`}></i>
             </button>
           </div>
-          <div className="password-strength">
-            <div className="strength-bars">
-              <div className="strength-bar"></div>
-              <div className="strength-bar"></div>
-              <div className="strength-bar"></div>
-              <div className="strength-bar"></div>
-            </div>
-            <span className="strength-text">Password strength</span>
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="confirmPassword">Confirm Password</label>
+          <div className="input-wrapper">
+            <i className="fas fa-lock"></i>
+            <input
+              type={showConfirmPassword ? "text" : "password"}
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleChange}
+              placeholder="Confirm your password"
+              required
+              minLength={8}
+              disabled={loading}
+            />
+            <button
+              type="button"
+              className="toggle-password"
+              aria-label="Toggle confirm password"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              <i className={`fas ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"}`}></i>
+            </button>
           </div>
         </div>
 
         <div className="form-group checkbox-group">
           <label className="checkbox-label">
-            <input type="checkbox" required />
+            <input type="checkbox" required disabled={loading} />
             <span className="checkmark"></span>
             I agree to the <Link href="#" className="form-link">Terms of Service</Link> and <Link href="#" className="form-link">Privacy Policy</Link>
           </label>
         </div>
 
-        <button type="submit" className="btn-submit">
-          <span className="btn-text">Create Account</span>
+        <button type="submit" className="btn-submit" disabled={loading}>
+          <span className="btn-text">{loading ? 'Creating Account...' : 'Create Account'}</span>
         </button>
       </form>
 

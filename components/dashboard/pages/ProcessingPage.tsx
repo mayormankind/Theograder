@@ -11,9 +11,11 @@ import {
   Cpu,
   Layers,
   AlignLeft,
+  AlertCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
+import { gradingService, type GradingResult, type BatchJob } from '@/lib/services/grading-service';
 
 interface ProcessingPageProps {
   onNavigate: (page: Page) => void;
@@ -54,25 +56,87 @@ const pipelineSteps = [
 export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
   const [currentStep, setCurrentStep] = useState(0);
   const [charCount, setCharCount] = useState(0);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
+  const [batchJob, setBatchJob] = useState<BatchJob | null>(null);
 
+  // Simulate real processing with AI service integration
   useEffect(() => {
-    const interval = setInterval(() => {
-      setCharCount((prev) => {
-        if (prev >= ocrText.length) {
+    const startProcessing = async () => {
+      setIsProcessing(true);
+      setError(null);
+      
+      try {
+        // Simulate OCR text extraction
+        const interval = setInterval(() => {
+          setCharCount((prev) => {
+            if (prev >= ocrText.length) {
+              clearInterval(interval);
+              return prev;
+            }
+            return prev + Math.floor(Math.random() * 8) + 3;
+          });
+        }, 30);
+
+        // Simulate pipeline steps
+        const timers = pipelineSteps.map((_, i) =>
+          setTimeout(() => setCurrentStep(i + 1), i * 2000 + 500)
+        );
+
+        // After processing is complete, simulate grading result
+        setTimeout(async () => {
+          const mockResult: GradingResult = {
+            studentId: 'STU-2021-0044',
+            studentName: 'Adaeze Okonkwo',
+            totalScore: 68,
+            maxScore: 100,
+            overallConfidence: 0.82,
+            questions: [
+              {
+                question: 'Q1. Explain database transactions and ACID properties',
+                score: 38,
+                maxScore: 50,
+                confidence: 0.85,
+                breakdown: [
+                  { point: 'Atomicity definition', similarity: 0.88, weight: 0.25 },
+                  { point: 'Consistency explanation', similarity: 0.82, weight: 0.25 },
+                  { point: 'Isolation concept', similarity: 0.79, weight: 0.25 },
+                  { point: 'Durability guarantee', similarity: 0.91, weight: 0.25 },
+                ]
+              },
+              {
+                question: 'Q2. Compare relational vs NoSQL databases',
+                score: 30,
+                maxScore: 50,
+                confidence: 0.79,
+                breakdown: [
+                  { point: 'Relational structure', similarity: 0.85, weight: 0.33 },
+                  { point: 'NoSQL flexibility', similarity: 0.76, weight: 0.33 },
+                  { point: 'Comparison analysis', similarity: 0.75, weight: 0.34 },
+                ]
+              }
+            ],
+            processingTime: 12450,
+            extractionMethod: 'hybrid',
+            status: 'completed'
+          };
+          
+          setGradingResult(mockResult);
+          setIsProcessing(false);
+        }, pipelineSteps.length * 2000 + 1000);
+
+        return () => {
           clearInterval(interval);
-          return prev;
-        }
-        return prev + Math.floor(Math.random() * 8) + 3;
-      });
-    }, 30);
-    return () => clearInterval(interval);
-  }, []);
+          timers.forEach(clearTimeout);
+        };
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Processing failed');
+        setIsProcessing(false);
+      }
+    };
 
-  useEffect(() => {
-    const timers = pipelineSteps.map((_, i) =>
-      setTimeout(() => setCurrentStep(i + 1), i * 2000 + 500)
-    );
-    return () => timers.forEach(clearTimeout);
+    startProcessing();
   }, []);
 
   const displayedText = ocrText.slice(0, charCount);
@@ -108,6 +172,17 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Error Display */}
+      {error && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4">
+          <AlertCircle size={15} className="mt-0.5 shrink-0 text-red-500" />
+          <div>
+            <p className="text-xs font-semibold text-red-800">Processing Error</p>
+            <p className="text-xs text-red-600 mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

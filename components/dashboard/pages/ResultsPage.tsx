@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   CheckCircle2,
   XCircle,
@@ -12,9 +12,12 @@ import {
   Flag,
   ArrowRight,
   Sparkles,
+  ArrowLeft,
+  Download,
+  Eye,
 } from 'lucide-react';
-import { mockGradingResults } from '@/lib/mockData';
-import type { GradingResult, Page } from '@/types';
+import type { Page } from '@/types';
+import { gradingService, type GradingResult } from '@/lib/services/grading-service';
 import { cn } from '@/lib/utils';
 
 interface ResultsPageProps {
@@ -57,22 +60,118 @@ const ScoreGauge = ({ score, max }: { score: number; max: number }) => {
 };
 
 export default function ResultsPage({ onNavigate }: ResultsPageProps) {
-  const [results] = useState<GradingResult[]>(mockGradingResults);
+  const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
-  const [expandedRows, setExpandedRows] = useState<string[]>([`q1-a`, `q1-b`]);
+  const [expandedRows, setExpandedRows] = useState<string[]>([]);
 
-  const totalScore = results.reduce((acc, r) => {
-    const key = `${r.questionId}-${r.partLabel}`;
-    return acc + (overrides[key] !== undefined ? parseFloat(overrides[key]) || 0 : r.score);
-  }, 0);
-  const totalMax = results.reduce((acc, r) => acc + r.maxScore, 0);
-  const avgConfidence = Math.round(results.reduce((acc, r) => acc + r.confidence, 0) / results.length);
+  // Mock grading result for demonstration
+  useEffect(() => {
+    const mockResult: GradingResult = {
+      studentId: 'STU-2021-0044',
+      studentName: 'Adaeze Okonkwo',
+      totalScore: 68,
+      maxScore: 100,
+      overallConfidence: 0.82,
+      questions: [
+        {
+          question: 'Q1. Explain database transactions and ACID properties',
+          score: 38,
+          maxScore: 50,
+          confidence: 0.85,
+          breakdown: [
+            { point: 'Atomicity definition', similarity: 0.88, weight: 0.25 },
+            { point: 'Consistency explanation', similarity: 0.82, weight: 0.25 },
+            { point: 'Isolation concept', similarity: 0.79, weight: 0.25 },
+            { point: 'Durability guarantee', similarity: 0.91, weight: 0.25 },
+          ]
+        },
+        {
+          question: 'Q2. Compare relational vs NoSQL databases',
+          score: 30,
+          maxScore: 50,
+          confidence: 0.79,
+          breakdown: [
+            { point: 'Relational structure', similarity: 0.85, weight: 0.33 },
+            { point: 'NoSQL flexibility', similarity: 0.76, weight: 0.33 },
+            { point: 'Comparison analysis', similarity: 0.75, weight: 0.34 },
+          ]
+        }
+      ],
+      processingTime: 12450,
+      extractionMethod: 'hybrid',
+      status: 'completed'
+    };
+
+    // Simulate loading and then set result
+    setTimeout(() => {
+      setGradingResult(mockResult);
+      setLoading(false);
+    }, 1000);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3">
+          <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-400 border-t-transparent" />
+          <p className="text-sm text-slate-500">Loading grading results...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <AlertCircle size={24} className="text-red-500" />
+          <p className="text-sm text-red-600">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!gradingResult) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-sm text-slate-500">No grading results available</p>
+      </div>
+    );
+  }
+
+  const totalScore = gradingResult.totalScore;
+  const totalMax = gradingResult.maxScore;
+  const avgConfidence = Math.round(gradingResult.overallConfidence * 100);
   const overallPct = Math.round((totalScore / totalMax) * 100);
 
   const toggleRow = (key: string) =>
     setExpandedRows((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
-  const groupedByQ: Record<string, GradingResult[]> = {};
+  // Convert questions to the format expected by the UI
+  const results = gradingResult.questions.flatMap((q, qIndex) => 
+    q.breakdown.map((part, pIndex) => ({
+      questionId: `q${qIndex + 1}`,
+      questionNumber: `Q${qIndex + 1}`,
+      partLabel: String.fromCharCode(97 + pIndex), // a, b, c, d...
+      studentAnswer: 'Extracted student answer would go here',
+      score: Math.round(part.similarity * part.weight * q.maxScore),
+      maxScore: Math.round(part.weight * q.maxScore),
+      similarityScore: Math.round(part.similarity * 100),
+      confidence: Math.round(q.confidence * 100),
+      matchedConcepts: [part.point],
+      missingConcepts: []
+    }))
+  );
+
+  const groupedByQ: Record<string, typeof results> = {};
   results.forEach((r) => {
     if (!groupedByQ[r.questionNumber]) groupedByQ[r.questionNumber] = [];
     groupedByQ[r.questionNumber].push(r);

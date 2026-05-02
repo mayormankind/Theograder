@@ -24,6 +24,13 @@ CREATE TABLE "users" (
     "password" TEXT NOT NULL,
     "role" "UserRole" NOT NULL DEFAULT 'LECTURER',
     "avatar" TEXT,
+    "emailVerified" TIMESTAMP(3),
+    "isActive" BOOLEAN NOT NULL DEFAULT false,
+    "lastLoginAt" TIMESTAMP(3),
+    "otpCode" TEXT,
+    "otpExpiresAt" TIMESTAMP(3),
+    "resetToken" TEXT,
+    "resetExpiresAt" TIMESTAMP(3),
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

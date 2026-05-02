@@ -4,6 +4,7 @@ export type Page =
   | 'scripts'
   | 'upload'
   | 'rubrics'
+  | 'create-rubric'
   | 'processing'
   | 'results'
   | 'report'
@@ -68,4 +69,10 @@ export interface ActivityItem {
   description: string;
   timestamp: string;
   user: string;
+}
+
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  error?: string;
 }

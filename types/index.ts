@@ -54,6 +54,7 @@ export interface GradingResult {
   questionNumber: string;
   partLabel: string;
   studentAnswer: string;
+  expectedAnswer: string;
   score: number;
   maxScore: number;
   similarityScore: number;

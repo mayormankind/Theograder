@@ -12,7 +12,7 @@ import {
   Save,
   Award,
 } from "lucide-react";
-import { mockGradingResults } from "@/lib/mock-data";
+import { mockGradingResults } from "@/lib/mockData";
 import { GradingResult, Page } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -115,7 +115,7 @@ export default function GradingPage({ onNavigate }: GradingPageProps) {
     );
   };
 
-  const getScore = (r: GradingResult) => overrides[r.questionId] ?? r.aiScore;
+  const getScore = (r: GradingResult) => overrides[r.questionId] ?? r.score;
   const totalScore = results.reduce((sum, r) => sum + getScore(r), 0);
   const totalMax = results.reduce((sum, r) => sum + r.maxScore, 0);
   const avgConfidence = Math.round(
@@ -244,7 +244,7 @@ export default function GradingPage({ onNavigate }: GradingPageProps) {
                     className="p-4 border-b border-slate-50 last:border-0"
                   >
                     <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
-                      Part ({r.subLabel})
+                      Part ({r.partLabel})
                     </p>
                     {/* Highlighted answer text */}
                     <div className="text-sm text-slate-700 leading-relaxed bg-slate-50 rounded-lg p-3 border border-slate-100">
@@ -313,7 +313,7 @@ export default function GradingPage({ onNavigate }: GradingPageProps) {
                   >
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-semibold text-slate-800">
-                        {r.questionNumber} ({r.subLabel})
+                        {r.questionNumber} ({r.partLabel})
                       </p>
                     </div>
 
@@ -490,7 +490,7 @@ export default function GradingPage({ onNavigate }: GradingPageProps) {
                     className="flex items-center justify-between text-sm"
                   >
                     <span className="text-slate-400">
-                      {r.questionNumber} ({r.subLabel})
+                      {r.questionNumber} ({r.partLabel})
                     </span>
                     <span className="font-semibold text-white">
                       {getScore(r)}/{r.maxScore}

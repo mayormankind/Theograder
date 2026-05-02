@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,10 +14,11 @@ export async function POST(
     }
 
     const { title } = await request.json();
+    const { id } = await params;
 
     const originalRubric = await prisma.rubric.findFirst({
       where: {
-        id: params.id,
+        id: id,
         createdById: session.user.id,
       },
       include: {

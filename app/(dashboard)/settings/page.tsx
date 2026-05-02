@@ -2,7 +2,7 @@
 
 import SettingsPage from "@/components/dashboard/pages/SettingsPage";
 import { useRouter } from "next/navigation";
-import { Page } from "@/types";
+import type { Page } from "@/types";
 
 export default function Page() {
   const router = useRouter();

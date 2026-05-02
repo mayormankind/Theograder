@@ -5,7 +5,7 @@ import { authOptions } from '@/lib/auth';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -13,9 +13,11 @@ export async function GET(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const rubric = await prisma.rubric.findFirst({
       where: {
-        id: params.id,
+        id: id,
         createdById: session.user.id,
       },
       include: {
@@ -49,7 +51,7 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -59,13 +61,14 @@ export async function PUT(
 
     const data = await request.json();
     const { title, description, examId, questions } = data;
+    const { id } = await params;
 
     // Calculate total marks
     const totalMarks = questions?.reduce((acc: number, q: any) => acc + q.maxScore, 0) || 0;
 
     const rubric = await prisma.rubric.update({
       where: {
-        id: params.id,
+        id: id,
       },
       data: {
         ...(title && { title }),
@@ -95,7 +98,7 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -103,9 +106,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const { id } = await params;
+
     const rubric = await prisma.rubric.delete({
       where: {
-        id: params.id,
+        id: id,
       },
     });
 

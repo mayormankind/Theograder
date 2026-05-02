@@ -2,7 +2,7 @@
 
 import ProcessingPage from "@/components/dashboard/pages/ProcessingPage";
 import { useRouter } from "next/navigation";
-import { Page } from "@/types";
+import type { Page } from "@/types";
 
 export default function Page() {
   const router = useRouter();

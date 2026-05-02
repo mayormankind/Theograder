@@ -1,7 +1,7 @@
 "use client";
 
 import CreateRubricPage from "@/components/dashboard/pages/CreateRubricPage";
-import { Page } from "@/types";
+import type { Page } from "@/types";
 import { useRouter } from "next/navigation";
 
 export default function Page() {

@@ -2,7 +2,7 @@
 
 import DashboardPage from "@/components/dashboard/pages/DashboardPage";
 import { useRouter } from "next/navigation";
-import { Page } from "@/types";
+import type { Page } from "@/types";
 
 export default function Page() {
   const router = useRouter();

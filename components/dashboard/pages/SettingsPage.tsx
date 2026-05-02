@@ -3,10 +3,15 @@
 import { useState } from "react";
 import { Save, CheckCircle2, User, Shield, Bell, Cpu } from "lucide-react";
 import { cn } from "@/lib/utils";
+import type { Page } from "@/types";
 
 type Tab = "profile" | "ai" | "notifications" | "security";
 
-export default function SettingsPage() {
+interface SettingsPageProps {
+  onNavigate: (page: Page) => void;
+}
+
+export default function SettingsPage({ onNavigate }: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState<Tab>("ai");
   const [saved, setSaved] = useState(false);
   const [threshold, setThreshold] = useState(70);

@@ -19,6 +19,18 @@ export interface ExtractedRubric {
   totalMarks: number;
 }
 
+export interface AIQuestionResult {
+  question: string;
+  score: number;
+  confidence: number;
+  breakdown: number[];
+}
+
+export interface AIGradingResult {
+  student_id: string;
+  questions: AIQuestionResult[];
+}
+
 export interface ExtractionResult {
   success: boolean;
   rubric?: ExtractedRubric;
@@ -181,15 +193,7 @@ class AIClient {
   async gradeScript(
     file: File,
     rubricStr: string
-  ): Promise<{
-    student_id: string;
-    questions: Array<{
-      question: string;
-      score: number;
-      confidence: number;
-      breakdown: number[];
-    }>;
-  }> {
+  ): Promise<AIGradingResult> {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -243,7 +247,7 @@ class AIClient {
   async getBatchGradingStatus(jobId: string): Promise<{
     job_id: string;
     status: string;
-    results?: any[];
+    results?: AIGradingResult[];
   }> {
     try {
       const response = await this.makeRequest(`/batch-status/${jobId}`);

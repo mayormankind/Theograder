@@ -1,4 +1,4 @@
-import { aiClient } from './ai-client';
+import { aiClient, type ExtractedRubric, type AIGradingResult, type AIQuestionResult } from './ai-client';
 
 export interface GradingQuestion {
   question: string;
@@ -39,7 +39,7 @@ export interface BatchJob {
 }
 
 class GradingService {
-  async gradeScript(file: File, rubric: any): Promise<GradingResult> {
+  async gradeScript(file: File, rubric: ExtractedRubric): Promise<GradingResult> {
     const startTime = Date.now();
     
     try {
@@ -52,10 +52,10 @@ class GradingService {
       // Transform AI service response to our format
       const gradingResult: GradingResult = {
         studentId: result.student_id,
-        totalScore: result.questions.reduce((sum: number, q: any) => sum + q.score, 0),
-        maxScore: result.questions.reduce((sum: number, q: any) => sum + q.breakdown.reduce((s: number, b: number) => s + b, 0), 0),
-        overallConfidence: result.questions.reduce((sum: number, q: any) => sum + q.confidence, 0) / result.questions.length,
-        questions: result.questions.map((q: any) => ({
+        totalScore: result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.score, 0),
+        maxScore: result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.breakdown.reduce((s: number, b: number) => s + b, 0), 0),
+        overallConfidence: result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.confidence, 0) / result.questions.length,
+        questions: result.questions.map((q: AIQuestionResult) => ({
           question: q.question,
           score: q.score,
           maxScore: q.breakdown.reduce((s: number, b: number) => s + b, 0),
@@ -87,7 +87,7 @@ class GradingService {
     }
   }
 
-  async batchGradeScripts(files: File[], rubric: any): Promise<BatchJob> {
+  async batchGradeScripts(files: File[], rubric: ExtractedRubric): Promise<BatchJob> {
     try {
       // Convert rubric to JSON string
       const rubricStr = JSON.stringify(rubric);
@@ -122,12 +122,12 @@ class GradingService {
         totalFiles: 0, // Would need to track this separately
         processedFiles: status.results?.length || 0,
         failedFiles: 0, // Would need to track failed files
-        results: status.results?.map((r: any) => ({
+        results: status.results?.map((r: AIGradingResult) => ({
           studentId: r.student_id,
-          totalScore: r.questions.reduce((sum: number, q: any) => sum + q.score, 0),
-          maxScore: r.questions.reduce((sum: number, q: any) => sum + q.breakdown.reduce((s: number, b: number) => s + b, 0), 0),
-          overallConfidence: r.questions.reduce((sum: number, q: any) => sum + q.confidence, 0) / r.questions.length,
-          questions: r.questions.map((q: any) => ({
+          totalScore: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.score, 0),
+          maxScore: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.breakdown.reduce((s: number, b: number) => s + b, 0), 0),
+          overallConfidence: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.confidence, 0) / r.questions.length,
+          questions: r.questions.map((q: AIQuestionResult) => ({
             question: q.question,
             score: q.score,
             maxScore: q.breakdown.reduce((s: number, b: number) => s + b, 0),

@@ -181,7 +181,7 @@ async function main() {
   const settings = [
     {
       key: 'ai_service_url',
-      value: 'http://localhost:8000',
+      value: process.env.AI_SERVICE_URL || 'http://localhost:8000',
       description: 'AI service endpoint URL',
     },
     {

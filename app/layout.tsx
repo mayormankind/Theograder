@@ -14,7 +14,7 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "GradeIQ",
+  title: "TheoGrader",
   description:
     "Intelligent assessment grading for Nigerian universities.",
 };
@@ -34,7 +34,7 @@ export default function RootLayout({
         />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var saved=localStorage.getItem("gradeiq-theme");var prefersDark=window.matchMedia("(prefers-color-scheme: dark)").matches;var theme=saved||(prefersDark?"dark":"light");document.documentElement.setAttribute("data-theme",theme);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`,
+            __html: `(function(){try{var saved=localStorage.getItem("theograder-theme");var prefersDark=window.matchMedia("(prefers-color-scheme: dark)").matches;var theme=saved||(prefersDark?"dark":"light");document.documentElement.setAttribute("data-theme",theme);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`,
           }}
         />
       </head>
@@ -42,7 +42,7 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {children}
-        <Toaster />
+        <Toaster richColors/>
       </body>
     </html>
   );

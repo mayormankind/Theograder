@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
 
     // Update user as verified and active
     const user = await prisma.user.update({
-      where: { id: verificationToken.userId },
+      where: { id: verificationToken.userId! },
       data: {
         emailVerified: new Date(),
         isActive: true
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
 
     // Delete verification token
     await prisma.verificationToken.delete({
-      where: { id: verificationToken.id }
+      where: { token: verificationToken.token }
     });
 
     // Send welcome email
@@ -115,6 +115,7 @@ export async function POST(request: NextRequest) {
     // Create new verification token
     await prisma.verificationToken.create({
       data: {
+        identifier: user.email,
         token: verificationToken,
         userId: user.id,
         expires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours

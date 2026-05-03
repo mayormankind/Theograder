@@ -197,6 +197,7 @@ export const mockGradingResults: GradingResult[] = [
     partLabel: 'a',
     studentAnswer:
       'Atomicity means that a transaction is treated as a single unit. Either all operations succeed or none of them are applied to the database. For example, if a bank transfer fails midway, the debit is rolled back.',
+    expectedAnswer: 'Atomicity ensures that all operations in a transaction are completed successfully or none are applied. Example: A bank transfer debiting one account and crediting another must both succeed or both fail.',
     score: 4,
     maxScore: 5,
     similarityScore: 88,
@@ -210,6 +211,7 @@ export const mockGradingResults: GradingResult[] = [
     partLabel: 'b',
     studentAnswer:
       'Consistency ensures the database stays valid after a transaction. It must obey all constraints and integrity rules defined in the schema.',
+    expectedAnswer: 'Consistency ensures the database moves from one valid state to another, maintaining all predefined rules and constraints.',
     score: 4,
     maxScore: 5,
     similarityScore: 82,
@@ -223,6 +225,7 @@ export const mockGradingResults: GradingResult[] = [
     partLabel: 'c',
     studentAnswer:
       'Isolation means transactions run independently from each other. Multiple transactions happening at once should not interfere.',
+    expectedAnswer: 'Isolation ensures concurrent transactions execute as if they were serial, preventing dirty reads, non-repeatable reads, and phantom reads.',
     score: 3,
     maxScore: 5,
     similarityScore: 67,
@@ -236,6 +239,7 @@ export const mockGradingResults: GradingResult[] = [
     partLabel: 'd',
     studentAnswer:
       'Durability guarantees that once committed, a transaction is permanently saved. Even if the system crashes, the data is not lost because of logs.',
+    expectedAnswer: 'Durability guarantees that once a transaction is committed, it remains so even in the event of system failure, using logs and checkpoints.',
     score: 5,
     maxScore: 5,
     similarityScore: 94,
@@ -249,6 +253,7 @@ export const mockGradingResults: GradingResult[] = [
     partLabel: 'a',
     studentAnswer:
       'Relational databases use tables with rows and columns. They use SQL for querying and foreign keys to link tables together.',
+    expectedAnswer: 'The relational model organizes data into tables with fixed schemas. Relationships are expressed through foreign keys and joins.',
     score: 6,
     maxScore: 8,
     similarityScore: 76,
@@ -262,6 +267,7 @@ export const mockGradingResults: GradingResult[] = [
     partLabel: 'b',
     studentAnswer:
       'NoSQL document stores like MongoDB use JSON documents. They are flexible and can scale horizontally across many servers.',
+    expectedAnswer: 'Document databases store data as flexible, self-describing JSON/BSON documents. They offer schema flexibility, horizontal scaling, and are suited to hierarchical data.',
     score: 6,
     maxScore: 8,
     similarityScore: 78,
@@ -275,6 +281,7 @@ export const mockGradingResults: GradingResult[] = [
     partLabel: 'c',
     studentAnswer:
       'Relational databases are more consistent but harder to scale. NoSQL is more flexible and scalable for big data.',
+    expectedAnswer: 'Key trade-offs include: relational systems provide stronger consistency and complex query support; document stores offer greater flexibility and scalability for large unstructured datasets.',
     score: 3,
     maxScore: 4,
     similarityScore: 71,

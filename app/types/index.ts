@@ -4,6 +4,7 @@ export type Page =
   | 'scripts'
   | 'upload'
   | 'rubrics'
+  | 'create-rubric'
   | 'processing'
   | 'results'
   | 'report'
@@ -52,6 +53,7 @@ export interface GradingResult {
   questionNumber: string;
   partLabel: string;
   studentAnswer: string;
+  expectedAnswer: string;
   score: number;
   maxScore: number;
   similarityScore: number;

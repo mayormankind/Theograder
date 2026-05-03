@@ -15,6 +15,7 @@ import {
   ArrowLeft,
   Download,
   Eye,
+  AlertCircle
 } from 'lucide-react';
 import type { Page } from '@/types';
 import { gradingService, type GradingResult } from '@/lib/services/grading-service';

@@ -4,14 +4,12 @@ import { useState, useRef } from 'react';
 import {
   Upload,
   FileText,
-  Image,
+  Image as ImageIcon,
   Type,
   Edit3,
   CheckCircle2,
   AlertCircle,
-  ArrowRight,
   ChevronRight,
-  Loader2,
   X,
   FileWarning,
 } from 'lucide-react';
@@ -128,7 +126,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
       } else {
         setError(result.error || 'Failed to save rubric');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred while saving rubric');
     } finally {
       setLoading(false);
@@ -400,7 +398,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
       <div>
         <h2 className="text-base font-semibold text-slate-800">Create New Rubric</h2>
         <p className="text-sm text-slate-500 mt-0.5">
-          Choose how you'd like to create your rubric. We recommend uploading an existing document for the fastest setup.
+          Choose how you&apos;d like to create your rubric. We recommend uploading an existing document for the fastest setup.
         </p>
       </div>
 
@@ -486,7 +484,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                       <FileText size={11} /> Word
                     </span>
                     <span className="flex items-center gap-1">
-                      <Image size={11} /> Image
+                      <ImageIcon size={11} /> Image
                     </span>
                     <span>Max 10MB</span>
                   </div>

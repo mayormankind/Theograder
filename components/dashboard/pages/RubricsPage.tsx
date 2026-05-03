@@ -3,15 +3,8 @@
 import { useState, useEffect } from 'react';
 import {
   Plus,
-  Trash2,
-  GripVertical,
-  ChevronDown,
-  ChevronRight,
-  Save,
   CheckCircle2,
   HelpCircle,
-  BookOpen,
-  Tag,
   Copy,
   Edit3,
   X,
@@ -30,141 +23,16 @@ interface RubricPageProps {
 
 export default function RubricPage({ onNavigate }: RubricPageProps) {
   const [questions, setQuestions] = useState<RubricQuestion[]>(mockRubric);
-  const [expandedQ, setExpandedQ] = useState<string[]>(['q1', 'q2']);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [currentRubric, setCurrentRubric] = useState<Rubric | null>(null);
   const [rubricTitle, setRubricTitle] = useState('Database Systems — Final Examination');
   const [courseCode, setCourseCode] = useState('CSC 401');
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateTitle, setDuplicateTitle] = useState('');
 
-  const totalMarks = questions.reduce((acc, q) => acc + q.totalMarks, 0);
 
-  const toggleQ = (id: string) =>
-    setExpandedQ((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-
-  const updateQuestion = (qId: string, field: keyof RubricQuestion, value: unknown) => {
-    setQuestions((prev) => prev.map((q) => (q.id === qId ? { ...q, [field]: value } : q)));
-  };
-
-  const updatePart = (qId: string, pId: string, field: keyof RubricPart, value: unknown) => {
-    setQuestions((prev) =>
-      prev.map((q) =>
-        q.id === qId
-          ? {
-              ...q,
-              parts: q.parts.map((p) => (p.id === pId ? { ...p, [field]: value } : p)),
-              totalMarks: q.parts.reduce((acc, p) => acc + (p.id === pId && field === 'marks' ? (value as number) : p.marks), 0),
-            }
-          : q
-      )
-    );
-  };
-
-  const addPart = (qId: string) => {
-    const q = questions.find((x) => x.id === qId);
-    if (!q) return;
-    const labels = 'abcdefghijklmnopqrstuvwxyz';
-    const newLabel = labels[q.parts.length] || String(q.parts.length + 1);
-    const newPart: RubricPart = {
-      id: `${qId}-${Date.now()}`,
-      label: newLabel,
-      expectedAnswer: '',
-      keyPoints: [],
-      marks: 5,
-    };
-    setQuestions((prev) =>
-      prev.map((x) =>
-        x.id === qId ? { ...x, parts: [...x.parts, newPart] } : x
-      )
-    );
-  };
-
-  const removePart = (qId: string, pId: string) => {
-    setQuestions((prev) =>
-      prev.map((q) =>
-        q.id === qId
-          ? { ...q, parts: q.parts.filter((p) => p.id !== pId) }
-          : q
-      )
-    );
-  };
-
-  const addQuestion = () => {
-    const num = `Q${questions.length + 1}`;
-    const newQ: RubricQuestion = {
-      id: `q${Date.now()}`,
-      questionNumber: num,
-      questionText: '',
-      parts: [
-        { id: `q${Date.now()}-a`, label: 'a', expectedAnswer: '', keyPoints: [], marks: 5 },
-      ],
-      totalMarks: 5,
-    };
-    setQuestions((prev) => [...prev, newQ]);
-    setExpandedQ((prev) => [...prev, newQ.id]);
-  };
-
-  const removeQuestion = (qId: string) => {
-    setQuestions((prev) => prev.filter((q) => q.id !== qId));
-  };
-
-  const handleSave = async () => {
-    setLoading(true);
-    setError(null);
-    
-    try {
-      // Convert to API format
-      const questionsData = questions.map((q, index) => ({
-        questionId: `Q${index + 1}`,
-        question: q.questionText,
-        maxScore: q.totalMarks,
-        points: q.parts.map(part => ({
-          id: part.id,
-          point: part.expectedAnswer,
-          weight: part.marks / q.totalMarks,
-          maxScore: part.marks,
-        })),
-      }));
-
-      const createData = {
-        title: rubricTitle,
-        description: `Rubric for ${rubricTitle}`,
-        questions: questionsData,
-      };
-
-      // Validate rubric
-      const validation = rubricsApi.validateRubric(createData);
-      if (!validation.isValid) {
-        setError(validation.errors.join(', '));
-        return;
-      }
-
-      let result;
-      if (currentRubric) {
-        // Update existing rubric
-        result = await rubricsApi.update({ ...createData, id: currentRubric.id });
-      } else {
-        // Create new rubric
-        result = await rubricsApi.create(createData);
-      }
-
-      if (result.success) {
-        setSaved(true);
-        setCurrentRubric(result.data!);
-        setTimeout(() => setSaved(false), 2500);
-      } else {
-        setError(result.error || 'Failed to save rubric');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleDuplicate = async () => {
     if (!currentRubric) return;
@@ -194,32 +62,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
     }
   };
 
-  const handleDelete = async () => {
-    if (!currentRubric) return;
-    
-    if (!confirm('Are you sure you want to delete this rubric?')) return;
-    
-    setLoading(true);
-    try {
-      const result = await rubricsApi.delete(currentRubric.id);
-      
-      if (result.success) {
-        // Reset to new rubric state
-        setCurrentRubric(null);
-        setRubricTitle('Database Systems — Final Examination');
-        setCourseCode('CSC 401');
-        setQuestions(mockRubric);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
-      } else {
-        setError(result.error || 'Failed to delete rubric');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
+
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto w-full">

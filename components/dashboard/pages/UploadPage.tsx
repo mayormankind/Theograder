@@ -4,7 +4,7 @@ import { useState, useRef, useCallback } from 'react';
 import {
   Upload,
   FileText,
-  Image,
+  Image as ImageIcon,
   X,
   CheckCircle2,
   Loader2,
@@ -12,7 +12,6 @@ import {
   ChevronDown,
   ArrowRight,
   FolderOpen,
-  FileWarning,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
@@ -60,24 +59,23 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
   const [selectedExam, setSelectedExam] = useState('Database Systems — Final Examination (CSC 401)');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
-  }, []);
+  };
 
-  const handleDragLeave = useCallback(() => {
+  const handleDragLeave = () => {
     setIsDragging(false);
-  }, []);
+  };
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
     const droppedFiles = Array.from(e.dataTransfer.files);
     addFiles(droppedFiles);
-  }, []);
+  };
 
   const addFiles = (newFiles: File[]) => {
     // Basic file validation
@@ -149,7 +147,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
                 }
               : f
           ));
-        } catch (err) {
+        } catch {
           // Handle individual file errors
           setFiles(prev => prev.map(f => 
             f.id === fileItem.id 
@@ -168,7 +166,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
       setTimeout(() => {
         onNavigate('processing');
       }, 2000);
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred during processing');
     } finally {
       setLoading(false);
@@ -188,20 +186,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
         </div>
       )}
 
-      {/* Validation Warnings */}
-      {validationWarnings.length > 0 && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-100 bg-amber-50 p-4">
-          <FileWarning size={15} className="mt-0.5 shrink-0 text-amber-500" />
-          <div>
-            <p className="text-xs font-semibold text-amber-800">Warnings</p>
-            <div className="mt-1">
-              {validationWarnings.map((warning, index) => (
-                <p key={index} className="text-xs text-amber-600">• {warning}</p>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Header */}
       <div>
@@ -274,7 +259,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
             <FileText size={11} /> PDF
           </span>
           <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-600">
-            <Image size={11} /> JPG / PNG
+            <ImageIcon size={11} /> JPG / PNG
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-600">
             Max 20 MB per file
@@ -313,7 +298,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
                     isImg ? 'bg-violet-50 ring-1 ring-violet-200' : 'bg-blue-50 ring-1 ring-blue-200'
                   )}>
                     {isImg ? (
-                      <Image size={15} className="text-violet-600" />
+                      <ImageIcon size={15} className="text-violet-600" />
                     ) : (
                       <FileText size={15} className="text-blue-600" />
                     )}

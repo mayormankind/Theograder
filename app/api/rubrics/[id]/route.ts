@@ -64,7 +64,7 @@ export async function PUT(
     const { id } = await params;
 
     // Calculate total marks
-    const totalMarks = questions?.reduce((acc: number, q: any) => acc + q.maxScore, 0) || 0;
+    const totalMarks = questions?.reduce((acc: number, q: { maxScore: number }) => acc + q.maxScore, 0) || 0;
 
     const rubric = await prisma.rubric.update({
       where: {
@@ -108,7 +108,7 @@ export async function DELETE(
 
     const { id } = await params;
 
-    const rubric = await prisma.rubric.delete({
+    await prisma.rubric.delete({
       where: {
         id: id,
       },

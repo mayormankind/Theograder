@@ -316,7 +316,6 @@ Guidelines:
   private mockExtractionFromText(text: string): ExtractionResult {
     // Simple mock extraction based on text content
     const hasQuestions = /\b(q\d+|question\s*\d+|\d+\.)\b/i.test(text);
-    const hasMarks = /\b(\d+)\s*(marks|points|pts)\b/i.test(text);
     
     if (!hasQuestions) {
       return {

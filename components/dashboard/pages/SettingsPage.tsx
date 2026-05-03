@@ -11,7 +11,7 @@ interface SettingsPageProps {
   onNavigate: (page: Page) => void;
 }
 
-export default function SettingsPage({ onNavigate }: SettingsPageProps) {
+export default function SettingsPage({}: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState<Tab>("ai");
   const [saved, setSaved] = useState(false);
   const [threshold, setThreshold] = useState(70);

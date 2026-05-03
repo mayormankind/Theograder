@@ -12,8 +12,7 @@ import {
   ClipboardList,
   Upload,
 } from 'lucide-react';
-import { mockRubric } from '@/lib/mockData';
-import type { RubricQuestion, RubricPart, Page } from '@/types';
+import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
 import { rubricsApi, type Rubric, type CreateRubricData } from '@/lib/api/rubrics';
 
@@ -22,13 +21,10 @@ interface RubricPageProps {
 }
 
 export default function RubricPage({ onNavigate }: RubricPageProps) {
-  const [questions, setQuestions] = useState<RubricQuestion[]>(mockRubric);
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentRubric, setCurrentRubric] = useState<Rubric | null>(null);
-  const [rubricTitle, setRubricTitle] = useState('Database Systems — Final Examination');
-  const [courseCode, setCourseCode] = useState('CSC 401');
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateTitle, setDuplicateTitle] = useState('');
 
@@ -49,7 +45,6 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
         setDuplicateTitle('');
         // Load the duplicated rubric
         setCurrentRubric(result.data!);
-        setRubricTitle(result.data!.title);
         setSaved(true);
         setTimeout(() => setSaved(false), 2500);
       } else {

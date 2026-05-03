@@ -39,7 +39,7 @@ class UploadApi {
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
     const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-    files.forEach((file, index) => {
+    files.forEach((file) => {
       // Check file size
       if (file.size > maxFileSize) {
         errors.push(`File ${file.name} exceeds maximum size of 20MB`);

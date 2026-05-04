@@ -112,7 +112,7 @@ export async function PUT(
     }
 
     const updatedResult = await prisma.result.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { status },
     });
 

@@ -149,7 +149,7 @@ export async function PUT(
 
       // Update main result
       const result = await tx.result.update({
-        where: { id: params.id },
+        where: { id: id },
         data: {
           status: validatedData.status || existingResult.status,
           feedback: validatedData.feedback,

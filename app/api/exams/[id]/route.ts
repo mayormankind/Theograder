@@ -104,7 +104,7 @@ export async function PUT(
     const validatedData = updateExamSchema.parse(body);
 
     const updatedExam = await prisma.exam.update({
-      where: { id: params.id },
+      where: { id: id },
       data: validatedData,
       include: {
         createdBy: {
@@ -163,7 +163,7 @@ export async function DELETE(
 
     // Soft delete by setting status to ARCHIVED
     const archivedExam = await prisma.exam.update({
-      where: { id: params.id },
+      where: { id: id },
       data: { status: 'ARCHIVED' },
     });
 

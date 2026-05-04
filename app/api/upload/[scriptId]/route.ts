@@ -5,15 +5,17 @@ import { requireAuth } from '@/lib/session';
 // GET /api/upload/[scriptId] - Get script processing status
 export async function GET(
   request: NextRequest,
-  { params }: { params: { scriptId: string } }
+  { params }: { params: Promise<{ scriptId: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { scriptId } = await params;
 
     const script = await prisma.script.findFirst({
       where: {
-        id: params.scriptId,
+        id: scriptId,
         exam: {
           createdById: session.userId,
         },
@@ -57,16 +59,18 @@ export async function GET(
 // DELETE /api/upload/[scriptId] - Delete a script
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { scriptId: string } }
+  { params }: { params: Promise<{ scriptId: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { scriptId } = await params;
 
     // Check if script exists and belongs to user
     const script = await prisma.script.findFirst({
       where: {
-        id: params.scriptId,
+        id: scriptId,
         exam: {
           createdById: session.userId,
         },

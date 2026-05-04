@@ -5,15 +5,17 @@ import { requireAuth } from '@/lib/session';
 // GET /api/batches/[id] - Get batch details
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     const batch = await prisma.batch.findFirst({
       where: {
-        id: params.id,
+        id: id,
         exam: {
           createdById: session.userId,
         },
@@ -71,16 +73,18 @@ export async function GET(
 // DELETE /api/batches/[id] - Cancel a batch
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     // Check if batch exists and belongs to user
     const batch = await prisma.batch.findFirst({
       where: {
-        id: params.id,
+        id: id,
         exam: {
           createdById: session.userId,
         },
@@ -103,7 +107,7 @@ export async function DELETE(
 
     // Update batch status to cancelled
     const cancelledBatch = await prisma.batch.update({
-      where: { id: params.id },
+      where: { id: id },
       data: {
         status: 'CANCELLED',
       },

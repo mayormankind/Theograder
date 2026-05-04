@@ -25,15 +25,17 @@ const updateRubricSchema = z.object({
 // GET /api/rubrics/[id] - Get a single rubric
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     const rubric = await prisma.rubric.findFirst({
       where: {
-        id: params.id,
+        id: id,
         OR: [
           { createdById: session.userId },
           { isTemplate: true },
@@ -91,16 +93,18 @@ export async function GET(
 // PUT /api/rubrics/[id] - Update a rubric
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     // Check if rubric exists and belongs to user
     const existingRubric = await prisma.rubric.findFirst({
       where: {
-        id: params.id,
+        id: id,
         createdById: session.userId,
       },
     });
@@ -141,7 +145,7 @@ export async function PUT(
         await tx.rubricPoint.deleteMany({
           where: {
             question: {
-              rubricId: params.id,
+              rubricId: id,
             },
           },
         });
@@ -149,7 +153,7 @@ export async function PUT(
         // Delete existing questions
         await tx.rubricQuestion.deleteMany({
           where: {
-            rubricId: params.id,
+            rubricId: id,
           },
         });
 
@@ -160,7 +164,7 @@ export async function PUT(
               questionId: question.questionId || `Q${index + 1}`,
               question: question.question,
               maxScore: question.maxScore,
-              rubricId: params.id,
+              rubricId: id,
             },
           });
 
@@ -180,7 +184,7 @@ export async function PUT(
     }
 
     const updatedRubric = await prisma.rubric.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         questions: {
@@ -222,16 +226,18 @@ export async function PUT(
 // DELETE /api/rubrics/[id] - Delete a rubric
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     // Check if rubric exists and belongs to user
     const existingRubric = await prisma.rubric.findFirst({
       where: {
-        id: params.id,
+        id: id,
         createdById: session.userId,
       },
     });
@@ -253,7 +259,7 @@ export async function DELETE(
 
     // Delete rubric (cascade will handle questions and points)
     await prisma.rubric.delete({
-      where: { id: params.id },
+      where: { id: id },
     });
 
     return NextResponse.json({

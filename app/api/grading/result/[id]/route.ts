@@ -16,15 +16,17 @@ const updateResultSchema = z.object({
 // GET /api/grading/result/[id] - Get full result detail
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     const result = await prisma.result.findFirst({
       where: {
-        id: params.id,
+        id: id,
         gradedById: session.userId,
       },
       include: {
@@ -88,16 +90,17 @@ export async function GET(
 // PUT /api/grading/result/[id] - Update result (lecturer override)
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
-    // Check if result exists and belongs to user
     const existingResult = await prisma.result.findFirst({
       where: {
-        id: params.id,
+        id: id,
         gradedById: session.userId,
       },
       include: {

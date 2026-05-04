@@ -17,15 +17,17 @@ const updateExamSchema = z.object({
 // GET /api/exams/[id] - Get a single exam
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     const exam = await prisma.exam.findFirst({
       where: {
-        id: params.id,
+        id: id,
         createdById: session.userId,
       },
       include: {
@@ -75,16 +77,18 @@ export async function GET(
 // PUT /api/exams/[id] - Update an exam
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     // Check if exam exists and belongs to user
     const existingExam = await prisma.exam.findFirst({
       where: {
-        id: params.id,
+        id: id,
         createdById: session.userId,
       },
     });
@@ -134,16 +138,18 @@ export async function PUT(
 // DELETE /api/exams/[id] - Soft delete an exam (archive)
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
 
     // Check if exam exists and belongs to user
     const existingExam = await prisma.exam.findFirst({
       where: {
-        id: params.id,
+        id: id,
         createdById: session.userId,
       },
     });

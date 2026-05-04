@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { emailService } from '@/lib/services/email-service';
 
@@ -109,7 +110,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Generate new verification token
-    const crypto = require('crypto');
     const verificationToken = crypto.randomBytes(32).toString('hex');
 
     // Create new verification token

@@ -124,28 +124,68 @@ Segmentation is done using **regex pattern matching**.
 
 ## 📂 Folder Structure (Unified Next.js)
 
-The project follows a modular Next.js App Router structure to accommodate both the high-fidelity landing page and the upcoming intelligent dashboard.
+The project follows a modular Next.js App Router structure with semantic URL routing for better organization and scalability.
 
 ```text
 TheoGrader/
 ├── app/                      # Next.js App Router
-│   ├── (auth)/               # Auth route group (login, signup, etc.)
-│   ├── (dashboard)/          # Dashboard route group (grading, reports)
+│   ├── auth/                 # Authentication routes (/auth/login, /auth/signup, etc.)
+│   │   ├── login/
+│   │   ├── signup/
+│   │   ├── verify-email/
+│   │   ├── forgot-password/
+│   │   ├── reset-password/
+│   │   └── verify/
+│   ├── dashboard/            # Dashboard routes (/dashboard, /dashboard/settings, etc.)
+│   │   ├── page.tsx          # Main dashboard
+│   │   ├── settings/
+│   │   ├── rubrics/
+│   │   ├── exams/
+│   │   ├── grading/
+│   │   ├── results/
+│   │   ├── upload/
+│   │   ├── create-rubric/
+│   │   ├── processing/
+│   │   ├── report/
+│   │   └── scripts/
 │   ├── api/                  # Internal API routes
+│   │   ├── auth/             # Authentication API endpoints
+│   │   ├── rubrics/          # Rubric management API
+│   │   └── upload/           # File upload API
 │   ├── layout.tsx            # Global root layout
-│   └── page.tsx              # Main Landing Page
+│   └── page.tsx              # Main Landing Page (/)
 ├── components/               # UI Components
 │   ├── landing/              # Landing page specific components
-│   ├── dashboard/            # Dashboard specific components (from intelliGrade)
+│   ├── dashboard/            # Dashboard specific components
 │   ├── auth/                 # Auth layouts and forms
 │   └── ui/                   # Shadcn/UI primitive components
 ├── hooks/                    # Reusable React hooks
 ├── lib/                      # Shared utilities (Prisma, constants, etc.)
-├── services/                 # Backend service wrappers (AI API calls)
+│   └── services/             # Backend service wrappers (email, AI API calls)
 ├── types/                    # TypeScript interfaces/types
 ├── public/                   # Static assets (images, icons)
 └── CONTEXT.md                # Project documentation
 ```
+
+### URL Structure
+
+- `/` - Landing page
+- `/auth/login` - Login page
+- `/auth/signup` - Sign up page
+- `/auth/verify-email` - Email verification
+- `/auth/forgot-password` - Forgot password
+- `/auth/reset-password` - Reset password
+- `/dashboard` - Main dashboard
+- `/dashboard/settings` - Settings
+- `/dashboard/rubrics` - Rubrics management
+- `/dashboard/exams` - Exams
+- `/dashboard/grading` - Grading interface
+- `/dashboard/results` - Results
+- `/dashboard/upload` - Upload scripts
+- `/dashboard/create-rubric` - Create rubric
+- `/dashboard/processing` - Processing status
+- `/dashboard/report` - Reports
+- `/dashboard/scripts` - Scripts management
 
 ---
 

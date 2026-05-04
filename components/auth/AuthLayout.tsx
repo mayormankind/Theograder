@@ -3,9 +3,20 @@
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 
+interface IllustrationItem {
+  type: 'card' | 'score' | 'progress';
+  content?: string;
+  icon?: string;
+  dotColor?: 'green' | 'blue' | 'yellow' | 'red';
+  score?: string;
+  progress?: number;
+  progressTotal?: number;
+  iconStyle?: React.CSSProperties;
+}
+
 interface AuthLayoutProps {
   children: ReactNode;
-  illustration: ReactNode;
+  illustration: IllustrationItem[];
   quote: string;
   author: string;
   authorInitials: string;
@@ -88,7 +99,30 @@ export default function AuthLayout({
             </div>
 
             <div className="auth-illustration">
-              {illustration}
+              {illustration.map((item, index) => (
+                <div key={index} className={`auth-float-card afc-${index + 1}`}>
+                  {item.type === 'card' && (
+                    <div className="afc-row">
+                      {item.dotColor && <div className={`afc-dot ${item.dotColor}`}></div>}
+                      {item.icon && <i className={`fas ${item.icon}`}></i>}
+                      {item.content && <span>{item.content}</span>}
+                    </div>
+                  )}
+                  {item.type === 'score' && item.score && (
+                    <div className="afc-score">{item.score}</div>
+                  )}
+                  {item.type === 'progress' && (
+                    <>
+                      <div className="afc-row">
+                        <div className="afc-bar">
+                          <div className="afc-bar-fill" style={{ width: item.progress ? `${(item.progress / (item.progressTotal || 1)) * 100}%` : '0%' }}></div>
+                        </div>
+                      </div>
+                      <span>Processing {item.progress || 0}/{item.progressTotal || 0} scripts...</span>
+                    </>
+                  )}
+                </div>
+              ))}
               <div className="auth-circle c1"></div>
               <div className="auth-circle c2"></div>
               <div className="auth-circle c3"></div>
@@ -116,6 +150,7 @@ export default function AuthLayout({
         <div className="auth-right">
           <div className="auth-right-top">
             <button
+              type="button"
               className="theme-toggle"
               onClick={toggleTheme}
               aria-label="Toggle theme"

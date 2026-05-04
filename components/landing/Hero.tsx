@@ -85,7 +85,7 @@ export default function Hero() {
             confidence, not fatigue.
           </p>
           <div className="hero-cta" data-animate="fade-up" data-delay="300">
-            <Link href="/signup" className="btn-primary-lg">
+            <Link href="/auth/signup" className="btn-primary-lg">
               Start Grading Smarter
               <div className="btn-shimmer"></div>
             </Link>

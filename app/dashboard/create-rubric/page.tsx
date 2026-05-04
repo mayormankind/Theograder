@@ -1,0 +1,14 @@
+"use client";
+
+import CreateRubricPage from "@/components/dashboard/pages/CreateRubricPage";
+import type { Page } from "@/types";
+import { useRouter } from "next/navigation";
+
+export default function Page() {
+  const router = useRouter();
+  const handleNavigate = (page: Page) => {
+    router.push(`/dashboard/${page}`);
+  };
+
+  return <CreateRubricPage onNavigate={handleNavigate} />;
+}

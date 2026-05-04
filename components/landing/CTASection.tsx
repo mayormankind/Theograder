@@ -13,7 +13,7 @@ export default function CTASection() {
               more consistently with GradeIQ.
             </p>
             <div className="cta-actions">
-              <Link href="/signup" className="btn-primary-lg btn-white">
+              <Link href="/auth/signup" className="btn-primary-lg btn-white">
                 Create Your Free Account
                 <i className="fas fa-arrow-right"></i>
               </Link>

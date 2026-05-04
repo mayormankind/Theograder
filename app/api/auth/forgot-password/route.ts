@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { emailService } from '@/lib/services/email-service';
 
@@ -114,7 +115,6 @@ export async function PUT(request: NextRequest) {
     }
 
     // Hash new password
-    const bcrypt = require('bcryptjs');
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
     // Update user password and clear reset token

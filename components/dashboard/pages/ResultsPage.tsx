@@ -227,7 +227,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
       {/* Main Split */}
       <div className="flex flex-1 min-h-0 overflow-hidden" style={{ height: 'calc(100vh - 64px - 58px)' }}>
         {/* Left: Student Script */}
-        <div className="w-[42%] flex-shrink-0 flex flex-col border-r border-slate-200 bg-slate-50 overflow-y-auto">
+        <div className="w-[42%] shrink-0 flex flex-col border-r border-slate-200 bg-slate-50 overflow-y-auto">
           <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3">
             <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Student Answers (OCR Extract)</p>
           </div>

@@ -42,7 +42,7 @@ export async function POST(
         createdById: session.user.id,
         examId: originalRubric.examId,
         questions: {
-          create: originalRubric.questions.map((q: { questionId: string | null, question: string, maxScore: number, points: Array<{ point: string, weight: number, maxScore: number }> }) => ({
+          create: originalRubric.questions.map((q: any) => ({
             questionId: q.questionId,
             question: q.question,
             maxScore: q.maxScore,

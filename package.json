@@ -18,8 +18,10 @@
   "dependencies": {
     "@auth/prisma-adapter": "^2.11.2",
     "@prisma/client": "^6.0.0",
+    "@supabase/supabase-js": "^2.105.1",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.1",
+    "iron-session": "^8.0.4",
     "lucide-react": "^1.11.0",
     "next": "^15.1.0",
     "next-auth": "^4.24.14",

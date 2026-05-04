@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { emailService } from '@/lib/services/email-service';
+import { createAuthResponse } from '@/lib/session';
 
 export async function POST(request: NextRequest) {
   try {
@@ -87,7 +88,16 @@ export async function POST(request: NextRequest) {
         data: { lastLoginAt: new Date() }
       });
 
-      return NextResponse.json(
+      // Set session cookie and create response
+      const response = await createAuthResponse(
+        request,
+        {
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          avatar: user.avatar || undefined
+        },
         {
           message: 'Login successful',
           user: {
@@ -98,8 +108,10 @@ export async function POST(request: NextRequest) {
             avatar: user.avatar
           }
         },
-        { status: 200 }
+        200
       );
+
+      return response;
     }
 
   } catch (error) {
@@ -170,7 +182,16 @@ export async function PUT(request: NextRequest) {
       }
     });
 
-    return NextResponse.json(
+    // Set session cookie and create response
+    const response = await createAuthResponse(
+      request,
+      {
+        userId: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        avatar: user.avatar || undefined
+      },
       {
         message: 'Login successful',
         user: {
@@ -181,8 +202,10 @@ export async function PUT(request: NextRequest) {
           avatar: user.avatar
         }
       },
-      { status: 200 }
+      200
     );
+
+    return response;
 
   } catch (error) {
     console.error('OTP verification error:', error);

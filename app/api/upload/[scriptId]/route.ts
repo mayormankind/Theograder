@@ -101,7 +101,7 @@ export async function DELETE(
 
     // Delete script (will also delete file from disk if needed)
     await prisma.script.delete({
-      where: { id: params.scriptId },
+      where: { id: scriptId },
     });
 
     return NextResponse.json({

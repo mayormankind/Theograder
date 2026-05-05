@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { Save, CheckCircle2, User, Shield, Bell, Cpu } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Save, CheckCircle2, User, Shield, Bell, Cpu, Loader2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Page } from "@/types";
+import { toast } from 'sonner';
 
 type Tab = "profile" | "ai" | "notifications" | "security";
 
@@ -11,19 +12,97 @@ interface SettingsPageProps {
   onNavigate: (page: Page) => void;
 }
 
+interface UserSettings {
+  firstName: string;
+  lastName: string;
+  title: string;
+  email: string;
+  staffId: string;
+  department: string;
+  faculty: string;
+  confidenceThreshold: number;
+  batchSize: number;
+  autoFlag: boolean;
+  emailNotif: boolean;
+  systemNotif: boolean;
+}
+
 export default function SettingsPage({}: SettingsPageProps) {
   const [activeTab, setActiveTab] = useState<Tab>("ai");
   const [saved, setSaved] = useState(false);
-  const [threshold, setThreshold] = useState(70);
-  const [autoFlag, setAutoFlag] = useState(true);
-  const [batchSize, setBatchSize] = useState(20);
-  const [emailNotif, setEmailNotif] = useState(true);
-  const [systemNotif, setSystemNotif] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [settings, setSettings] = useState<UserSettings>({
+    firstName: "",
+    lastName: "",
+    title: "",
+    email: "",
+    staffId: "",
+    department: "",
+    faculty: "",
+    confidenceThreshold: 70,
+    batchSize: 20,
+    autoFlag: true,
+    emailNotif: true,
+    systemNotif: true,
+  });
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/settings');
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings');
+      }
+      const data = await response.json();
+      setSettings(data.settings || settings);
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+      setError('Failed to load settings');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleSave = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      const response = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save settings');
+      }
+
+      setSaved(true);
+      toast.success('Settings saved successfully');
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err) {
+      console.error('Error saving settings:', err);
+      setError('Failed to save settings');
+      toast.error('Failed to save settings');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin text-slate-400" size={32} />
+      </div>
+    );
+  }
 
   const tabs: {
     id: Tab;
@@ -38,6 +117,17 @@ export default function SettingsPage({}: SettingsPageProps) {
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-3xl mx-auto w-full">
+      {/* Error Display */}
+      {error && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4">
+          <AlertCircle size={15} className="mt-0.5 shrink-0 text-red-500" />
+          <div>
+            <p className="text-xs font-semibold text-red-800">Error</p>
+            <p className="text-xs text-red-600 mt-0.5">{error}</p>
+          </div>
+        </div>
+      )}
+
       <div>
         <h2 className="text-base font-semibold text-slate-800">Settings</h2>
         <p className="text-sm text-slate-500 mt-0.5">
@@ -73,14 +163,14 @@ export default function SettingsPage({}: SettingsPageProps) {
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-4 mb-6">
               <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-blue-500 text-xl font-bold text-white shadow-md">
-                AE
+                {settings.firstName[0]}{settings.lastName[0]}
               </div>
               <div>
                 <p className="text-base font-semibold text-slate-800">
-                  Dr. Amaka Eze
+                  {settings.title} {settings.firstName} {settings.lastName}
                 </p>
                 <p className="text-sm text-slate-500">
-                  Senior Lecturer · Faculty of Computing Sciences
+                  Senior Lecturer · {settings.department}
                 </p>
                 <button className="mt-1 text-xs font-medium text-teal-600 hover:text-teal-700">
                   Change avatar
@@ -89,19 +179,20 @@ export default function SettingsPage({}: SettingsPageProps) {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
-                { label: "First Name", value: "Amaka" },
-                { label: "Last Name", value: "Eze" },
-                { label: "Title", value: "Dr." },
-                { label: "Staff ID", value: "STF-0042" },
-                { label: "Department", value: "Computer Science" },
-                { label: "Faculty", value: "Faculty of Science" },
+                { label: "First Name", value: settings.firstName, key: "firstName" as const },
+                { label: "Last Name", value: settings.lastName, key: "lastName" as const },
+                { label: "Title", value: settings.title, key: "title" as const },
+                { label: "Staff ID", value: settings.staffId, key: "staffId" as const },
+                { label: "Department", value: settings.department, key: "department" as const },
+                { label: "Faculty", value: settings.faculty, key: "faculty" as const },
               ].map((field) => (
                 <div key={field.label}>
                   <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
                     {field.label}
                   </label>
                   <input
-                    defaultValue={field.value}
+                    value={settings[field.key]}
+                    onChange={(e) => setSettings({...settings, [field.key]: e.target.value})}
                     className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
                   />
                 </div>
@@ -111,7 +202,8 @@ export default function SettingsPage({}: SettingsPageProps) {
                   Email Address
                 </label>
                 <input
-                  defaultValue="a.eze@unilag.edu.ng"
+                  value={settings.email}
+                  onChange={(e) => setSettings({...settings, email: e.target.value})}
                   className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
                 />
               </div>
@@ -137,15 +229,15 @@ export default function SettingsPage({}: SettingsPageProps) {
                     Confidence Threshold for Auto-Flag
                   </label>
                   <span className="text-sm font-bold text-teal-600">
-                    {threshold}%
+                    {settings.confidenceThreshold}%
                   </span>
                 </div>
                 <input
                   type="range"
                   min={50}
                   max={95}
-                  value={threshold}
-                  onChange={(e) => setThreshold(parseInt(e.target.value))}
+                  value={settings.confidenceThreshold}
+                  onChange={(e) => setSettings({...settings, confidenceThreshold: parseInt(e.target.value)})}
                   className="w-full accent-teal-500"
                 />
                 <p className="text-xs text-slate-400 mt-1">
@@ -163,10 +255,10 @@ export default function SettingsPage({}: SettingsPageProps) {
                   {[5, 10, 20, 50].map((val) => (
                     <button
                       key={val}
-                      onClick={() => setBatchSize(val)}
+                      onClick={() => setSettings({...settings, batchSize: val})}
                       className={cn(
                         "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
-                        batchSize === val
+                        settings.batchSize === val
                           ? "border-teal-300 bg-teal-50 text-teal-700"
                           : "border-slate-200 text-slate-600 hover:bg-slate-50",
                       )}
@@ -191,16 +283,16 @@ export default function SettingsPage({}: SettingsPageProps) {
                   </p>
                 </div>
                 <button
-                  onClick={() => setAutoFlag(!autoFlag)}
+                  onClick={() => setSettings({...settings, autoFlag: !settings.autoFlag})}
                   className={cn(
                     "relative h-6 w-11 rounded-full transition-colors",
-                    autoFlag ? "bg-teal-500" : "bg-slate-200",
+                    settings.autoFlag ? "bg-teal-500" : "bg-slate-200",
                   )}
                 >
                   <span
                     className={cn(
                       "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
-                      autoFlag ? "left-5.5 translate-x-5" : "left-0.5",
+                      settings.autoFlag ? "left-5.5 translate-x-5" : "left-0.5",
                     )}
                   />
                 </button>
@@ -245,14 +337,14 @@ export default function SettingsPage({}: SettingsPageProps) {
               {
                 label: "Email Notifications",
                 desc: "Receive results and alerts via email",
-                value: emailNotif,
-                set: setEmailNotif,
+                value: settings.emailNotif,
+                set: () => setSettings({...settings, emailNotif: !settings.emailNotif}),
               },
               {
                 label: "In-App Notifications",
                 desc: "Show notifications within the system",
-                value: systemNotif,
-                set: setSystemNotif,
+                value: settings.systemNotif,
+                set: () => setSettings({...settings, systemNotif: !settings.systemNotif}),
               },
             ].map((item) => (
               <div
@@ -266,7 +358,7 @@ export default function SettingsPage({}: SettingsPageProps) {
                   <p className="text-xs text-slate-400 mt-0.5">{item.desc}</p>
                 </div>
                 <button
-                  onClick={() => item.set(!item.value)}
+                  onClick={item.set}
                   className={cn(
                     "relative h-6 w-11 rounded-full transition-colors",
                     item.value ? "bg-teal-500" : "bg-slate-200",
@@ -316,15 +408,17 @@ export default function SettingsPage({}: SettingsPageProps) {
       <div className="flex justify-end">
         <button
           onClick={handleSave}
+          disabled={saving}
           className={cn(
             "flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all",
             saved
               ? "bg-teal-50 text-teal-700 ring-1 ring-teal-200"
               : "bg-[#0f1f3d] text-white hover:bg-[#162b52]",
+            saving && "opacity-70 cursor-not-allowed"
           )}
         >
-          {saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
-          {saved ? "Changes Saved" : "Save Changes"}
+          {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
+          {saving ? "Saving..." : saved ? "Changes Saved" : "Save Changes"}
         </button>
       </div>
     </div>

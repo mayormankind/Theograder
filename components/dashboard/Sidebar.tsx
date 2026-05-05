@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   LayoutDashboard,
   BookOpen,
@@ -12,6 +12,8 @@ import {
   ChevronRight,
   GraduationCap,
   Cpu,
+  X,
+  Menu,
 } from "lucide-react";
 import type { Page } from "@/types";
 import { cn } from "@/lib/utils";
@@ -39,15 +41,53 @@ const navItems: NavItem[] = [
 
 export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close mobile sidebar on route change
+  useEffect(() => {
+    if (isMobile) {
+      setMobileOpen(false);
+    }
+  }, [activePage, isMobile]);
 
   return (
-    <aside
-      className={cn(
-        "relative flex flex-col bg-[#0f1f3d] text-white transition-all duration-300 ease-in-out",
-        collapsed ? "w-17" : "w-60",
+    <>
+      {/* Mobile Overlay */}
+      {isMobile && mobileOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setMobileOpen(false)}
+        />
       )}
-      style={{ minHeight: "100vh" }}
-    >
+
+      {/* Mobile Toggle Button */}
+      {isMobile && (
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="lg:hidden fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-[#0f1f3d] text-white shadow-lg"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
+      <aside
+        className={cn(
+          "fixed lg:relative flex flex-col bg-[#0f1f3d] text-white transition-all duration-300 ease-in-out z-50 lg:z-0",
+          collapsed ? "lg:w-17 w-60" : "w-60",
+          isMobile ? mobileOpen ? "translate-x-0" : "-translate-x-full" : "translate-x-0"
+        )}
+        style={{ minHeight: "100vh" }}
+      >
       {/* Logo */}
       <div
         className={cn(
@@ -59,7 +99,7 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
           <Cpu size={18} className="text-teal-400" />
         </div>
         {!collapsed && (
-          <div className="overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
             <span className="block truncate text-sm font-bold tracking-tight text-white">
               AutoGrade <span className="text-teal-400">AI</span>
             </span>
@@ -67,6 +107,14 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
               Academic System
             </span>
           </div>
+        )}
+        {isMobile && (
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="ml-2 text-white/60 hover:text-white lg:hidden"
+          >
+            <X size={20} />
+          </button>
         )}
       </div>
 
@@ -171,10 +219,11 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
       {/* Collapse Toggle */}
       <button
         onClick={() => setCollapsed(!collapsed)}
-        className="absolute -right-3 top-[72px] flex h-6 w-6 items-center justify-center rounded-full bg-[#0f1f3d] ring-1 ring-white/20 text-white/60 hover:text-white transition-colors z-10"
+        className="hidden lg:flex absolute -right-3 top-[72px] h-6 w-6 items-center justify-center rounded-full bg-[#0f1f3d] ring-1 ring-white/20 text-white/60 hover:text-white transition-colors z-10"
       >
         {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
       </button>
     </aside>
+    </>
   );
 }

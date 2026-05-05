@@ -11,50 +11,96 @@ import {
   AlertCircle,
   ClipboardList,
   Upload,
+  Trash2,
+  Loader2,
 } from 'lucide-react';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
-import { rubricsApi, type Rubric, type CreateRubricData } from '@/lib/api/rubrics';
+import { rubricsApi, type Rubric } from '@/lib/api/rubrics';
 
 interface RubricPageProps {
   onNavigate: (page: Page) => void;
 }
 
 export default function RubricPage({ onNavigate }: RubricPageProps) {
-  const [saved, setSaved] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [rubrics, setRubrics] = useState<Rubric[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentRubric, setCurrentRubric] = useState<Rubric | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateTitle, setDuplicateTitle] = useState('');
+  const [duplicatingRubric, setDuplicatingRubric] = useState<Rubric | null>(null);
+  const [deletingRubric, setDeletingRubric] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchRubrics();
+  }, []);
+
+  const fetchRubrics = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await rubricsApi.getAll();
+      if (result.success) {
+        setRubrics(result.data || []);
+      } else {
+        setError(result.error || 'Failed to fetch rubrics');
+      }
+    } catch (err) {
+      console.error('Error fetching rubrics:', err);
+      setError('Failed to fetch rubrics');
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
 
   const handleDuplicate = async () => {
-    if (!currentRubric) return;
+    if (!duplicatingRubric) return;
     
-    setLoading(true);
     try {
       const result = await rubricsApi.duplicate(
-        currentRubric.id,
-        duplicateTitle || `${currentRubric.title} (Copy)`
+        duplicatingRubric.id,
+        duplicateTitle || `${duplicatingRubric.title} (Copy)`
       );
       
       if (result.success) {
         setShowDuplicateModal(false);
         setDuplicateTitle('');
-        // Load the duplicated rubric
-        setCurrentRubric(result.data!);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 2500);
+        setDuplicatingRubric(null);
+        await fetchRubrics();
       } else {
         setError(result.error || 'Failed to duplicate rubric');
       }
     } catch (err) {
       setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
     }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this rubric? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      setDeletingRubric(id);
+      const result = await rubricsApi.delete(id);
+      if (result.success) {
+        setRubrics(rubrics.filter(r => r.id !== id));
+      } else {
+        setError(result.error || 'Failed to delete rubric');
+      }
+    } catch (err) {
+      setError('An unexpected error occurred');
+    } finally {
+      setDeletingRubric(null);
+    }
+  };
+
+  const openDuplicateModal = (rubric: Rubric) => {
+    setDuplicatingRubric(rubric);
+    setDuplicateTitle('');
+    setShowDuplicateModal(true);
   };
 
 
@@ -81,7 +127,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
           </p>
         </div>
         <button
-          onClick={() => onNavigate('create-rubric')}
+          onClick={() => onNavigate('rubrics')}
           className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
         >
           <Plus size={14} />
@@ -97,11 +143,11 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
               <ClipboardList size={14} className="text-slate-500" />
               <p className="text-sm font-semibold text-slate-800">Your Rubrics</p>
               <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
-                3 rubrics
+                {rubrics.length} rubrics
               </span>
             </div>
             <button
-              onClick={() => onNavigate('create-rubric')}
+              onClick={() => onNavigate('rubrics')}
               className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
             >
               <Plus size={14} />
@@ -109,77 +155,67 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
             </button>
           </div>
 
-          <div className="divide-y divide-slate-50">
-            {/* Mock rubric items */}
-            <div className="px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h4 className="text-sm font-semibold text-slate-800">Database Systems — Final Examination</h4>
-                    <span className="rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-teal-700 ring-1 ring-teal-200">
-                      Active
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">CSC 401 • 5 questions • 100 marks</p>
-                  <p className="text-xs text-slate-400 mt-1">Created 2 days ago • Used 3 times</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                    <Copy size={14} />
-                  </button>
-                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                    <Edit3 size={14} />
-                  </button>
-                </div>
-              </div>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="animate-spin text-slate-400" size={24} />
             </div>
-
-            <div className="px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h4 className="text-sm font-semibold text-slate-800">Software Engineering Principles</h4>
-                    <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200">
-                      Draft
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">CSC 312 • 8 questions • 150 marks</p>
-                  <p className="text-xs text-slate-400 mt-1">Created 1 week ago • Never used</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                    <Copy size={14} />
-                  </button>
-                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                    <Edit3 size={14} />
-                  </button>
-                </div>
-              </div>
+          ) : rubrics.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 px-5">
+              <ClipboardList size={40} className="text-slate-300 mb-3" />
+              <p className="text-sm font-medium text-slate-600">No rubrics yet</p>
+              <p className="text-xs text-slate-500 mt-1">Create your first rubric to get started</p>
             </div>
-
-            <div className="px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center gap-3">
-                    <h4 className="text-sm font-semibold text-slate-800">Algorithms & Complexity — Mid-Semester</h4>
-                    <span className="rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-teal-700 ring-1 ring-teal-200">
-                      Active
-                    </span>
+          ) : (
+            <div className="divide-y divide-slate-50">
+              {rubrics.map((rubric) => (
+                <div key={rubric.id} className="px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3">
+                        <h4 className="text-sm font-semibold text-slate-800">{rubric.title}</h4>
+                        {rubric.examId ? (
+                          <span className="rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-teal-700 ring-1 ring-teal-200">
+                            Linked
+                          </span>
+                        ) : (
+                          <span className="rounded-full bg-slate-50 px-2 py-1 text-[10px] font-semibold text-slate-700 ring-1 ring-slate-200">
+                            Template
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {rubric.exam?.courseCode || 'No course'} • {rubric.questions.length} questions • {rubric.totalMarks} marks
+                      </p>
+                      <p className="text-xs text-slate-400 mt-1">
+                        Created {new Date(rubric.createdAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openDuplicateModal(rubric)}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                        title="Duplicate"
+                      >
+                        <Copy size={14} />
+                      </button>
+                      <button
+                        onClick={() => handleDelete(rubric.id)}
+                        disabled={deletingRubric === rubric.id}
+                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 transition-colors"
+                        title="Delete"
+                      >
+                        {deletingRubric === rubric.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Trash2 size={14} />
+                        )}
+                      </button>
+                    </div>
                   </div>
-                  <p className="text-xs text-slate-500 mt-1">CSC 305 • 6 questions • 75 marks</p>
-                  <p className="text-xs text-slate-400 mt-1">Created 2 weeks ago • Used 7 times</p>
                 </div>
-                <div className="flex items-center gap-2">
-                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                    <Copy size={14} />
-                  </button>
-                  <button className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
-                    <Edit3 size={14} />
-                  </button>
-                </div>
-              </div>
+              ))}
             </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -210,7 +246,11 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-800">Duplicate Rubric</h3>
               <button
-                onClick={() => setShowDuplicateModal(false)}
+                onClick={() => {
+                  setShowDuplicateModal(false);
+                  setDuplicatingRubric(null);
+                  setDuplicateTitle('');
+                }}
                 className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
               >
                 <X size={16} />
@@ -224,27 +264,26 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
                 type="text"
                 value={duplicateTitle}
                 onChange={(e) => setDuplicateTitle(e.target.value)}
-                placeholder={`${currentRubric?.title} (Copy)`}
+                placeholder={`${duplicatingRubric?.title} (Copy)`}
                 className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
               />
             </div>
             <div className="flex gap-3">
               <button
-                onClick={() => setShowDuplicateModal(false)}
+                onClick={() => {
+                  setShowDuplicateModal(false);
+                  setDuplicatingRubric(null);
+                  setDuplicateTitle('');
+                }}
                 className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDuplicate}
-                disabled={loading}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
               >
-                {loading ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                ) : (
-                  <Copy size={14} />
-                )}
+                <Copy size={14} />
                 Duplicate
               </button>
             </div>

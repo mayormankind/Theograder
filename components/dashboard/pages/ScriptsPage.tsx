@@ -1,51 +1,121 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Search,
   Upload,
   Filter,
   Eye,
   BarChart3,
+  Loader2,
+  Trash2,
 } from 'lucide-react';
-import { mockScripts } from '@/lib/mockData';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+
+interface Script {
+  id: string;
+  fileName: string;
+  studentName: string;
+  studentId: string;
+  examId: string;
+  examTitle?: string;
+  status: 'UPLOADED' | 'PROCESSING' | 'PENDING_REVIEW' | 'GRADED';
+  uploadedAt: string;
+  score?: number;
+  totalMarks?: number;
+  confidence?: number;
+}
 
 interface ScriptsPageProps {
   onNavigate: (page: Page) => void;
 }
 
 const statusStyles: Record<string, { style: string; label: string; dot: string }> = {
-  done: { style: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200', label: 'Graded', dot: 'bg-teal-400' },
-  processing: { style: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200', label: 'Processing', dot: 'bg-blue-400' },
-  pending_review: { style: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200', label: 'Needs Review', dot: 'bg-amber-400' },
-  uploaded: { style: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200', label: 'Queued', dot: 'bg-slate-300' },
+  GRADED: { style: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200', label: 'Graded', dot: 'bg-teal-400' },
+  PROCESSING: { style: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200', label: 'Processing', dot: 'bg-blue-400' },
+  PENDING_REVIEW: { style: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200', label: 'Needs Review', dot: 'bg-amber-400' },
+  UPLOADED: { style: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200', label: 'Queued', dot: 'bg-slate-300' },
 };
 
 export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
+  const [scripts, setScripts] = useState<Script[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  const filtered = mockScripts.filter((s) => {
+  useEffect(() => {
+    fetchScripts();
+  }, []);
+
+  const fetchScripts = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch('/api/upload');
+      if (!response.ok) {
+        throw new Error('Failed to fetch scripts');
+      }
+      const data = await response.json();
+      setScripts(data.scripts || []);
+    } catch (err) {
+      console.error('Error fetching scripts:', err);
+      setError('Failed to load scripts');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (scriptId: string) => {
+    if (!confirm('Are you sure you want to delete this script? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/upload/${scriptId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete script');
+      }
+
+      setScripts(scripts.filter(s => s.id !== scriptId));
+      toast.success('Script deleted successfully');
+    } catch (err) {
+      console.error('Error deleting script:', err);
+      toast.error('Failed to delete script');
+    }
+  };
+
+  const filtered = scripts.filter((s: Script) => {
     const matchSearch =
       s.studentName.toLowerCase().includes(search.toLowerCase()) ||
       s.studentId.toLowerCase().includes(search.toLowerCase()) ||
-      s.examTitle.toLowerCase().includes(search.toLowerCase());
+      (s.examTitle || '').toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === 'all' || s.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
   const counts = {
-    all: mockScripts.length,
-    done: mockScripts.filter((s) => s.status === 'done').length,
-    processing: mockScripts.filter((s) => s.status === 'processing').length,
-    pending_review: mockScripts.filter((s) => s.status === 'pending_review').length,
-    uploaded: mockScripts.filter((s) => s.status === 'uploaded').length,
+    all: scripts.length,
+    GRADED: scripts.filter((s: Script) => s.status === 'GRADED').length,
+    PROCESSING: scripts.filter((s: Script) => s.status === 'PROCESSING').length,
+    PENDING_REVIEW: scripts.filter((s: Script) => s.status === 'PENDING_REVIEW').length,
+    UPLOADED: scripts.filter((s: Script) => s.status === 'UPLOADED').length,
   };
 
   return (
     <div className="flex flex-col gap-6 p-6">
+      {/* Error Display */}
+      {error && (
+        <div className="flex items-center gap-3 rounded-xl border border-red-100 bg-red-50 p-4">
+          <p className="text-xs text-red-600">{error}</p>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -74,10 +144,10 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
           {[
             { key: 'all', label: `All (${counts.all})` },
-            { key: 'done', label: `Graded (${counts.done})` },
-            { key: 'pending_review', label: `Review (${counts.pending_review})` },
-            { key: 'processing', label: `Processing (${counts.processing})` },
-            { key: 'uploaded', label: `Queued (${counts.uploaded})` },
+            { key: 'GRADED', label: `Graded (${counts.GRADED})` },
+            { key: 'PENDING_REVIEW', label: `Review (${counts.PENDING_REVIEW})` },
+            { key: 'PROCESSING', label: `Processing (${counts.PROCESSING})` },
+            { key: 'UPLOADED', label: `Queued (${counts.UPLOADED})` },
           ].map((f) => (
             <button
               key={f.key}
@@ -97,23 +167,30 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
 
       {/* Table */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-slate-100 bg-slate-50">
-              <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Student</th>
-              <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden md:table-cell">Examination</th>
-              <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden sm:table-cell">Uploaded</th>
-              <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</th>
-              <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Score</th>
-              <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden md:table-cell">Confidence</th>
-              <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-50">
-            {filtered.map((script) => {
-              const st = statusStyles[script.status];
-              const scorePct = script.score !== undefined ? Math.round((script.score / script.totalMarks) * 100) : null;
-              return (
+        {loading ? (
+          <div className="flex items-center justify-center py-16">
+            <Loader2 className="animate-spin text-slate-400" size={32} />
+          </div>
+        ) : (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50">
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Student</th>
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden md:table-cell">Examination</th>
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden sm:table-cell">Uploaded</th>
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Status</th>
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Score</th>
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden md:table-cell">Confidence</th>
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {filtered.map((script: Script) => {
+                const st = statusStyles[script.status];
+                const scorePct = script.score !== undefined && script.totalMarks !== undefined 
+    ? Math.round((script.score / script.totalMarks) * 100) 
+    : null;
+                return (
                 <tr key={script.id} className="hover:bg-slate-50/80 transition-colors group">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-3">
@@ -193,7 +270,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
             })}
           </tbody>
         </table>
-        {filtered.length === 0 && (
+        )}
+        {filtered.length === 0 && !loading && (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400">
             <Filter size={32} className="mb-3 opacity-30" />
             <p className="text-sm font-medium">No scripts match your filters</p>
@@ -204,7 +282,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
 
       {/* Pagination */}
       <div className="flex items-center justify-between text-xs text-slate-500">
-        <p>Showing {filtered.length} of {mockScripts.length} scripts</p>
+        <p>Showing {filtered.length} of {scripts.length} scripts</p>
         <div className="flex items-center gap-1">
           <button className="rounded-lg border border-slate-200 px-3 py-1.5 hover:bg-slate-50 transition-colors">Previous</button>
           <button className="rounded-lg border border-teal-200 bg-teal-50 px-3 py-1.5 font-semibold text-teal-700">1</button>

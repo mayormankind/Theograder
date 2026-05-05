@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from 'react';
 import {
   Download,
   CheckCircle2,
@@ -9,8 +10,8 @@ import {
   Printer,
   ChevronLeft,
   AlertTriangle,
+  Loader2,
 } from 'lucide-react';
-import { mockGradingResults } from '@/lib/mockData';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
 import {
@@ -26,16 +27,6 @@ interface ReportPageProps {
   onNavigate: (page: Page) => void;
 }
 
-const radarData = [
-  { subject: 'Q1a', score: 80 },
-  { subject: 'Q1b', score: 80 },
-  { subject: 'Q1c', score: 60 },
-  { subject: 'Q1d', score: 100 },
-  { subject: 'Q2a', score: 75 },
-  { subject: 'Q2b', score: 75 },
-  { subject: 'Q2c', score: 75 },
-];
-
 const gradeFromPct = (pct: number) => {
   if (pct >= 70) return { grade: 'A', color: 'text-teal-700', bg: 'bg-teal-50', ring: 'ring-teal-200' };
   if (pct >= 60) return { grade: 'B', color: 'text-blue-700', bg: 'bg-blue-50', ring: 'ring-blue-200' };
@@ -45,11 +36,49 @@ const gradeFromPct = (pct: number) => {
 };
 
 export default function ReportPage({ onNavigate }: ReportPageProps) {
-  const totalScore = mockGradingResults.reduce((a, r) => a + r.score, 0);
-  const totalMax = mockGradingResults.reduce((a, r) => a + r.maxScore, 0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [gradingResult, setGradingResult] = useState<any>(null);
+
+  useEffect(() => {
+    // This page should receive a result ID parameter to fetch specific grading results
+    // For now, we'll keep the loading state but remove mock data
+    setLoading(false);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin text-slate-400" size={32} />
+      </div>
+    );
+  }
+
+  if (!gradingResult) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-sm text-slate-500">No grading result selected</p>
+        <p className="text-xs text-slate-400">Select a script from the Scripts page to view its report</p>
+        <button
+          onClick={() => onNavigate('scripts')}
+          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+        >
+          Go to Scripts
+        </button>
+      </div>
+    );
+  }
+
+  // Calculate metrics from grading result
+  const totalScore = gradingResult.totalScore || 0;
+  const totalMax = gradingResult.maxScore || 100;
   const pct = Math.round((totalScore / totalMax) * 100);
-  const avgConf = Math.round(mockGradingResults.reduce((a, r) => a + r.confidence, 0) / mockGradingResults.length);
+  const avgConf = Math.round((gradingResult.overallConfidence || 0.8) * 100);
   const { grade, color, bg, ring } = gradeFromPct(pct);
+  const radarData = gradingResult.questions?.map((q: any) => ({
+    subject: q.questionNumber || 'Q',
+    score: Math.round((q.score / q.maxScore) * 100)
+  })) || [];
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -91,10 +120,10 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
         {/* Student Info */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 border-b border-slate-100 px-8 py-5">
           {[
-            { label: 'Student Name', value: 'Adaeze Okonkwo' },
-            { label: 'Student ID', value: 'STU-2021-0044' },
-            { label: 'Date Graded', value: '2025-05-16' },
-            { label: 'Graded By', value: 'AutoGrade AI + Dr. Eze' },
+            { label: 'Student Name', value: gradingResult.studentName || 'N/A' },
+            { label: 'Student ID', value: gradingResult.studentId || 'N/A' },
+            { label: 'Date Graded', value: gradingResult.createdAt ? new Date(gradingResult.createdAt).toLocaleDateString() : 'N/A' },
+            { label: 'Graded By', value: 'AutoGrade AI' },
           ].map((item) => (
             <div key={item.label}>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
@@ -109,7 +138,7 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
             { label: 'Total Score', value: `${totalScore}/${totalMax}`, icon: Award, color: 'text-teal-600', bg: 'bg-teal-50' },
             { label: 'Percentage', value: `${pct}%`, icon: BarChart3, color: 'text-blue-600', bg: 'bg-blue-50' },
             { label: 'Avg. Confidence', value: `${avgConf}%`, icon: CheckCircle2, color: 'text-violet-600', bg: 'bg-violet-50' },
-            { label: 'Questions', value: `${[...new Set(mockGradingResults.map(r => r.questionNumber))].length} (${mockGradingResults.length} parts)`, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100' },
+            { label: 'Questions', value: `${gradingResult.questions?.length || 0}`, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100' },
           ].map((item) => {
             const Icon = item.icon;
             return (
@@ -142,21 +171,21 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {mockGradingResults.map((r, i) => {
-                  const pct = Math.round((r.score / r.maxScore) * 100);
-                  const hasMissing = r.missingConcepts.length > 0;
+                {gradingResult.questions?.map((q: any, i: number) => {
+                  const pct = Math.round((q.score / q.maxScore) * 100);
+                  const hasMissing = q.missingConcepts && q.missingConcepts.length > 0;
                   return (
                     <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                       <td className="py-3">
                         <div className="flex items-center gap-2">
                           <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                            {r.questionNumber}{r.partLabel}
+                            {q.questionNumber || `Q${i + 1}`}
                           </span>
                         </div>
                       </td>
                       <td className="py-3">
                         <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold text-slate-800">{r.score}/{r.maxScore}</span>
+                          <span className="text-sm font-bold text-slate-800">{q.score}/{q.maxScore}</span>
                           <div className="h-1.5 w-16 rounded-full bg-slate-100 hidden sm:block">
                             <div
                               className={cn('h-1.5 rounded-full', pct >= 80 ? 'bg-teal-500' : pct >= 60 ? 'bg-blue-400' : pct >= 40 ? 'bg-amber-400' : 'bg-red-400')}
@@ -166,21 +195,21 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
                         </div>
                       </td>
                       <td className="py-3 hidden sm:table-cell">
-                        <span className="text-sm text-slate-600">{r.similarityScore}%</span>
+                        <span className="text-sm text-slate-600">{q.similarityScore || '—'}</span>
                       </td>
                       <td className="py-3 hidden sm:table-cell">
                         <span className={cn(
                           'text-[11px] font-semibold',
-                          r.confidence >= 85 ? 'text-teal-600' : r.confidence >= 70 ? 'text-blue-600' : 'text-amber-600'
+                          (q.confidence || 0) >= 85 ? 'text-teal-600' : (q.confidence || 0) >= 70 ? 'text-blue-600' : 'text-amber-600'
                         )}>
-                          {r.confidence}%
+                          {q.confidence || 0}%
                         </span>
                       </td>
                       <td className="py-3">
                         {hasMissing ? (
                           <div className="flex items-center gap-1 text-amber-600">
                             <AlertTriangle size={11} />
-                            <span className="text-[10px] font-medium">{r.missingConcepts.length} missing</span>
+                            <span className="text-[10px] font-medium">{q.missingConcepts.length} missing</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 text-teal-600">
@@ -191,7 +220,7 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
                       </td>
                     </tr>
                   );
-                })}
+                }) || []}
               </tbody>
               <tfoot>
                 <tr className="border-t-2 border-slate-200">
@@ -231,14 +260,16 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
             <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
               <p className="text-[11px] font-semibold text-slate-600 mb-1">Areas for Improvement</p>
               <div className="flex flex-col gap-1">
-                {mockGradingResults
-                  .filter((r) => r.missingConcepts.length > 0)
-                  .map((r, i) => (
+                {gradingResult.questions?.filter((q: any) => q.missingConcepts && q.missingConcepts.length > 0)
+                  .map((r: any, i: number) => (
                     <p key={i} className="text-[11px] text-slate-500">
-                      <span className="font-semibold text-slate-700">{r.questionNumber}{r.partLabel}:</span>{' '}
+                      <span className="font-semibold text-slate-700">{r.questionNumber || `Q${i + 1}`}:</span>{' '}
                       {r.missingConcepts.join(', ')}
                     </p>
-                  ))}
+                  )) || []}
+                {(!gradingResult.questions || gradingResult.questions.filter((q: any) => q.missingConcepts && q.missingConcepts.length > 0).length === 0) && (
+                  <p className="text-[11px] text-slate-400 italic">No areas for improvement identified</p>
+                )}
               </div>
             </div>
           </div>

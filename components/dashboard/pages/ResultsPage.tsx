@@ -64,49 +64,12 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
   const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
 
-  // Mock grading result for demonstration
+  // This page should receive a result ID parameter to fetch specific grading results
+  // For now, we'll keep the loading state but remove mock data
   useEffect(() => {
-    const mockResult: GradingResult = {
-      studentId: 'STU-2021-0044',
-      studentName: 'Adaeze Okonkwo',
-      totalScore: 68,
-      maxScore: 100,
-      overallConfidence: 0.82,
-      questions: [
-        {
-          question: 'Q1. Explain database transactions and ACID properties',
-          score: 38,
-          maxScore: 50,
-          confidence: 0.85,
-          breakdown: [
-            { point: 'Atomicity definition', similarity: 0.88, weight: 0.25 },
-            { point: 'Consistency explanation', similarity: 0.82, weight: 0.25 },
-            { point: 'Isolation concept', similarity: 0.79, weight: 0.25 },
-            { point: 'Durability guarantee', similarity: 0.91, weight: 0.25 },
-          ]
-        },
-        {
-          question: 'Q2. Compare relational vs NoSQL databases',
-          score: 30,
-          maxScore: 50,
-          confidence: 0.79,
-          breakdown: [
-            { point: 'Relational structure', similarity: 0.85, weight: 0.33 },
-            { point: 'NoSQL flexibility', similarity: 0.76, weight: 0.33 },
-            { point: 'Comparison analysis', similarity: 0.75, weight: 0.34 },
-          ]
-        }
-      ],
-      processingTime: 12450,
-      extractionMethod: 'hybrid',
-      status: 'completed'
-    };
-
-    // Simulate loading and then set result
-    setTimeout(() => {
-      setGradingResult(mockResult);
-      setLoading(false);
-    }, 1000);
+    // This would typically fetch grading results from /api/grading/result/[id]
+    // The page needs to be navigated to with a specific result ID
+    setLoading(false);
   }, []);
 
   if (loading) {
@@ -139,8 +102,15 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
 
   if (!gradingResult) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-sm text-slate-500">No grading results available</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-4">
+        <p className="text-sm text-slate-500">No grading result selected</p>
+        <p className="text-xs text-slate-400">Select a script from the Scripts page to view its grading results</p>
+        <button
+          onClick={() => onNavigate('scripts')}
+          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+        >
+          Go to Scripts
+        </button>
       </div>
     );
   }

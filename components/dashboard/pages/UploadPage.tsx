@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Upload,
   FileText,
@@ -15,10 +15,16 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
-import { aiClient } from '@/lib/services/ai-client';
 
 interface UploadPageProps {
   onNavigate: (page: Page) => void;
+}
+
+interface Exam {
+  id: string;
+  title: string;
+  courseCode?: string;
+  courseName?: string;
 }
 
 interface FileItem {
@@ -30,8 +36,6 @@ interface FileItem {
   progress: number;
   file?: File;
   errorMessage?: string;
-  extractedText?: string;
-  extractionMethod?: string;
 }
 
 const formatSize = (bytes: number) => {
@@ -47,19 +51,40 @@ const statusConfig = {
   error: { label: 'Error', color: 'text-red-600', bg: 'bg-red-50', ring: 'ring-red-200', icon: AlertCircle },
 };
 
-const mockFiles: FileItem[] = [
-  { id: 'f1', name: 'STU2021_0044_Okonkwo.pdf', size: 2.3 * 1024 * 1024, type: 'pdf', status: 'done', progress: 100 },
-  { id: 'f2', name: 'STU2021_0071_Nwosu.pdf', size: 1.8 * 1024 * 1024, type: 'pdf', status: 'done', progress: 100 },
-  { id: 'f3', name: 'STU2021_0089_AlHassan.jpg', size: 3.1 * 1024 * 1024, type: 'image', status: 'processing', progress: 63 },
-];
-
 export default function UploadPage({ onNavigate }: UploadPageProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [files, setFiles] = useState<FileItem[]>(mockFiles);
-  const [selectedExam, setSelectedExam] = useState('Database Systems — Final Examination (CSC 401)');
+  const [files, setFiles] = useState<FileItem[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [examsLoading, setExamsLoading] = useState(true);
+  const [selectedExamId, setSelectedExamId] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  const fetchExams = async () => {
+    try {
+      setExamsLoading(true);
+      const response = await fetch('/api/exams');
+      if (!response.ok) {
+        throw new Error('Failed to fetch exams');
+      }
+      const data = await response.json();
+      setExams(data.exams || []);
+      if (data.exams && data.exams.length > 0) {
+        setSelectedExamId(data.exams[0].id);
+      }
+    } catch (err) {
+      console.error('Error fetching exams:', err);
+      setError('Failed to load exams');
+    } finally {
+      setExamsLoading(false);
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -108,53 +133,57 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
   };
 
   const handleProcess = async () => {
-    setLoading(true);
+    if (!selectedExamId) {
+      setError('Please select an exam');
+      return;
+    }
+
+    setUploading(true);
     setError(null);
     
     try {
-      // Get only files that haven't been processed yet
-      const filesToProcess = files.filter(f => f.status === 'uploaded' || f.status === 'done');
-      const filesWithFiles = filesToProcess.filter(f => f.file);
+      const filesToUpload = files.filter(f => f.status === 'uploaded' && f.file);
       
-      if (filesWithFiles.length === 0) {
-        setError('No files to process');
+      if (filesToUpload.length === 0) {
+        setError('No files to upload');
         return;
       }
 
-      // Process each file with OCR
-      for (const fileItem of filesWithFiles) {
+      // Upload each file
+      for (const fileItem of filesToUpload) {
         try {
-          // Update status to processing
           setFiles(prev => prev.map(f => 
             f.id === fileItem.id 
-              ? { ...f, status: 'processing' as const, progress: 0 }
+              ? { ...f, status: 'processing' as const, progress: 50 }
               : f
           ));
 
-          // Extract text using AI service
-          const ocrResult = await aiClient.extractTextFromImage(fileItem.file!);
-          
-          // Update file with OCR results
+          const formData = new FormData();
+          formData.append('file', fileItem.file!);
+          formData.append('examId', selectedExamId);
+
+          const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to upload file');
+          }
+
           setFiles(prev => prev.map(f => 
             f.id === fileItem.id 
-              ? { 
-                  ...f, 
-                  status: 'done' as const, 
-                  progress: 100,
-                  extractedText: ocrResult.extracted_text,
-                  extractionMethod: ocrResult.extraction_method,
-                  file: undefined
-                }
+              ? { ...f, status: 'done' as const, progress: 100, file: undefined }
               : f
           ));
-        } catch {
-          // Handle individual file errors
+        } catch (err) {
           setFiles(prev => prev.map(f => 
             f.id === fileItem.id 
               ? { 
                   ...f, 
                   status: 'error' as const, 
-                  errorMessage: 'Failed to extract text',
+                  errorMessage: err instanceof Error ? err.message : 'Upload failed',
                   file: undefined
                 }
               : f
@@ -162,14 +191,15 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
         }
       }
 
-      // Navigate to processing page after a delay
-      setTimeout(() => {
-        onNavigate('processing');
-      }, 2000);
-    } catch {
-      setError('An unexpected error occurred during processing');
+      // Navigate to scripts page after successful upload
+      const successfulUploads = files.filter(f => f.status === 'done').length;
+      if (successfulUploads > 0) {
+        onNavigate('scripts');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred');
     } finally {
-      setLoading(false);
+      setUploading(false);
     }
   };
 
@@ -203,19 +233,27 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
         </label>
         <div className="relative">
           <select
-            value={selectedExam}
-            onChange={(e) => setSelectedExam(e.target.value)}
-            className="h-10 w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-medium text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
+            value={selectedExamId}
+            onChange={(e) => setSelectedExamId(e.target.value)}
+            disabled={examsLoading || exams.length === 0}
+            className="h-10 w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-medium text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <option>Database Systems — Final Examination (CSC 401)</option>
-            <option>Software Engineering Principles (CSC 312)</option>
-            <option>Algorithms & Complexity — Mid-Semester (CSC 305)</option>
-            <option>Computer Networks — Theory Paper (CSC 415)</option>
+            {examsLoading ? (
+              <option value="">Loading exams...</option>
+            ) : exams.length === 0 ? (
+              <option value="">No exams available</option>
+            ) : (
+              exams.map((exam) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.title} {exam.courseCode ? `(${exam.courseCode})` : ''}
+                </option>
+              ))
+            )}
           </select>
           <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
         </div>
         <p className="mt-2 text-[11px] text-slate-400">
-          Make sure the rubric for this exam is configured before processing.
+          Make sure the rubric for this exam is configured before uploading.
         </p>
       </div>
 
@@ -348,15 +386,15 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
         </div>
         <button
           onClick={handleProcess}
-          disabled={files.filter((f) => f.status === 'done' || f.status === 'uploaded').length === 0 || loading}
+          disabled={files.filter((f) => f.status === 'done' || f.status === 'uploaded').length === 0 || uploading}
           className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
         >
-          {loading ? (
+          {uploading ? (
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
           ) : (
             <ArrowRight size={14} />
           )}
-          {loading ? 'Processing...' : 'Process Scripts'}
+          {uploading ? 'Uploading...' : 'Upload Scripts'}
         </button>
       </div>
     </div>

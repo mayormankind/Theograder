@@ -1,38 +1,220 @@
 "use client";
 
-import { useState } from 'react';
-import { BookOpen, Plus, Search, ChevronRight, Calendar, Users, CheckCircle2, Clock, FileEdit } from 'lucide-react';
-import { mockExams } from '@/lib/mockData';
+import { useState, useEffect } from 'react';
+import { BookOpen, Plus, Search, ChevronRight, Calendar, Users, CheckCircle2, Clock, FileEdit, X, Edit2, Trash2 } from 'lucide-react';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ExamsPageProps {
   onNavigate: (page: Page) => void;
 }
 
+interface Exam {
+  id: string;
+  title: string;
+  description?: string;
+  courseCode?: string;
+  courseName?: string;
+  totalMarks: number;
+  duration?: number;
+  examDate?: string;
+  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  createdAt: string;
+  updatedAt: string;
+  rubrics?: Array<{
+    id: string;
+    title: string;
+  }>;
+  _count?: {
+    scripts: number;
+    graded: number;
+  };
+}
+
 const statusStyles = {
-  active: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
-  completed: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
-  draft: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200',
+  DRAFT: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200',
+  ACTIVE: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
+  COMPLETED: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
+  ARCHIVED: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
 };
 
 const statusLabels = {
-  active: 'Active',
-  completed: 'Completed',
-  draft: 'Draft',
+  DRAFT: 'Draft',
+  ACTIVE: 'Active',
+  COMPLETED: 'Completed',
+  ARCHIVED: 'Archived',
 };
 
 export default function ExamsPage({ onNavigate }: ExamsPageProps) {
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'draft'>('all');
+  const [filter, setFilter] = useState<'all' | 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED'>('all');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    courseCode: string;
+    courseName: string;
+    totalMarks: number;
+    duration: number;
+    examDate: string;
+    status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  }>({
+    title: '',
+    description: '',
+    courseCode: '',
+    courseName: '',
+    totalMarks: 100,
+    duration: 120,
+    examDate: '',
+    status: 'DRAFT',
+  });
 
-  const filtered = mockExams.filter((e) => {
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  const fetchExams = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await fetch('/api/exams');
+      if (!response.ok) {
+        throw new Error('Failed to fetch exams');
+      }
+      
+      const data = await response.json();
+      setExams(data.exams || []);
+    } catch (err) {
+      console.error('Error fetching exams:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load exams');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filtered = exams.filter((e) => {
     const matchSearch =
       e.title.toLowerCase().includes(search.toLowerCase()) ||
-      e.course.toLowerCase().includes(search.toLowerCase());
+      e.courseCode?.toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === 'all' || e.status === filter;
     return matchSearch && matchFilter;
   });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const url = editingExam ? `/api/exams/${editingExam.id}` : '/api/exams';
+      const method = editingExam ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save exam');
+      }
+
+      if (editingExam) {
+        setExams(exams.map(exam => 
+          exam.id === editingExam.id ? { ...exam, ...formData } : exam
+        ));
+        toast.success('Exam updated successfully');
+      } else {
+        const newExam = await response.json();
+        setExams([...exams, newExam.exam]);
+        toast.success('Exam created successfully');
+      }
+
+      setShowCreateModal(false);
+      setShowEditModal(false);
+      setEditingExam(null);
+      setFormData({
+        title: '',
+        description: '',
+        courseCode: '',
+        courseName: '',
+        totalMarks: 100,
+        duration: 120,
+        examDate: '',
+        status: 'DRAFT',
+      });
+    } catch (err) {
+      console.error('Error saving exam:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to save exam');
+    }
+  };
+
+  const handleEdit = (exam: Exam) => {
+    setEditingExam(exam);
+    setFormData({
+      title: exam.title,
+      description: exam.description || '',
+      courseCode: exam.courseCode || '',
+      courseName: exam.courseName || '',
+      totalMarks: exam.totalMarks,
+      duration: exam.duration || 120,
+      examDate: exam.examDate || '',
+      status: exam.status as 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED',
+    });
+    setShowEditModal(true);
+  };
+
+  const handleDelete = async (examId: string) => {
+    if (!confirm('Are you sure you want to delete this exam? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/exams/${examId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete exam');
+      }
+
+      setExams(exams.filter(exam => exam.id !== examId));
+      toast.success('Exam deleted successfully');
+    } catch (err) {
+      console.error('Error deleting exam:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to delete exam');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 border-t-transparent"></div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-slate-600">Failed to load exams</p>
+        <button
+          onClick={fetchExams}
+          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6">
@@ -43,7 +225,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
           <p className="text-sm text-slate-500 mt-0.5">Manage your examination sessions and rubrics.</p>
         </div>
         <button
-          onClick={() => onNavigate('rubrics')}
+          onClick={() => setShowCreateModal(true)}
           className="inline-flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
         >
           <Plus size={15} />
@@ -64,7 +246,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
           />
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
-          {(['all', 'active', 'completed', 'draft'] as const).map((f) => (
+          {(['all', 'DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -84,7 +266,9 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
       {/* Exam Cards */}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         {filtered.map((exam) => {
-          const progress = exam.totalScripts > 0 ? Math.round((exam.graded / exam.totalScripts) * 100) : 0;
+          const progress = exam._count && exam._count.scripts > 0 
+            ? Math.round((exam._count.graded || 0) / exam._count.scripts * 100) 
+            : 0;
           return (
             <div
               key={exam.id}
@@ -97,7 +281,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                   </div>
                   <div>
                     <p className="text-sm font-semibold text-slate-800 leading-snug">{exam.title}</p>
-                    <p className="text-xs text-teal-600 font-medium mt-0.5">{exam.course}</p>
+                    <p className="text-xs text-teal-600 font-medium mt-0.5">{exam.courseCode}</p>
                   </div>
                 </div>
                 <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold', statusStyles[exam.status])}>
@@ -112,26 +296,26 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                     <Calendar size={11} className="text-slate-400" />
                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Date</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700">{exam.date}</p>
+                  <p className="text-xs font-semibold text-slate-700">{exam.examDate || 'Not set'}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
                   <div className="flex items-center gap-1 mb-0.5">
                     <Users size={11} className="text-slate-400" />
                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Scripts</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700">{exam.totalScripts}</p>
+                  <p className="text-xs font-semibold text-slate-700">{exam._count?.scripts || 0}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
                   <div className="flex items-center gap-1 mb-0.5">
                     <CheckCircle2 size={11} className="text-slate-400" />
                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Graded</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700">{exam.graded}</p>
+                  <p className="text-xs font-semibold text-slate-700">{exam._count?.graded || 0}</p>
                 </div>
               </div>
 
               {/* Progress */}
-              {exam.totalScripts > 0 && (
+              {exam._count && exam._count.scripts > 0 && (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-[11px] text-slate-500">Grading progress</p>
@@ -143,13 +327,6 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                       style={{ width: `${progress}%` }}
                     />
                   </div>
-                </div>
-              )}
-
-              {exam.status === 'draft' && (
-                <div className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-2">
-                  <Clock size={12} className="text-amber-500" />
-                  <p className="text-[11px] text-amber-700">No scripts uploaded yet. Add a rubric to get started.</p>
                 </div>
               )}
 
@@ -170,16 +347,165 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                   Edit Rubric
                 </button>
                 <button
-                  onClick={() => onNavigate('results')}
-                  className="ml-auto flex items-center gap-1 text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors"
+                  onClick={() => handleEdit(exam)}
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
-                  View Results <ChevronRight size={12} />
+                  <Edit2 size={12} />
+                  Edit
+                </button>
+                <button
+                  onClick={() => handleDelete(exam.id)}
+                  className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <Trash2 size={12} />
+                  Delete
                 </button>
               </div>
             </div>
           );
         })}
       </div>
+
+      {/* Create/Edit Modal */}
+      {(showCreateModal || showEditModal) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">
+                {editingExam ? 'Edit Exam' : 'Create New Exam'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowCreateModal(false);
+                  setShowEditModal(false);
+                  setEditingExam(null);
+                }}
+                className="text-slate-400 hover:text-slate-600"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={formData.title}
+                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                  placeholder="e.g., Database Systems Final Exam"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Description
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  rows={3}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none"
+                  placeholder="Optional description of the exam"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Course Code
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.courseCode}
+                    onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                    placeholder="e.g., CS301"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Course Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.courseName}
+                    onChange={(e) => setFormData({ ...formData, courseName: e.target.value })}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                    placeholder="e.g., Database Systems"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Total Marks *
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    min="1"
+                    value={formData.totalMarks}
+                    onChange={(e) => setFormData({ ...formData, totalMarks: parseInt(e.target.value) })}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                    placeholder="100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                    Duration (minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={formData.duration}
+                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                    placeholder="120"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Exam Date
+                </label>
+                <input
+                  type="datetime-local"
+                  value={formData.examDate}
+                  onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreateModal(false);
+                    setShowEditModal(false);
+                    setEditingExam(null);
+                  }}
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+                >
+                  {editingExam ? 'Update Exam' : 'Create Exam'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

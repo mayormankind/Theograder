@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -11,8 +11,8 @@ import {
   Edit3,
   Save,
   Award,
+  Loader2,
 } from "lucide-react";
-import { mockGradingResults } from "@/lib/mockData";
 import { GradingResult, Page } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -98,16 +98,20 @@ function SimilarityRing({ value }: { value: number }) {
 }
 
 export default function GradingPage({ onNavigate }: GradingPageProps) {
-  const results = mockGradingResults;
-  const [expandedQ, setExpandedQ] = useState<string[]>([
-    "q1a",
-    "q1b",
-    "q1c",
-    "q1d",
-  ]);
+  const [results, setResults] = useState<GradingResult[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedQ, setExpandedQ] = useState<string[]>([]);
   const [editingScore, setEditingScore] = useState<string | null>(null);
   const [overrides, setOverrides] = useState<Record<string, number>>({});
   const [finalized, setFinalized] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    // This would typically fetch grading results from the API
+    // For now, we'll keep the page in a state that requires a result ID
+    setLoading(false);
+  }, []);
 
   const toggleQ = (id: string) => {
     setExpandedQ((prev) =>
@@ -116,18 +120,55 @@ export default function GradingPage({ onNavigate }: GradingPageProps) {
   };
 
   const getScore = (r: GradingResult) => overrides[r.questionId] ?? r.score;
-  const totalScore = results.reduce((sum, r) => sum + getScore(r), 0);
-  const totalMax = results.reduce((sum, r) => sum + r.maxScore, 0);
-  const avgConfidence = Math.round(
-    results.reduce((sum, r) => sum + r.confidence, 0) / results.length,
-  );
+  const totalScore = results.reduce((sum: number, r: GradingResult) => sum + getScore(r), 0);
+  const totalMax = results.reduce((sum: number, r: GradingResult) => sum + r.maxScore, 0);
+  const avgConfidence = results.length > 0 
+    ? Math.round(results.reduce((sum: number, r: GradingResult) => sum + r.confidence, 0) / results.length)
+    : 0;
 
   const groupedResults: Record<string, GradingResult[]> = {};
-  results.forEach((r) => {
+  results.forEach((r: GradingResult) => {
     if (!groupedResults[r.questionNumber])
       groupedResults[r.questionNumber] = [];
     groupedResults[r.questionNumber].push(r);
   });
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin text-slate-400" size={32} />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-slate-600">Failed to load grading results</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  if (results.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-slate-600">No grading results to display</p>
+        <p className="text-sm text-slate-400">Select a script from the Scripts page to view grading results</p>
+        <button
+          onClick={() => onNavigate('scripts')}
+          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+        >
+          Go to Scripts
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-full">

@@ -12,7 +12,7 @@ export default function Navbar() {
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       setMounted(true);
-      const savedTheme = localStorage.getItem("gradeiq-theme") as "dark" | "light" | null;
+      const savedTheme = localStorage.getItem("theograder-theme") as "dark" | "light" | null;
       const initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
       
       if (initialTheme !== activeTheme) {
@@ -36,7 +36,7 @@ export default function Navbar() {
     const newTheme = activeTheme === "dark" ? "light" : "dark";
     setActiveTheme(newTheme);
     document.documentElement.setAttribute("data-theme", newTheme);
-    localStorage.setItem("gradeiq-theme", newTheme);
+    localStorage.setItem("theograder-theme", newTheme);
   };
 
   const toggleMobileMenu = () => {
@@ -77,7 +77,7 @@ export default function Navbar() {
               </svg>
             </div>
             <span className="logo-text">
-              Grade<span className="logo-accent">IQ</span>
+              Theo<span className="logo-accent">Grader</span>
             </span>
           </Link>
           <div className="nav-links" id="navLinks">

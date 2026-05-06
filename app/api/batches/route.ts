@@ -133,16 +133,15 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Upload files and create batch items
-    const uploadDir = join(process.cwd(), 'uploads', session.userId!, 'batches', batch.id);
-    await mkdir(uploadDir, { recursive: true });
-
+    // Upload files to Supabase and create batch items
     const uploadedFiles = [];
     for (const [index, file] of files.entries()) {
       const fileId = uuidv4();
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
       const fileName = `${fileId}${fileExtension}`;
-      const filePath = join(uploadDir, fileName);
+      
+      // Path in Supabase bucket
+      const storagePath = `${session.userId}/${validatedData.examId}/${fileName}`;
 
       // Validate file
       const maxSize = 20 * 1024 * 1024; // 20MB
@@ -163,10 +162,16 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Save file to disk
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
+      // Upload to Supabase Storage
+      try {
+        await uploadFileToSupabase(file, 'uploads', storagePath);
+      } catch (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        return NextResponse.json(
+          { error: `Failed to upload ${file.name} to storage` },
+          { status: 500 }
+        );
+      }
 
       // Create script record
       const script = await prisma.script.create({
@@ -175,7 +180,7 @@ export async function POST(request: NextRequest) {
           originalName: file.name,
           fileSize: file.size,
           mimeType: file.type,
-          filePath: filePath,
+          filePath: storagePath, // Store Supabase path
           examId: validatedData.examId,
           status: 'PROCESSING',
         },

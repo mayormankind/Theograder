@@ -10,7 +10,7 @@ export default function CTASection() {
             <h2>Ready to transform how you grade?</h2>
             <p>
               Join 200+ Nigerian lecturers who are grading smarter, faster, and
-              more consistently with GradeIQ.
+              more consistently with TheoGrader.
             </p>
             <div className="cta-actions">
               <Link href="/auth/signup" className="btn-primary-lg btn-white">

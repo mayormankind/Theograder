@@ -29,7 +29,7 @@ export default function AuthLayout({
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       setMounted(true);
-      const saved = localStorage.getItem("gradeiq-theme") as
+      const saved = localStorage.getItem("theograder-theme") as
         | "dark"
         | "light"
         | null;
@@ -52,7 +52,7 @@ export default function AuthLayout({
     const newTheme = activeTheme === "dark" ? "light" : "dark";
     setActiveTheme(newTheme);
     document.documentElement.setAttribute("data-theme", newTheme);
-    localStorage.setItem("gradeiq-theme", newTheme);
+    localStorage.setItem("theograder-theme", newTheme);
   };
 
   return (
@@ -87,7 +87,7 @@ export default function AuthLayout({
                   </svg>
                 </div>
                 <span className="logo-text">
-                  Grade<span className="logo-accent">IQ</span>
+                  Theo<span className="logo-accent">Grader</span>
                 </span>
               </Link>
             </div>

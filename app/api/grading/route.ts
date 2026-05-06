@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
+import { downloadFileFromSupabase } from '@/lib/supabase';
 
 const gradeScriptSchema = z.object({
   scriptId: z.string().min(1, 'Script ID is required'),
@@ -157,9 +158,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No rubric available for grading' }, { status: 400 });
     }
 
-    // Read file content
-    const fs = require('fs');
-    const fileBuffer = fs.readFileSync(script.filePath);
+    // Download file from Supabase Storage
+    let fileBuffer: Buffer;
+    try {
+      fileBuffer = await downloadFileFromSupabase('uploads', script.filePath);
+    } catch (downloadError) {
+      console.error('Failed to download file from Supabase:', downloadError);
+      return NextResponse.json(
+        { error: 'Failed to download script file from storage' },
+        { status: 500 }
+      );
+    }
+
     const fileBlob = new Blob([fileBuffer], { type: script.mimeType });
 
     // Create form data for AI service

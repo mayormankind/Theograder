@@ -1,8 +1,8 @@
-# 📘 Intelligent Assessment System — Project Context
+# 📘 TheoGrader — Project Context
 
 ## 🏷️ Project Title
 
-Design and Development of an Intelligent Assessment System for Automated Grading of Theoretical Examination Scripts in Nigerian Universities
+TheoGrader — Design and Development of an Intelligent Assessment System for Automated Grading of Theoretical Examination Scripts in Nigerian Universities
 
 ---
 
@@ -194,6 +194,6 @@ TheoGrader/
 The dashboard currently in `intelliGrade` (built with Vite/React) will be merged into `TheoGrader` using the following steps:
 
 1.  **Component Porting**: Move `intelliGrade/src/components/*` to `TheoGrader/components/dashboard/`.
-2.  **Style Migration**: Integrate `intelliGrade/src/index.css` into `TheoGrader/app/gradeiq.css` or as a module.
+2.  **Style Migration**: Integrate `intelliGrade/src/index.css` into `TheoGrader/app/theograder.css` or as a module.
 3.  **Route Setup**: Create `TheoGrader/app/(dashboard)/dashboard/page.tsx` as the main entry point.
 4.  **State Management**: Transition from local Vite state to Next.js server/client state patterns.

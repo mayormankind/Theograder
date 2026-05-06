@@ -53,3 +53,18 @@ export async function deleteFileFromSupabase(bucket: string, path: string) {
     throw new Error(`Failed to delete file: ${error.message}`);
   }
 }
+
+// Helper function to download file from Supabase Storage
+export async function downloadFileFromSupabase(bucket: string, path: string): Promise<Buffer> {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .download(path);
+
+  if (error) {
+    throw new Error(`Failed to download file: ${error.message}`);
+  }
+
+  // Convert Blob to Buffer
+  const arrayBuffer = await data.arrayBuffer();
+  return Buffer.from(arrayBuffer);
+}

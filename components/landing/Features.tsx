@@ -148,7 +148,7 @@ export default function Features() {
                 </div>
                 <h3>Rubric-Based Grading</h3>
                 <p>
-                  Define your marking scheme once. GradeIQ maps every answer to
+                  Define your marking scheme once. TheoGrader maps every answer to
                   your rubric criteria automatically.
                 </p>
               </div>

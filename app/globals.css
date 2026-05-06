@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "./gradeiq.css";
+@import "./theograder.css";
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {

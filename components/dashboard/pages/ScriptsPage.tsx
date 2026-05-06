@@ -1,3 +1,4 @@
+//components/dashboard/pages/ScriptsPage.tsx
 "use client";
 
 import { useState, useEffect } from 'react';

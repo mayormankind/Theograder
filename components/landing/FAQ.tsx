@@ -12,7 +12,7 @@ export default function FAQ() {
     },
     {
       q: "Can I customize the rubric for my course?",
-      a: "Absolutely. You define your own marking scheme, model answers, and grading criteria for each question. GradeIQ adapts to your rubric — not the other way around.",
+      a: "Absolutely. You define your own marking scheme, model answers, and grading criteria for each question. TheoGrader adapts to your rubric — not the other way around.",
     },
     {
       q: "What is SBERT and why do you use it?",
@@ -28,7 +28,7 @@ export default function FAQ() {
     },
     {
       q: "How much does it cost?",
-      a: "GradeIQ is currently in early access. Each lecturer gets one free account with full feature access. Sign up now to lock in early adopter benefits.",
+      a: "TheoGrader is currently in early access. Each lecturer gets one free account with full feature access. Sign up now to lock in early adopter benefits.",
     },
   ];
 

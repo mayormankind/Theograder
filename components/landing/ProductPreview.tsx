@@ -10,7 +10,7 @@ export default function ProductPreview() {
             engine in action
           </h2>
           <p className="section-desc">
-            A detailed breakdown of how GradeIQ scores and explains every
+            A detailed breakdown of how TheoGrader scores and explains every
             answer.
           </p>
         </div>
@@ -23,7 +23,7 @@ export default function ProductPreview() {
             </div>
             <div className="preview-url">
               <i className="fas fa-lock"></i>
-              app.gradeiq.ng/grading/BIO301/scripts/247
+              app.theograder.ng/grading/BIO301/scripts/247
             </div>
             <div className="preview-actions-top">
               <i className="fas fa-arrow-up-right-from-square"></i>

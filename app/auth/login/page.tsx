@@ -270,7 +270,7 @@ export default function LoginPage() {
     >
       <div className="auth-form-header">
         <h1>Welcome back</h1>
-        <p>Log in to your GradeIQ account to continue grading.</p>
+        <p>Log in to your TheoGrader account to continue grading.</p>
       </div>
 
       <div className="auth-divider">

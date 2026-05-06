@@ -31,9 +31,9 @@ export default function Footer() {
                   </defs>
                 </svg>
               </div>
-              <span className="logo-text"
-                >Grade<span className="logo-accent">IQ</span></span
-              >
+              <span className="logo-text">
+                Theo<span className="logo-accent">Grader</span>
+              </span>
             </Link>
             <p className="footer-desc">
               Intelligent assessment grading system built specifically for
@@ -63,11 +63,19 @@ export default function Footer() {
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2025 GradeIQ. All rights reserved.</span>
+          <span>
+            © {new Date().getFullYear()} TheoGrader. All rights reserved.
+          </span>
           <div className="footer-social">
-            <a href="#"><i className="fab fa-twitter"></i></a>
-            <a href="#"><i className="fab fa-linkedin"></i></a>
-            <a href="#"><i className="fab fa-github"></i></a>
+            <a href="#">
+              <i className="fab fa-twitter"></i>
+            </a>
+            <a href="#">
+              <i className="fab fa-linkedin"></i>
+            </a>
+            <a href="#">
+              <i className="fab fa-github"></i>
+            </a>
           </div>
         </div>
       </div>

@@ -1,7 +1,7 @@
 export default function Testimonials() {
   const testimonials = [
     {
-      text: "I used to spend 3 weeks grading 200 scripts for BIO 301. With GradeIQ, I reviewed everything in 2 days. The semantic analysis is shockingly accurate.",
+      text: "I used to spend 3 weeks grading 200 scripts for BIO 301. With TheoGrader, I reviewed everything in 2 days. The semantic analysis is shockingly accurate.",
       author: "Dr. Oluwaseun Adeyemi",
       role: "Senior Lecturer, University of Lagos",
       initials: "OA",

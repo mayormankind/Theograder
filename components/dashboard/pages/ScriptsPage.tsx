@@ -10,6 +10,8 @@ import {
   BarChart3,
   Loader2,
   Trash2,
+  Zap,
+  ChevronDown,
 } from 'lucide-react';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
@@ -29,8 +31,14 @@ interface Script {
   confidence?: number;
 }
 
+interface Exam {
+  id: string;
+  title: string;
+  courseCode?: string;
+}
+
 interface ScriptsPageProps {
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
 }
 
 const statusStyles: Record<string, { style: string; label: string; dot: string }> = {
@@ -42,20 +50,44 @@ const statusStyles: Record<string, { style: string; label: string; dot: string }
 
 export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const [scripts, setScripts] = useState<Script[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedExamId, setSelectedExamId] = useState<string>('all');
+  const [batchGrading, setBatchGrading] = useState(false);
+
+  useEffect(() => {
+    fetchExams();
+    fetchScripts();
+  }, []);
 
   useEffect(() => {
     fetchScripts();
-  }, []);
+  }, [selectedExamId]);
+
+  const fetchExams = async () => {
+    try {
+      const response = await fetch('/api/exams');
+      if (!response.ok) {
+        throw new Error('Failed to fetch exams');
+      }
+      const data = await response.json();
+      setExams(data.exams || []);
+    } catch (err) {
+      console.error('Error fetching exams:', err);
+    }
+  };
 
   const fetchScripts = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/upload');
+      const url = selectedExamId === 'all' 
+        ? '/api/upload' 
+        : `/api/upload?examId=${selectedExamId}`;
+      const response = await fetch(url);
       if (!response.ok) {
         throw new Error('Failed to fetch scripts');
       }
@@ -91,6 +123,69 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     }
   };
 
+  const handleGradeScript = async (scriptId: string) => {
+    try {
+      const response = await fetch('/api/grading', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ scriptId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to grade script');
+      }
+
+      toast.success('Script graded successfully');
+      fetchScripts();
+    } catch (err) {
+      console.error('Error grading script:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to grade script');
+    }
+  };
+
+  const handleBatchGrade = async () => {
+    if (selectedExamId === 'all') {
+      toast.error('Please select an exam to grade');
+      return;
+    }
+
+    const ungradedScripts = scripts.filter(s => s.status === 'UPLOADED' || s.status === 'PROCESSING');
+    if (ungradedScripts.length === 0) {
+      toast.error('No ungraded scripts for this exam');
+      return;
+    }
+
+    if (!confirm(`Grade ${ungradedScripts.length} script(s) for this exam? This may take a while.`)) {
+      return;
+    }
+
+    setBatchGrading(true);
+    try {
+      const response = await fetch('/api/batches', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: `Batch Grade - ${new Date().toLocaleDateString()}`,
+          examId: selectedExamId,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to start batch grading');
+      }
+
+      toast.success(`Started grading ${ungradedScripts.length} script(s)`);
+      onNavigate('processing');
+    } catch (err) {
+      console.error('Error starting batch grade:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to start batch grading');
+    } finally {
+      setBatchGrading(false);
+    }
+  };
+
   const filtered = scripts.filter((s: Script) => {
     const matchSearch =
       s.studentName.toLowerCase().includes(search.toLowerCase()) ||
@@ -108,6 +203,9 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     UPLOADED: scripts.filter((s: Script) => s.status === 'UPLOADED').length,
   };
 
+  const selectedExam = exams.find(e => e.id === selectedExamId);
+  const ungradedCount = scripts.filter(s => s.status === 'UPLOADED' || s.status === 'PROCESSING').length;
+
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Error Display */}
@@ -121,7 +219,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-slate-800">Examination Scripts</h2>
-          <p className="text-sm text-slate-500 mt-0.5">All uploaded student answer scripts across active examinations.</p>
+          <p className="text-sm text-slate-500 mt-0.5">Manage and grade student answer scripts by examination.</p>
         </div>
         <button
           onClick={() => onNavigate('upload')}
@@ -129,6 +227,44 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
         >
           <Upload size={14} /> Upload Scripts
         </button>
+      </div>
+
+      {/* Exam Filter & Batch Grade Bar */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <select
+              value={selectedExamId}
+              onChange={(e) => setSelectedExamId(e.target.value)}
+              className="h-10 appearance-none rounded-lg border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-medium text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all min-w-[250px]"
+            >
+              <option value="all">All Examinations</option>
+              {exams.map((exam) => (
+                <option key={exam.id} value={exam.id}>
+                  {exam.title} {exam.courseCode ? `(${exam.courseCode})` : ''}
+                </option>
+              ))}
+            </select>
+            <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          </div>
+          {selectedExamId !== 'all' && (
+            <button
+              onClick={handleBatchGrade}
+              disabled={batchGrading || ungradedCount === 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {batchGrading ? (
+                <Loader2 className="animate-spin" size={14} />
+              ) : (
+                <Zap size={14} />
+              )}
+              {batchGrading ? 'Grading...' : `Grade All (${ungradedCount})`}
+            </button>
+          )}
+        </div>
+        <div className="text-xs text-slate-500">
+          Showing {scripts.length} script{scripts.length !== 1 ? 's' : ''}
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -188,9 +324,10 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
             <tbody className="divide-y divide-slate-50">
               {filtered.map((script: Script) => {
                 const st = statusStyles[script.status];
-                const scorePct = script.score !== undefined && script.totalMarks !== undefined 
-    ? Math.round((script.score / script.totalMarks) * 100) 
+                const scorePct = script.score !== undefined && script.totalMarks !== undefined
+    ? Math.round((script.score / script.totalMarks) * 100)
     : null;
+                const canGrade = script.status === 'UPLOADED' || script.status === 'PROCESSING';
                 return (
                 <tr key={script.id} className="hover:bg-slate-50/80 transition-colors group">
                   <td className="px-5 py-4">
@@ -251,18 +388,31 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                     )}
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      {canGrade && (
+                        <button
+                          onClick={() => handleGradeScript(script.id)}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-teal-600 hover:bg-teal-50 transition-colors"
+                          title="Grade this script"
+                        >
+                          <Zap size={11} /> Grade
+                        </button>
+                      )}
+                      {script.status === 'GRADED' && (
+                        <button
+                          onClick={() => onNavigate('grading', { scriptId: script.id })}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
+                          title="View grading details"
+                        >
+                          <Eye size={11} /> Review
+                        </button>
+                      )}
                       <button
-                        onClick={() => onNavigate('results')}
-                        className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-teal-600 hover:bg-teal-50 transition-colors"
-                      >
-                        <Eye size={11} /> View
-                      </button>
-                      <button
-                        onClick={() => onNavigate('report')}
+                        onClick={() => onNavigate('results', { scriptId: script.id })}
                         className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                        title="View results"
                       >
-                        <BarChart3 size={11} /> Report
+                        <BarChart3 size={11} /> Results
                       </button>
                     </div>
                   </td>

@@ -28,12 +28,13 @@ export default function DashboardLayout({
     setActivePage(getActivePage(pathname));
   }, [pathname]);
 
-  const handleNavigate = (page: Page) => {
-    if (page === "dashboard") {
-      router.push("/dashboard");
-    } else {
-      router.push(`/dashboard/${page}`);
+  const handleNavigate = (page: Page, params?: Record<string, string>) => {
+    let url = page === "dashboard" ? "/dashboard" : `/dashboard/${page}`;
+    if (params) {
+      const searchParams = new URLSearchParams(params);
+      url += `?${searchParams.toString()}`;
     }
+    router.push(url);
   };
 
   return (

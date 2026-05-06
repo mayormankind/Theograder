@@ -170,7 +170,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const fileBlob = new Blob([fileBuffer], { type: script.mimeType });
+    const fileBlob = new Blob([new Uint8Array(fileBuffer)], { type: script.mimeType });
 
     // Create form data for AI service
     const formData = new FormData();

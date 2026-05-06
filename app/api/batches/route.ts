@@ -5,6 +5,7 @@ import { requireAuth } from '@/lib/session';
 import { writeFile, mkdir } from 'fs/promises';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { downloadFileFromSupabase, uploadFileToSupabase } from '@/lib/supabase';
 
 const createBatchSchema = z.object({
   name: z.string().min(1, 'Batch name is required'),
@@ -89,16 +90,42 @@ export async function POST(request: NextRequest) {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
 
-    const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
-    const batchData = JSON.parse(formData.get('batchData') as string);
+    const contentType = request.headers.get('content-type') || '';
+    let files: File[] = [];
+    let validatedData: z.infer<typeof createBatchSchema>;
 
-    // Validate input
-    if (!files || files.length === 0) {
-      return NextResponse.json({ error: 'No files provided' }, { status: 400 });
+    // Handle both JSON (for existing scripts) and FormData (for new file uploads)
+    if (contentType.includes('application/json')) {
+      const body = await request.json();
+      validatedData = createBatchSchema.parse(body);
+      
+      // Fetch existing scripts for the exam
+      const existingScripts = await prisma.script.findMany({
+        where: {
+          examId: validatedData.examId,
+          status: { in: ['PROCESSING'] as const },
+        },
+      });
+
+      if (existingScripts.length === 0) {
+        return NextResponse.json({ error: 'No ungraded scripts found for this exam' }, { status: 400 });
+      }
+
+      // Convert scripts to File objects for AI service
+      // Note: This requires fetching files from storage - for now, we'll pass script IDs
+      // and let the AI service fetch from Supabase directly
+      files = []; // Will handle differently below
+    } else {
+      const formData = await request.formData();
+      files = formData.getAll('files') as File[];
+      const batchData = JSON.parse(formData.get('batchData') as string);
+
+      if (!files || files.length === 0) {
+        return NextResponse.json({ error: 'No files provided' }, { status: 400 });
+      }
+
+      validatedData = createBatchSchema.parse(JSON.parse(batchData));
     }
-
-    const validatedData = createBatchSchema.parse(JSON.parse(batchData));
 
     // Verify exam exists and belongs to user
     const exam = await prisma.exam.findFirst({
@@ -122,85 +149,122 @@ export async function POST(request: NextRequest) {
     // Get AI service URL
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
+    // Determine if we're using existing scripts or uploading new ones
+    const useExistingScripts = files.length === 0;
+    const scriptsToProcess = useExistingScripts
+      ? await prisma.script.findMany({
+          where: {
+            examId: validatedData.examId,
+            status: { in: ['PROCESSING'] as const },
+          },
+        })
+      : [];
+
     // Create batch record
     const batch = await prisma.batch.create({
       data: {
         name: validatedData.name,
         description: validatedData.description,
         examId: validatedData.examId,
-        totalFiles: files.length,
+        totalFiles: useExistingScripts ? scriptsToProcess.length : files.length,
         status: 'PENDING',
       },
     });
 
-    // Upload files to Supabase and create batch items
+    // Upload files to Supabase and create batch items (for new uploads)
     const uploadedFiles = [];
-    for (const [index, file] of files.entries()) {
-      const fileId = uuidv4();
-      const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
-      const fileName = `${fileId}${fileExtension}`;
-      
-      // Path in Supabase bucket
-      const storagePath = `${session.userId}/${validatedData.examId}/${fileName}`;
+    if (!useExistingScripts) {
+      for (const [index, file] of files.entries()) {
+        const fileId = uuidv4();
+        const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
+        const fileName = `${fileId}${fileExtension}`;
+        
+        // Path in Supabase bucket
+        const storagePath = `${session.userId}/${validatedData.examId}/${fileName}`;
 
-      // Validate file
-      const maxSize = 20 * 1024 * 1024; // 20MB
-      const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
-      const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
+        // Validate file
+        const maxSize = 20 * 1024 * 1024; // 20MB
+        const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+        const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png'];
 
-      if (file.size > maxSize) {
-        return NextResponse.json(
-          { error: `File ${file.name} exceeds maximum size of 20MB` },
-          { status: 400 }
-        );
-      }
+        if (file.size > maxSize) {
+          return NextResponse.json(
+            { error: `File ${file.name} exceeds maximum size of 20MB` },
+            { status: 400 }
+          );
+        }
 
-      if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-        return NextResponse.json(
-          { error: `File ${file.name} is not a supported format` },
-          { status: 400 }
-        );
-      }
+        if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+          return NextResponse.json(
+            { error: `File ${file.name} is not a supported format` },
+            { status: 400 }
+          );
+        }
 
-      // Upload to Supabase Storage
-      try {
-        await uploadFileToSupabase(file, 'uploads', storagePath);
-      } catch (uploadError) {
-        console.error('Supabase upload error:', uploadError);
-        return NextResponse.json(
-          { error: `Failed to upload ${file.name} to storage` },
-          { status: 500 }
-        );
-      }
+        // Upload to Supabase Storage
+        try {
+          await uploadFileToSupabase(file, 'uploads', storagePath);
+        } catch (uploadError) {
+          console.error('Supabase upload error:', uploadError);
+          return NextResponse.json(
+            { error: `Failed to upload ${file.name} to storage` },
+            { status: 500 }
+          );
+        }
 
-      // Create script record
-      const script = await prisma.script.create({
-        data: {
-          filename: fileName,
-          originalName: file.name,
-          fileSize: file.size,
-          mimeType: file.type,
-          filePath: storagePath, // Store Supabase path
-          examId: validatedData.examId,
-          status: 'PROCESSING',
-        },
-      });
+        // Create script record
+        const script = await prisma.script.create({
+          data: {
+            filename: fileName,
+            originalName: file.name,
+            fileSize: file.size,
+            mimeType: file.type,
+            filePath: storagePath, // Store Supabase path
+            examId: validatedData.examId,
+            status: 'PROCESSING',
+          },
+        });
 
-      // Create batch item
-      const batchItem = await prisma.batchItem.create({
-        data: {
-          batchId: batch.id,
-          filename: file.name,
+        // Create batch item
+        const batchItem = await prisma.batchItem.create({
+          data: {
+            batchId: batch.id,
+            filename: file.name,
+            scriptId: script.id,
+            status: 'PENDING',
+          },
+        });
+
+        uploadedFiles.push({
           scriptId: script.id,
-          status: 'PENDING',
-        },
-      });
+          filename: file.name,
+          batchItemId: batchItem.id,
+        });
+      }
+    } else {
+      // Create batch items for existing scripts
+      for (const script of scriptsToProcess) {
+        const batchItem = await prisma.batchItem.create({
+          data: {
+            batchId: batch.id,
+            filename: script.originalName,
+            scriptId: script.id,
+            status: 'PENDING',
+          },
+        });
 
-      uploadedFiles.push({
-        scriptId: script.id,
-        filename: file.name,
-        batchItemId: batchItem.id,
-      });
+        uploadedFiles.push({
+          scriptId: script.id,
+          filename: script.originalName,
+          batchItemId: batchItem.id,
+        });
+
+        // Update script status to PROCESSING
+        await prisma.script.update({
+          where: { id: script.id },
+          data: { status: 'PROCESSING' },
+        });
+      }
     }
 
     // Start batch processing by calling AI service
@@ -209,8 +273,27 @@ export async function POST(request: NextRequest) {
       batchFormData.append('rubric_id', exam.rubrics[0].id);
       
       // Add all files to form data
-      for (const [index, file] of files.entries()) {
-        batchFormData.append(`files`, file);
+      if (useExistingScripts) {
+        // Download files from Supabase and add to FormData
+        for (const script of scriptsToProcess) {
+          try {
+            const fileBuffer = await downloadFileFromSupabase('uploads', script.filePath);
+            const file = new File([new Uint8Array(fileBuffer)], script.originalName, {
+              type: script.mimeType,
+            });
+            batchFormData.append('files', file);
+          } catch (downloadError) {
+            console.error(`Failed to download script ${script.id}:`, downloadError);
+            return NextResponse.json(
+              { error: `Failed to download script ${script.originalName}` },
+              { status: 500 }
+            );
+          }
+        }
+      } else {
+        for (const [index, file] of files.entries()) {
+          batchFormData.append(`files`, file);
+        }
       }
 
       const response = await fetch(`${aiServiceUrl}/batch-grade`, {

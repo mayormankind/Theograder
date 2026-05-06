@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   CheckCircle2,
   XCircle,
@@ -12,14 +13,13 @@ import {
   Flag,
   ArrowRight,
   Sparkles,
-  AlertCircle
+  Loader2,
 } from 'lucide-react';
-import type { Page } from '@/types';
-import { type GradingResult } from '@/lib/services/grading-service';
+import type { Page, GradingResult } from '@/types';
 import { cn } from '@/lib/utils';
 
 interface ResultsPageProps {
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
 }
 
 const confidenceColor = (c: number) => {
@@ -58,53 +58,90 @@ const ScoreGauge = ({ score, max }: { score: number; max: number }) => {
 };
 
 export default function ResultsPage({ onNavigate }: ResultsPageProps) {
-  const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
+  const searchParams = useSearchParams();
+  const scriptId = searchParams.get('scriptId');
+  const [results, setResults] = useState<GradingResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [overrides, setOverrides] = useState<Record<string, string>>({});
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
 
-  // This page should receive a result ID parameter to fetch specific grading results
-  // For now, we'll keep the loading state but remove mock data
   useEffect(() => {
-    // This would typically fetch grading results from /api/grading/result/[id]
-    // The page needs to be navigated to with a specific result ID
-    setLoading(false);
-  }, []);
+    if (scriptId) {
+      fetchResults(scriptId);
+    } else {
+      setLoading(false);
+      setError('No script ID provided');
+    }
+  }, [scriptId]);
+
+  const fetchResults = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/api/grading?scriptId=${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch results');
+      }
+      const data = await response.json();
+      setResults(data.results || []);
+    } catch (err) {
+      console.error('Error fetching results:', err);
+      setError('Failed to load results');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleRow = (key: string) => {
+    setExpandedRows(prev =>
+      prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key]
+    );
+  };
+
+  const totalScore = results.reduce((sum, r) => {
+    const key = `${r.questionId}-${r.partLabel}`;
+    return sum + (overrides[key] !== undefined ? parseFloat(overrides[key]) || 0 : r.score);
+  }, 0);
+
+  const totalMax = results.reduce((sum, r) => sum + r.maxScore, 0);
+  const overallPct = totalMax > 0 ? Math.round((totalScore / totalMax) * 100) : 0;
+  const avgConfidence = results.length > 0
+    ? Math.round(results.reduce((sum, r) => sum + r.confidence, 0) / results.length)
+    : 0;
+
+  const groupedByQ: Record<string, GradingResult[]> = {};
+  results.forEach((r) => {
+    if (!groupedByQ[r.questionNumber]) groupedByQ[r.questionNumber] = [];
+    groupedByQ[r.questionNumber].push(r);
+  });
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3">
-          <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-400 border-t-transparent" />
-          <p className="text-sm text-slate-500">Loading grading results...</p>
-        </div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="animate-spin text-slate-400" size={32} />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-3 text-center">
-          <AlertCircle size={24} className="text-red-500" />
-          <p className="text-sm text-red-600">{error}</p>
-          <button
-            onClick={() => window.location.reload()}
-            className="rounded-lg bg-red-600 px-4 py-2 text-xs font-medium text-white hover:bg-red-700 transition-colors"
-          >
-            Retry
-          </button>
-        </div>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-slate-600">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+        >
+          Retry
+        </button>
       </div>
     );
   }
 
-  if (!gradingResult) {
+  if (results.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <p className="text-sm text-slate-500">No grading result selected</p>
-        <p className="text-xs text-slate-400">Select a script from the Scripts page to view its grading results</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+        <p className="text-slate-600">No results to display</p>
         <button
           onClick={() => onNavigate('scripts')}
           className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
@@ -115,54 +152,14 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
     );
   }
 
-  const totalScore = gradingResult.totalScore;
-  const totalMax = gradingResult.maxScore;
-  const avgConfidence = Math.round(gradingResult.overallConfidence * 100);
-  const overallPct = Math.round((totalScore / totalMax) * 100);
-
-  const toggleRow = (key: string) =>
-    setExpandedRows((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
-
-  // Convert questions to the format expected by the UI
-  const results = gradingResult.questions.flatMap((q, qIndex) => 
-    q.breakdown.map((part, pIndex) => ({
-      questionId: `q${qIndex + 1}`,
-      questionNumber: `Q${qIndex + 1}`,
-      partLabel: String.fromCharCode(97 + pIndex), // a, b, c, d...
-      studentAnswer: 'Extracted student answer would go here',
-      score: Math.round(part.similarity * part.weight * q.maxScore),
-      maxScore: Math.round(part.weight * q.maxScore),
-      similarityScore: Math.round(part.similarity * 100),
-      confidence: Math.round(q.confidence * 100),
-      matchedConcepts: [part.point],
-      missingConcepts: []
-    }))
-  );
-
-  const groupedByQ: Record<string, typeof results> = {};
-  results.forEach((r) => {
-    if (!groupedByQ[r.questionNumber]) groupedByQ[r.questionNumber] = [];
-    groupedByQ[r.questionNumber].push(r);
-  });
-
-  const studentAnswerLines = [
-    { label: 'Q1a', text: 'Atomicity means that a transaction is treated as a single unit. Either all operations succeed or none of them are applied to the database. For example, if a bank transfer fails midway, the debit is rolled back.', match: 88 },
-    { label: 'Q1b', text: 'Consistency ensures the database stays valid after a transaction. It must obey all constraints and integrity rules defined in the schema.', match: 82 },
-    { label: 'Q1c', text: 'Isolation means transactions run independently from each other. Multiple transactions happening at once should not interfere.', match: 67 },
-    { label: 'Q1d', text: 'Durability guarantees that once committed, a transaction is permanently saved. Even if the system crashes, the data is not lost because of logs.', match: 94 },
-    { label: 'Q2a', text: 'Relational databases use tables with rows and columns. They use SQL for querying and foreign keys to link tables together.', match: 76 },
-    { label: 'Q2b', text: 'NoSQL document stores like MongoDB use JSON documents. They are flexible and can scale horizontally across many servers.', match: 78 },
-    { label: 'Q2c', text: 'Relational databases are more consistent but harder to scale. NoSQL is more flexible and scalable for big data.', match: 71 },
-  ];
-
   return (
     <div className="flex flex-col gap-0 h-full">
       {/* Top Bar */}
       <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3.5">
         <div className="flex items-center gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Adaeze Okonkwo — STU-2021-0044</p>
-            <p className="text-xs text-slate-500">Database Systems Final · CSC 401</p>
+            <p className="text-sm font-semibold text-slate-800">Grading Results</p>
+            <p className="text-xs text-slate-500">Script ID: {scriptId}</p>
           </div>
           <div className="hidden md:flex items-center gap-3 border-l border-slate-200 pl-4">
             <div className="text-center">
@@ -186,7 +183,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
             <Flag size={12} /> Flag for Review
           </button>
           <button
-            onClick={() => { onNavigate('report'); }}
+            onClick={() => onNavigate('report')}
             className="flex items-center gap-1.5 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] transition-colors"
           >
             <Save size={12} /> Finalize Result
@@ -202,31 +199,19 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
             <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Student Answers (OCR Extract)</p>
           </div>
           <div className="flex flex-col gap-3 p-5">
-            {studentAnswerLines.map((item) => {
-              const matchColor =
-                item.match >= 85 ? 'border-l-teal-400 bg-teal-50/50' :
-                item.match >= 70 ? 'border-l-blue-400 bg-blue-50/50' :
-                item.match >= 55 ? 'border-l-amber-400 bg-amber-50/50' :
-                'border-l-red-400 bg-red-50/50';
-              const badgeColor =
-                item.match >= 85 ? 'bg-teal-100 text-teal-700' :
-                item.match >= 70 ? 'bg-blue-100 text-blue-700' :
-                item.match >= 55 ? 'bg-amber-100 text-amber-700' :
-                'bg-red-100 text-red-700';
-              return (
-                <div key={item.label} className={cn('rounded-lg border-l-2 p-3.5 bg-white shadow-sm', matchColor)}>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-white">
-                      {item.label}
-                    </span>
-                    <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold', badgeColor)}>
-                      {item.match}% match
-                    </span>
-                  </div>
-                  <p className="text-xs leading-relaxed text-slate-700">{item.text}</p>
+            {results.map((result) => (
+              <div key={result.questionId} className="rounded-lg border-l-2 border-teal-400 bg-teal-50/50 p-3.5 bg-white shadow-sm">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-white">
+                    {result.questionNumber} ({result.partLabel})
+                  </span>
+                  <span className="rounded-full bg-teal-100 text-teal-700 px-2 py-0.5 text-[10px] font-semibold">
+                    {Math.round(result.similarityScore)}% match
+                  </span>
                 </div>
-              );
-            })}
+                <p className="text-xs leading-relaxed text-slate-700">{result.studentAnswer}</p>
+              </div>
+            ))}
           </div>
         </div>
 
@@ -361,7 +346,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
                               <Edit3 size={12} className="text-slate-400 shrink-0" />
                               <p className="text-[11px] font-medium text-slate-600">Score Override</p>
                               <div className="flex items-center gap-1.5 ml-auto">
-                                <input title=''
+                                <input
                                   type="number"
                                   min={0}
                                   max={result.maxScore}

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { GradingResult, Page } from "@/types";
 import { cn } from "@/lib/utils";
+import { useSearchParams } from "next/navigation";
 
 interface GradingPageProps {
   onNavigate: (page: Page) => void;
@@ -98,6 +99,8 @@ function SimilarityRing({ value }: { value: number }) {
 }
 
 export default function GradingPage({ onNavigate }: GradingPageProps) {
+  const searchParams = useSearchParams();
+  const scriptId = searchParams.get('scriptId');
   const [results, setResults] = useState<GradingResult[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -108,10 +111,31 @@ export default function GradingPage({ onNavigate }: GradingPageProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // This would typically fetch grading results from the API
-    // For now, we'll keep the page in a state that requires a result ID
-    setLoading(false);
-  }, []);
+    if (scriptId) {
+      fetchGradingResults(scriptId);
+    } else {
+      setLoading(false);
+      setError('No script ID provided');
+    }
+  }, [scriptId]);
+
+  const fetchGradingResults = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/api/grading?scriptId=${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch grading results');
+      }
+      const data = await response.json();
+      setResults(data.results || []);
+    } catch (err) {
+      console.error('Error fetching grading results:', err);
+      setError('Failed to load grading results');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const toggleQ = (id: string) => {
     setExpandedQ((prev) =>

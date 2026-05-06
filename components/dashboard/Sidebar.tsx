@@ -23,7 +23,7 @@ import { useUser } from "@/hooks/useUser";
 
 interface SidebarProps {
   activePage: Page;
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
 }
 
 interface NavItem {

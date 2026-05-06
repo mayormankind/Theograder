@@ -267,9 +267,6 @@ export default function LoginPage() {
   return (
     <AuthLayout
       illustration={illustration}
-      quote="GradeIQ cut my grading time from 3 weeks to 2 days. I can't go back."
-      author="Dr. Oluwaseun Adeyemi, UNILAG"
-      authorInitials="OA"
     >
       <div className="auth-form-header">
         <h1>Welcome back</h1>

@@ -127,7 +127,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
           </p>
         </div>
         <button
-          onClick={() => onNavigate('rubrics')}
+          onClick={() => onNavigate('create-rubric')}
           className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
         >
           <Plus size={14} />
@@ -147,7 +147,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
               </span>
             </div>
             <button
-              onClick={() => onNavigate('rubrics')}
+              onClick={() => onNavigate('create-rubric')}
               className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
             >
               <Plus size={14} />

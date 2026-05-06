@@ -218,9 +218,6 @@ export default function SignupPage() {
   return (
     <AuthLayout
       illustration={illustration}
-      quote="The rubric-based grading is brilliant. It grades exactly how I would — but in minutes."
-      author="Prof. Ngozi Kalu, UNN"
-      authorInitials="NK"
     >
       <div className="auth-form-header">
         <h1>Create your account</h1>

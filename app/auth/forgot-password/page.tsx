@@ -4,31 +4,36 @@ import { useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import AuthLayout from "@/components/auth/AuthLayout";
-import { forgotPasswordSchema, type ForgotPasswordFormData } from "@/lib/validations/auth-schemas";
+import {
+  forgotPasswordSchema,
+  type ForgotPasswordFormData,
+} from "@/lib/validations/auth-schemas";
 
 export default function ForgotPasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [formData, setFormData] = useState<ForgotPasswordFormData>({
-    email: ''
+    email: "",
   });
   const [loading, setLoading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<keyof ForgotPasswordFormData, string>>>({});
+  const [fieldErrors, setFieldErrors] = useState<
+    Partial<Record<keyof ForgotPasswordFormData, string>>
+  >({});
 
   // Validate a single field in real-time
   const validateField = (name: keyof ForgotPasswordFormData, value: string) => {
     try {
       forgotPasswordSchema.shape[name].parse(value);
-      setFieldErrors(prev => ({ ...prev, [name]: undefined }));
+      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
     } catch (error) {
       if (error instanceof Error) {
-        setFieldErrors(prev => ({ ...prev, [name]: error.message }));
+        setFieldErrors((prev) => ({ ...prev, [name]: error.message }));
       }
     }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Real-time validation
     validateField(name as keyof ForgotPasswordFormData, value);
   };
@@ -53,27 +58,27 @@ export default function ForgotPasswordPage() {
     }
 
     try {
-      const response = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
+      const response = await fetch("/api/auth/forgot-password", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          email: formData.email
-        })
+          email: formData.email,
+        }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        toast.error(data.error || 'Failed to send reset link');
+        toast.error(data.error || "Failed to send reset link");
         return;
       }
 
       toast.success(data.message);
       setIsSuccess(true);
     } catch (err) {
-      toast.error('An unexpected error occurred. Please try again.');
+      toast.error("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -81,24 +86,19 @@ export default function ForgotPasswordPage() {
 
   const illustration = [
     {
-      type: 'card' as const,
-      icon: 'fa-envelope-open-text',
-      content: 'Reset link sent!'
+      type: "card" as const,
+      icon: "fa-envelope-open-text",
+      content: "Reset link sent!",
     },
     {
-      type: 'card' as const,
-      icon: 'fa-shield-halved',
-      content: 'Secure & Encrypted'
-    }
+      type: "card" as const,
+      icon: "fa-shield-halved",
+      content: "Secure & Encrypted",
+    },
   ];
 
   return (
-    <AuthLayout
-      illustration={illustration}
-      quote="Security is paramount when dealing with examination data. GradeIQ takes this seriously."
-      author="Dr. Fatima Abubakar, ABU Zaria"
-      authorInitials="FA"
-    >
+    <AuthLayout illustration={illustration}>
       {!isSuccess ? (
         <div>
           <div className="auth-form-header">
@@ -107,14 +107,11 @@ export default function ForgotPasswordPage() {
             </div>
             <h1>Reset your password</h1>
             <p>
-              Enter the email associated with your account and we&apos;ll send you
-              a reset link.
+              Enter the email associated with your account and we&apos;ll send
+              you a reset link.
             </p>
           </div>
-          <form
-            className="auth-form"
-            onSubmit={handleSubmit}
-          >
+          <form className="auth-form" onSubmit={handleSubmit}>
             <div className="form-group">
               <label htmlFor="email">Email address</label>
               <div className="input-wrapper">
@@ -128,13 +125,17 @@ export default function ForgotPasswordPage() {
                   placeholder="lecturer@university.edu.ng"
                   required
                   disabled={loading}
-                  className={fieldErrors.email ? 'input-error' : ''}
+                  className={fieldErrors.email ? "input-error" : ""}
                 />
               </div>
-              {fieldErrors.email && <span className="form-error">{fieldErrors.email}</span>}
+              {fieldErrors.email && (
+                <span className="form-error">{fieldErrors.email}</span>
+              )}
             </div>
             <button type="submit" className="btn-submit" disabled={loading}>
-              <span className="btn-text">{loading ? 'Sending...' : 'Send Reset Link'}</span>
+              <span className="btn-text">
+                {loading ? "Sending..." : "Send Reset Link"}
+              </span>
             </button>
           </form>
         </div>

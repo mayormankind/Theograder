@@ -58,7 +58,7 @@ class RubricsApi {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
       const data = await response.json();
-      return { success: true, data };
+      return { success: true, data: data.rubrics || [] };
     } catch (error) {
       console.error('Error fetching rubrics:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch rubrics' };

@@ -159,9 +159,6 @@ function ResetPasswordContent() {
     return (
       <AuthLayout
         illustration={illustration}
-        quote="Security is our top priority. All password resets are encrypted and time-limited."
-        author="TheoGrader Security Team"
-        authorInitials="TS"
       >
         <div className="auth-form-header">
           <div className="verify-animation">
@@ -195,9 +192,6 @@ function ResetPasswordContent() {
   return (
     <AuthLayout
       illustration={illustration}
-      quote="A strong password is your first line of defense in protecting your grading data."
-      author="Dr. Sarah Chen, Security Lead"
-      authorInitials="SC"
     >
       <div className="auth-form-header">
         <div className="verify-animation">

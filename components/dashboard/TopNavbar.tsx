@@ -1,35 +1,47 @@
 "use client";
 
-import { useState } from 'react';
-import { Search, Bell, ChevronDown, Upload, Plus } from 'lucide-react';
-import type { Page } from '@/types';
+import { useState } from "react";
+import {
+  Search,
+  Bell,
+  ChevronDown,
+  Upload,
+  Plus,
+  LogOut,
+  User,
+  Settings as SettingsIcon,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import type { Page } from "@/types";
+import { useUser } from "@/hooks/useUser";
+import { cn } from "@/lib/utils";
 
 const pageTitles: Record<Page, string> = {
-  dashboard: 'Dashboard',
-  exams: 'Exams',
-  scripts: 'Scripts',
-  upload: 'Upload Script',
-  rubrics: 'Rubric Builder',
-  'create-rubric': 'Create Rubric',
-  processing: 'Script Processing',
-  results: 'Grading Results',
-  report: 'Result Report',
-  settings: 'Settings',
-  grading: 'Grading',
+  dashboard: "Dashboard",
+  exams: "Exams",
+  scripts: "Scripts",
+  upload: "Upload Script",
+  rubrics: "Rubric Builder",
+  "create-rubric": "Create Rubric",
+  processing: "Script Processing",
+  results: "Grading Results",
+  report: "Result Report",
+  settings: "Settings",
+  grading: "Grading",
 };
 
 const pageBreadcrumbs: Record<Page, string[]> = {
-  dashboard: ['AutoGrade AI', 'Dashboard'],
-  exams: ['AutoGrade AI', 'Exams'],
-  scripts: ['AutoGrade AI', 'Scripts'],
-  upload: ['AutoGrade AI', 'Scripts', 'Upload Script'],
-  rubrics: ['AutoGrade AI', 'Rubrics'],
-  'create-rubric': ['AutoGrade AI', 'Rubrics', 'Create Rubric'],
-  processing: ['AutoGrade AI', 'Scripts', 'Processing'],
-  results: ['AutoGrade AI', 'Results'],
-  report: ['AutoGrade AI', 'Results', 'Report'],
-  settings: ['AutoGrade AI', 'Settings'],
-  grading: ['AutoGrade AI', 'Grading'],
+  dashboard: ["AutoGrade AI", "Dashboard"],
+  exams: ["AutoGrade AI", "Exams"],
+  scripts: ["AutoGrade AI", "Scripts"],
+  upload: ["AutoGrade AI", "Scripts", "Upload Script"],
+  rubrics: ["AutoGrade AI", "Rubrics"],
+  "create-rubric": ["AutoGrade AI", "Rubrics", "Create Rubric"],
+  processing: ["AutoGrade AI", "Scripts", "Processing"],
+  results: ["AutoGrade AI", "Results"],
+  report: ["AutoGrade AI", "Results", "Report"],
+  settings: ["AutoGrade AI", "Settings"],
+  grading: ["AutoGrade AI", "Grading"],
 };
 
 interface TopNavbarProps {
@@ -40,9 +52,31 @@ interface TopNavbarProps {
 export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
   const [notifications] = useState(4);
   const [showNotifs, setShowNotifs] = useState(false);
+  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const { user } = useUser();
+  const router = useRouter();
 
-  const breadcrumbs = pageBreadcrumbs[activePage] || ['AutoGrade AI'];
-  const title = pageTitles[activePage] || 'Dashboard';
+  const handleLogout = async () => {
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (response.ok) {
+        router.push("/auth/login");
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
+  const userInitials = user?.name
+    ? user.name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+    : "??";
+
+  const breadcrumbs = pageBreadcrumbs[activePage] || ["AutoGrade AI"];
+  const title = pageTitles[activePage] || "Dashboard";
 
   return (
     <header className="flex h-[64px] shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-6">
@@ -56,8 +90,8 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
               <span
                 className={
                   i === breadcrumbs.length - 1
-                    ? 'text-[11px] font-medium text-teal-600'
-                    : 'text-[11px] text-slate-400'
+                    ? "text-[11px] font-medium text-teal-600"
+                    : "text-[11px] text-slate-400"
                 }
               >
                 {crumb}
@@ -72,7 +106,10 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
 
       {/* Search */}
       <div className="relative hidden md:block">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <Search
+          size={14}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+        />
         <input
           type="text"
           placeholder="Search scripts, exams…"
@@ -83,14 +120,14 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
       {/* Quick Actions */}
       <div className="hidden md:flex items-center gap-2">
         <button
-          onClick={() => onNavigate('upload')}
+          onClick={() => onNavigate("upload")}
           className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
         >
           <Upload size={13} />
           Upload
         </button>
         <button
-          onClick={() => onNavigate('rubrics')}
+          onClick={() => onNavigate("rubrics")}
           className="flex items-center gap-1.5 rounded-lg bg-[#0f1f3d] px-3 py-2 text-xs font-medium text-white hover:bg-[#162b52] transition-colors"
         >
           <Plus size={13} />
@@ -114,17 +151,40 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
         {showNotifs && (
           <div className="absolute right-0 top-12 z-50 w-80 rounded-xl border border-slate-200 bg-white shadow-xl">
             <div className="border-b border-slate-100 px-4 py-3">
-              <p className="text-sm font-semibold text-slate-800">Notifications</p>
+              <p className="text-sm font-semibold text-slate-800">
+                Notifications
+              </p>
               <p className="text-xs text-slate-400">{notifications} unread</p>
             </div>
             {[
-              { text: '3 scripts processed for CSC 401', time: '2 min ago', dot: 'bg-teal-400' },
-              { text: 'Fatima Al-Hassan requires score review', time: '18 min ago', dot: 'bg-amber-400' },
-              { text: 'Rubric for CSC 415 saved successfully', time: '1 hr ago', dot: 'bg-blue-400' },
-              { text: 'Batch processing complete — 12 scripts', time: 'Yesterday', dot: 'bg-slate-300' },
+              {
+                text: "3 scripts processed for CSC 401",
+                time: "2 min ago",
+                dot: "bg-teal-400",
+              },
+              {
+                text: "Fatima Al-Hassan requires score review",
+                time: "18 min ago",
+                dot: "bg-amber-400",
+              },
+              {
+                text: "Rubric for CSC 415 saved successfully",
+                time: "1 hr ago",
+                dot: "bg-blue-400",
+              },
+              {
+                text: "Batch processing complete — 12 scripts",
+                time: "Yesterday",
+                dot: "bg-slate-300",
+              },
             ].map((n, i) => (
-              <div key={i} className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-50">
-                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.dot}`} />
+              <div
+                key={i}
+                className="flex items-start gap-3 px-4 py-3 hover:bg-slate-50 transition-colors cursor-pointer border-b border-slate-50"
+              >
+                <span
+                  className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${n.dot}`}
+                />
                 <div>
                   <p className="text-xs font-medium text-slate-700">{n.text}</p>
                   <p className="text-[11px] text-slate-400 mt-0.5">{n.time}</p>
@@ -132,23 +192,79 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
               </div>
             ))}
             <div className="px-4 py-2.5 text-center">
-              <button className="text-xs font-medium text-teal-600 hover:text-teal-700">View all notifications</button>
+              <button className="text-xs font-medium text-teal-600 hover:text-teal-700">
+                View all notifications
+              </button>
             </div>
           </div>
         )}
       </div>
 
       {/* Profile */}
-      <button className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition-colors">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-blue-500 text-[10px] font-bold text-white">
-          AE
-        </div>
-        <div className="hidden md:block text-left">
-          <p className="text-xs font-semibold text-slate-800">Dr. Amaka Eze</p>
-          <p className="text-[10px] text-slate-400">Senior Lecturer</p>
-        </div>
-        <ChevronDown size={12} className="text-slate-400" />
-      </button>
+      <div className="relative">
+        <button
+          onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+          className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition-colors"
+        >
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-blue-500 text-[10px] font-bold text-white uppercase">
+            {userInitials}
+          </div>
+          <div className="hidden md:block text-left">
+            <p className="text-xs font-semibold text-slate-800">
+              {user?.name || "Loading..."}
+            </p>
+            <p className="text-[10px] text-slate-400 capitalize">
+              {user?.role?.toLowerCase() || "Lecturer"}
+            </p>
+          </div>
+          <ChevronDown
+            size={12}
+            className={cn(
+              "text-slate-400 transition-transform",
+              showProfileDropdown && "rotate-180",
+            )}
+          />
+        </button>
+
+        {showProfileDropdown && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowProfileDropdown(false)}
+            />
+            <div className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+              <button
+                onClick={() => {
+                  onNavigate("settings");
+                  setShowProfileDropdown(false);
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <User size={14} />
+                Profile Settings
+              </button>
+              <button
+                onClick={() => {
+                  onNavigate("settings");
+                  setShowProfileDropdown(false);
+                }}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                <SettingsIcon size={14} />
+                Account Settings
+              </button>
+              <div className="my-1 border-t border-slate-100" />
+              <button
+                onClick={handleLogout}
+                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut size={14} />
+                Logout
+              </button>
+            </div>
+          </>
+        )}
+      </div>
     </header>
   );
 }

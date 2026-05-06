@@ -1,16 +1,17 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/session';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
+import { deleteFileFromSupabase } from "@/lib/supabase";
 
 // GET /api/upload/[scriptId] - Get script processing status
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ scriptId: string }> }
+  { params }: { params: Promise<{ scriptId: string }> },
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
-    
+
     const { scriptId } = await params;
 
     const script = await prisma.script.findFirst({
@@ -40,18 +41,15 @@ export async function GET(
     });
 
     if (!script) {
-      return NextResponse.json(
-        { error: 'Script not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
     return NextResponse.json(script);
   } catch (error) {
-    console.error('Error fetching script status:', error);
+    console.error("Error fetching script status:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch script status' },
-      { status: 500 }
+      { error: "Failed to fetch script status" },
+      { status: 500 },
     );
   }
 }
@@ -59,12 +57,12 @@ export async function GET(
 // DELETE /api/upload/[scriptId] - Delete a script
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ scriptId: string }> }
+  { params }: { params: Promise<{ scriptId: string }> },
 ) {
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
-    
+
     const { scriptId } = await params;
 
     // Check if script exists and belongs to user
@@ -85,33 +83,37 @@ export async function DELETE(
     });
 
     if (!script) {
-      return NextResponse.json(
-        { error: 'Script not found' },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
     // Don't allow deletion if script has results
     if (script._count.results > 0) {
       return NextResponse.json(
-        { error: 'Cannot delete script that has grading results' },
-        { status: 400 }
+        { error: "Cannot delete script that has grading results" },
+        { status: 400 },
       );
     }
 
-    // Delete script (will also delete file from disk if needed)
+    // Delete from Supabase Storage
+    try {
+      await deleteFileFromSupabase("uploads", script.filePath);
+    } catch (error) {
+      console.error("Error deleting file from Supabase:", error);
+    }
+
+    // Delete script
     await prisma.script.delete({
       where: { id: scriptId },
     });
 
     return NextResponse.json({
-      message: 'Script deleted successfully',
+      message: "Script deleted successfully",
     });
   } catch (error) {
-    console.error('Error deleting script:', error);
+    console.error("Error deleting script:", error);
     return NextResponse.json(
-      { error: 'Failed to delete script' },
-      { status: 500 }
+      { error: "Failed to delete script" },
+      { status: 500 },
     );
   }
 }

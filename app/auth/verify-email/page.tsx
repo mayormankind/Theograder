@@ -16,13 +16,13 @@ function VerifyEmailContent() {
 
   useEffect(() => {
     // Check for verification token in URL
-    const token = searchParams.get('token');
-    const emailParam = searchParams.get('email');
-    
+    const token = searchParams.get("token");
+    const emailParam = searchParams.get("email");
+
     if (emailParam) {
       setEmail(emailParam);
     }
-    
+
     if (token) {
       verifyEmail(token);
     }
@@ -31,26 +31,25 @@ function VerifyEmailContent() {
   const verifyEmail = async (token: string) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await fetch(`/api/auth/verify?token=${token}`);
       const data = await response.json();
-      
+
       if (!response.ok) {
-        setError(data.error || 'Verification failed');
+        setError(data.error || "Verification failed");
         return;
       }
-      
+
       setSuccess(data.message);
       setIsVerified(true);
-      
+
       // Redirect to login after successful verification
       setTimeout(() => {
-        router.push('/auth/login');
+        router.push("/auth/login");
       }, 3000);
-      
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -58,33 +57,32 @@ function VerifyEmailContent() {
 
   const resendVerification = async () => {
     if (!email) {
-      setError('Please provide your email address');
+      setError("Please provide your email address");
       return;
     }
-    
+
     setLoading(true);
     setError(null);
-    
+
     try {
-      const response = await fetch('/api/auth/verify', {
-        method: 'POST',
+      const response = await fetch("/api/auth/verify", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
-        setError(data.error || 'Failed to resend verification email');
+        setError(data.error || "Failed to resend verification email");
         return;
       }
-      
+
       setSuccess(data.message);
-      
     } catch (err) {
-      setError('An unexpected error occurred. Please try again.');
+      setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -92,19 +90,14 @@ function VerifyEmailContent() {
 
   const illustration = [
     {
-      type: 'card' as const,
-      icon: 'fa-check-circle',
-      content: 'Almost there!'
-    }
+      type: "card" as const,
+      icon: "fa-check-circle",
+      content: "Almost there!",
+    },
   ];
 
   return (
-    <AuthLayout
-      illustration={illustration}
-      quote="The AI-powered grading system has significantly improved our workflow and consistency across large classes."
-      author="Dr. Ibrahim Bello, FUTA"
-      authorInitials="IB"
-    >
+    <AuthLayout illustration={illustration}>
       <div className="auth-form-header">
         {isVerified ? (
           <div className="verify-animation">
@@ -128,15 +121,15 @@ function VerifyEmailContent() {
             </div>
           </div>
         )}
-        <h1>{isVerified ? 'Email Verified!' : 'Verify your email'}</h1>
+        <h1>{isVerified ? "Email Verified!" : "Verify your email"}</h1>
         <p>
           {isVerified ? (
-            'Your account has been successfully verified. Redirecting to login...'
+            "Your account has been successfully verified. Redirecting to login..."
           ) : (
             <>
               We&apos;ve sent a verification link to
               <br />
-              <strong>{email || 'your email address'}</strong>
+              <strong>{email || "your email address"}</strong>
             </>
           )}
         </p>
@@ -147,7 +140,7 @@ function VerifyEmailContent() {
           <span>{error}</span>
         </div>
       )}
-      
+
       {success && (
         <div className="alert alert-success">
           <span>{success}</span>
@@ -187,12 +180,13 @@ function VerifyEmailContent() {
           </div>
 
           <div className="verify-actions">
-            <button 
-              className="btn-submit btn-outline-submit" 
+            <button
+              className="btn-submit btn-outline-submit"
               onClick={resendVerification}
               disabled={loading}
             >
-              <i className="fas fa-redo"></i> {loading ? 'Sending...' : 'Resend Verification Email'}
+              <i className="fas fa-redo"></i>{" "}
+              {loading ? "Sending..." : "Resend Verification Email"}
             </button>
           </div>
         </>
@@ -207,28 +201,34 @@ function VerifyEmailContent() {
 
 export default function VerifyEmailPage() {
   return (
-    <Suspense fallback={
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        backgroundColor: '#f8fafc'
-      }}>
-        <div style={{ textAlign: 'center' }}>
-          <div style={{ 
-            width: '40px', 
-            height: '40px', 
-            border: '4px solid #e2e8f0', 
-            borderTop: '4px solid #3b82f6', 
-            borderRadius: '50%', 
-            animation: 'spin 1s linear infinite',
-            margin: '0 auto 20px'
-          }}></div>
-          <p style={{ color: '#64748b', fontSize: '16px' }}>Loading...</p>
+    <Suspense
+      fallback={
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            minHeight: "100vh",
+            backgroundColor: "#f8fafc",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            <div
+              style={{
+                width: "40px",
+                height: "40px",
+                border: "4px solid #e2e8f0",
+                borderTop: "4px solid #3b82f6",
+                borderRadius: "50%",
+                animation: "spin 1s linear infinite",
+                margin: "0 auto 20px",
+              }}
+            ></div>
+            <p style={{ color: "#64748b", fontSize: "16px" }}>Loading...</p>
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <VerifyEmailContent />
     </Suspense>
   );

@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
-import { writeFile, mkdir } from 'fs/promises';
-import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
+import { uploadFileToSupabase } from '@/lib/supabase';
 
 const uploadSchema = z.object({
   examId: z.string().min(1, 'Exam ID is required'),
@@ -17,7 +16,13 @@ export async function POST(request: NextRequest) {
     if (session instanceof NextResponse) return session;
 
     const formData = await request.formData();
-    const files = formData.getAll('files') as File[];
+    let files = formData.getAll('files') as File[];
+    const singleFile = formData.get('file') as File;
+    
+    if (files.length === 0 && singleFile) {
+      files = [singleFile];
+    }
+
     const examId = formData.get('examId') as string;
 
     // Validate input
@@ -39,17 +44,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Exam not found or access denied' }, { status: 404 });
     }
 
-    // Create upload directory
-    const uploadDir = join(process.cwd(), 'uploads', session.userId!, validatedData.examId);
-    await mkdir(uploadDir, { recursive: true });
-
     const uploadedScripts = [];
 
     for (const file of files) {
       const fileId = uuidv4();
       const fileExtension = '.' + file.name.split('.').pop()?.toLowerCase();
       const fileName = `${fileId}${fileExtension}`;
-      const filePath = join(uploadDir, fileName);
+      
+      // Path in Supabase bucket
+      const storagePath = `${session.userId}/${validatedData.examId}/${fileName}`;
 
       // Validate file
       const maxSize = 20 * 1024 * 1024; // 20MB
@@ -70,10 +73,16 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Save file to disk
-      const bytes = await file.arrayBuffer();
-      const buffer = Buffer.from(bytes);
-      await writeFile(filePath, buffer);
+      // Upload to Supabase Storage
+      try {
+        await uploadFileToSupabase(file, 'uploads', storagePath);
+      } catch (uploadError) {
+        console.error('Supabase upload error:', uploadError);
+        return NextResponse.json(
+          { error: `Failed to upload ${file.name} to storage` },
+          { status: 500 }
+        );
+      }
 
       // Create script record in database
       const script = await prisma.script.create({
@@ -82,7 +91,7 @@ export async function POST(request: NextRequest) {
           originalName: file.name,
           fileSize: file.size,
           mimeType: file.type,
-          filePath: filePath,
+          filePath: storagePath, // Store Supabase path
           examId: validatedData.examId,
           status: 'PROCESSING',
         },
@@ -122,7 +131,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// GET /api/upload - List uploaded scripts for an exam
+// GET /api/upload - List uploaded scripts
 export async function GET(request: NextRequest) {
   try {
     const session = await requireAuth(request);
@@ -131,45 +140,97 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const examId = searchParams.get('examId');
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '50'); // Increased default limit
     const status = searchParams.get('status') as any;
-
-    if (!examId) {
-      return NextResponse.json({ error: 'Exam ID is required' }, { status: 400 });
-    }
-
-    // Verify exam belongs to user
-    const exam = await prisma.exam.findFirst({
-      where: {
-        id: examId,
-        createdById: session.userId,
-      },
-    });
-
-    if (!exam) {
-      return NextResponse.json({ error: 'Exam not found or access denied' }, { status: 404 });
-    }
 
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
-      examId,
-    };
+    const where: any = {};
+
+    if (examId) {
+      where.examId = examId;
+      // Also verify exam belongs to user if filtering by exam
+      const exam = await prisma.exam.findFirst({
+        where: {
+          id: examId,
+          createdById: session.userId,
+        },
+      });
+      if (!exam) {
+        return NextResponse.json({ error: 'Exam not found or access denied' }, { status: 404 });
+      }
+    } else {
+      // Fetch scripts for all user's exams
+      where.exam = {
+        createdById: session.userId
+      };
+    }
 
     if (status && status !== 'ALL') {
       where.status = status;
     }
 
-    const [scripts, total] = await Promise.all([
+    const [scriptsData, total] = await Promise.all([
       prisma.script.findMany({
         where,
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
+        include: {
+          exam: {
+            select: {
+              title: true,
+              totalMarks: true,
+            }
+          },
+          results: {
+            orderBy: { gradedAt: 'desc' },
+            take: 1,
+            select: {
+              totalScore: true,
+              maxScore: true,
+              confidence: true,
+              status: true,
+            }
+          }
+        }
       }),
       prisma.script.count({ where }),
     ]);
+
+    // Map to frontend format
+    const scripts = scriptsData.map(s => {
+      const result = s.results[0];
+      
+      // Determine frontend status
+      let frontendStatus: 'UPLOADED' | 'PROCESSING' | 'PENDING_REVIEW' | 'GRADED' = 'UPLOADED';
+      if (result) {
+        if (result.status === 'PENDING') {
+          frontendStatus = 'PENDING_REVIEW';
+        } else {
+          frontendStatus = 'GRADED';
+        }
+      } else if (s.status === 'PROCESSING') {
+        frontendStatus = 'PROCESSING';
+      } else {
+        frontendStatus = 'UPLOADED';
+      }
+
+      return {
+        id: s.id,
+        fileName: s.originalName,
+        studentName: s.studentName || 'Unknown Student',
+        studentId: s.studentId || 'Not extracted',
+        examId: s.examId,
+        examTitle: s.exam.title,
+        status: frontendStatus,
+        uploadedAt: s.createdAt.toLocaleDateString(),
+        score: result?.totalScore,
+        totalMarks: result?.maxScore || s.exam.totalMarks,
+        confidence: result ? Math.round(result.confidence * 100) : undefined,
+      };
+    });
 
     return NextResponse.json({
       scripts,

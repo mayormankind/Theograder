@@ -52,7 +52,34 @@ Backend (AI Service):
 Database:
   - PostgreSQL
   - Prisma ORM
+
+Storage:
+  - Supabase Storage (Bucket: 'uploads')
 ```
+
+---
+
+## File Storage Architecture
+
+TheoGrader uses **Supabase Storage** for persisting examination scripts and other documents.
+
+### Storage Configuration
+- **Bucket Name**: `uploads`
+- **Access Control**: Publicly accessible via generated URLs.
+- **Directory Structure**: `[userId]/[examId]/[fileName]`
+
+### Implementation Details
+Storage operations are centralized in `lib/supabase.ts` using the following helpers:
+- `uploadFileToSupabase(file, bucket, path)`: Handles multipart uploads.
+- `getPublicUrl(bucket, path)`: Retrieves the CDN URL for a file.
+- `deleteFileFromSupabase(bucket, path)`: Removes files from the bucket.
+
+### Data Flow for Uploads
+1. User selects files in the **Upload Page**.
+2. Frontend calls `POST /api/upload` for each file.
+3. Backend uploads the file to Supabase Storage.
+4. Backend stores the **storage path** (not the URL) in the `Script` table's `filePath` column.
+5. AI service retrieves the file using the Supabase path or public URL for processing.
 
 ---
 

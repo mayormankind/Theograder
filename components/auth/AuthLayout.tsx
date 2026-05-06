@@ -4,10 +4,10 @@ import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
 
 interface IllustrationItem {
-  type: 'card' | 'score' | 'progress';
+  type: "card" | "score" | "progress";
   content?: string;
   icon?: string;
-  dotColor?: 'green' | 'blue' | 'yellow' | 'red';
+  dotColor?: "green" | "blue" | "yellow" | "red";
   score?: string;
   progress?: number;
   progressTotal?: number;
@@ -17,17 +17,11 @@ interface IllustrationItem {
 interface AuthLayoutProps {
   children: ReactNode;
   illustration: IllustrationItem[];
-  quote: string;
-  author: string;
-  authorInitials: string;
 }
 
 export default function AuthLayout({
   children,
   illustration,
-  quote,
-  author,
-  authorInitials,
 }: AuthLayoutProps) {
   const [activeTheme, setActiveTheme] = useState<"dark" | "light">("dark");
   const [mounted, setMounted] = useState(false);
@@ -101,24 +95,36 @@ export default function AuthLayout({
             <div className="auth-illustration">
               {illustration.map((item, index) => (
                 <div key={index} className={`auth-float-card afc-${index + 1}`}>
-                  {item.type === 'card' && (
+                  {item.type === "card" && (
                     <div className="afc-row">
-                      {item.dotColor && <div className={`afc-dot ${item.dotColor}`}></div>}
+                      {item.dotColor && (
+                        <div className={`afc-dot ${item.dotColor}`}></div>
+                      )}
                       {item.icon && <i className={`fas ${item.icon}`}></i>}
                       {item.content && <span>{item.content}</span>}
                     </div>
                   )}
-                  {item.type === 'score' && item.score && (
+                  {item.type === "score" && item.score && (
                     <div className="afc-score">{item.score}</div>
                   )}
-                  {item.type === 'progress' && (
+                  {item.type === "progress" && (
                     <>
                       <div className="afc-row">
                         <div className="afc-bar">
-                          <div className="afc-bar-fill" style={{ width: item.progress ? `${(item.progress / (item.progressTotal || 1)) * 100}%` : '0%' }}></div>
+                          <div
+                            className="afc-bar-fill"
+                            style={{
+                              width: item.progress
+                                ? `${(item.progress / (item.progressTotal || 1)) * 100}%`
+                                : "0%",
+                            }}
+                          ></div>
                         </div>
                       </div>
-                      <span>Processing {item.progress || 0}/{item.progressTotal || 0} scripts...</span>
+                      <span>
+                        Processing {item.progress || 0}/
+                        {item.progressTotal || 0} scripts...
+                      </span>
                     </>
                   )}
                 </div>
@@ -126,23 +132,6 @@ export default function AuthLayout({
               <div className="auth-circle c1"></div>
               <div className="auth-circle c2"></div>
               <div className="auth-circle c3"></div>
-            </div>
-
-            <div className="auth-left-footer">
-              <p>&quot;{quote}&quot;</p>
-              <div className="auth-quote-author">
-                <div
-                  className="proof-avatar"
-                  style={{
-                    background: "#fff",
-                    color: "#1a6b3c",
-                    fontSize: "12px",
-                  }}
-                >
-                  {authorInitials}
-                </div>
-                <span>{author}</span>
-              </div>
             </div>
           </div>
         </div>

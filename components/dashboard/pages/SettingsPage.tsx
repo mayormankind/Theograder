@@ -1,10 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Save, CheckCircle2, User, Shield, Bell, Cpu, Loader2, AlertCircle } from "lucide-react";
+import {
+  Save,
+  CheckCircle2,
+  User,
+  Shield,
+  Bell,
+  Cpu,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Page } from "@/types";
-import { toast } from 'sonner';
+import { toast } from "sonner";
 
 type Tab = "profile" | "ai" | "notifications" | "security";
 
@@ -56,15 +65,15 @@ export default function SettingsPage({}: SettingsPageProps) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch('/api/settings');
+      const response = await fetch("/api/settings");
       if (!response.ok) {
-        throw new Error('Failed to fetch settings');
+        throw new Error("Failed to fetch settings");
       }
       const data = await response.json();
       setSettings(data.settings || settings);
     } catch (err) {
-      console.error('Error fetching settings:', err);
-      setError('Failed to load settings');
+      console.error("Error fetching settings:", err);
+      setError("Failed to load settings");
     } finally {
       setLoading(false);
     }
@@ -74,23 +83,23 @@ export default function SettingsPage({}: SettingsPageProps) {
     try {
       setSaving(true);
       setError(null);
-      const response = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to save settings');
+        throw new Error("Failed to save settings");
       }
 
       setSaved(true);
-      toast.success('Settings saved successfully');
+      toast.success("Settings saved successfully");
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
-      console.error('Error saving settings:', err);
-      setError('Failed to save settings');
-      toast.error('Failed to save settings');
+      console.error("Error saving settings:", err);
+      setError("Failed to save settings");
+      toast.error("Failed to save settings");
     } finally {
       setSaving(false);
     }
@@ -98,7 +107,7 @@ export default function SettingsPage({}: SettingsPageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <Loader2 className="animate-spin text-slate-400" size={32} />
       </div>
     );
@@ -162,8 +171,9 @@ export default function SettingsPage({}: SettingsPageProps) {
         <div className="flex flex-col gap-4">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center gap-4 mb-6">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-teal-400 to-blue-500 text-xl font-bold text-white shadow-md">
-                {settings.firstName[0]}{settings.lastName[0]}
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-blue-500 text-xl font-bold text-white shadow-md">
+                {settings.firstName?.[0] || ""}
+                {settings.lastName?.[0] || "" || settings.firstName?.[0] || "?"}
               </div>
               <div>
                 <p className="text-base font-semibold text-slate-800">
@@ -179,12 +189,36 @@ export default function SettingsPage({}: SettingsPageProps) {
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               {[
-                { label: "First Name", value: settings.firstName, key: "firstName" as const },
-                { label: "Last Name", value: settings.lastName, key: "lastName" as const },
-                { label: "Title", value: settings.title, key: "title" as const },
-                { label: "Staff ID", value: settings.staffId, key: "staffId" as const },
-                { label: "Department", value: settings.department, key: "department" as const },
-                { label: "Faculty", value: settings.faculty, key: "faculty" as const },
+                {
+                  label: "First Name",
+                  value: settings.firstName,
+                  key: "firstName" as const,
+                },
+                {
+                  label: "Last Name",
+                  value: settings.lastName,
+                  key: "lastName" as const,
+                },
+                {
+                  label: "Title",
+                  value: settings.title,
+                  key: "title" as const,
+                },
+                {
+                  label: "Staff ID",
+                  value: settings.staffId,
+                  key: "staffId" as const,
+                },
+                {
+                  label: "Department",
+                  value: settings.department,
+                  key: "department" as const,
+                },
+                {
+                  label: "Faculty",
+                  value: settings.faculty,
+                  key: "faculty" as const,
+                },
               ].map((field) => (
                 <div key={field.label}>
                   <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
@@ -192,7 +226,9 @@ export default function SettingsPage({}: SettingsPageProps) {
                   </label>
                   <input
                     value={settings[field.key]}
-                    onChange={(e) => setSettings({...settings, [field.key]: e.target.value})}
+                    onChange={(e) =>
+                      setSettings({ ...settings, [field.key]: e.target.value })
+                    }
                     className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
                   />
                 </div>
@@ -203,7 +239,10 @@ export default function SettingsPage({}: SettingsPageProps) {
                 </label>
                 <input
                   value={settings.email}
-                  onChange={(e) => setSettings({...settings, email: e.target.value})}
+                  onChange={(e) =>
+                    setSettings({ ...settings, email: e.target.value })
+                  }
+                  disabled
                   className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
                 />
               </div>
@@ -237,7 +276,12 @@ export default function SettingsPage({}: SettingsPageProps) {
                   min={50}
                   max={95}
                   value={settings.confidenceThreshold}
-                  onChange={(e) => setSettings({...settings, confidenceThreshold: parseInt(e.target.value)})}
+                  onChange={(e) =>
+                    setSettings({
+                      ...settings,
+                      confidenceThreshold: parseInt(e.target.value),
+                    })
+                  }
                   className="w-full accent-teal-500"
                 />
                 <p className="text-xs text-slate-400 mt-1">
@@ -255,7 +299,9 @@ export default function SettingsPage({}: SettingsPageProps) {
                   {[5, 10, 20, 50].map((val) => (
                     <button
                       key={val}
-                      onClick={() => setSettings({...settings, batchSize: val})}
+                      onClick={() =>
+                        setSettings({ ...settings, batchSize: val })
+                      }
                       className={cn(
                         "rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
                         settings.batchSize === val
@@ -283,7 +329,9 @@ export default function SettingsPage({}: SettingsPageProps) {
                   </p>
                 </div>
                 <button
-                  onClick={() => setSettings({...settings, autoFlag: !settings.autoFlag})}
+                  onClick={() =>
+                    setSettings({ ...settings, autoFlag: !settings.autoFlag })
+                  }
                   className={cn(
                     "relative h-6 w-11 rounded-full transition-colors",
                     settings.autoFlag ? "bg-teal-500" : "bg-slate-200",
@@ -338,13 +386,21 @@ export default function SettingsPage({}: SettingsPageProps) {
                 label: "Email Notifications",
                 desc: "Receive results and alerts via email",
                 value: settings.emailNotif,
-                set: () => setSettings({...settings, emailNotif: !settings.emailNotif}),
+                set: () =>
+                  setSettings({
+                    ...settings,
+                    emailNotif: !settings.emailNotif,
+                  }),
               },
               {
                 label: "In-App Notifications",
                 desc: "Show notifications within the system",
                 value: settings.systemNotif,
-                set: () => setSettings({...settings, systemNotif: !settings.systemNotif}),
+                set: () =>
+                  setSettings({
+                    ...settings,
+                    systemNotif: !settings.systemNotif,
+                  }),
               },
             ].map((item) => (
               <div
@@ -414,10 +470,16 @@ export default function SettingsPage({}: SettingsPageProps) {
             saved
               ? "bg-teal-50 text-teal-700 ring-1 ring-teal-200"
               : "bg-[#0f1f3d] text-white hover:bg-[#162b52]",
-            saving && "opacity-70 cursor-not-allowed"
+            saving && "opacity-70 cursor-not-allowed",
           )}
         >
-          {saving ? <Loader2 size={14} className="animate-spin" /> : saved ? <CheckCircle2 size={14} /> : <Save size={14} />}
+          {saving ? (
+            <Loader2 size={14} className="animate-spin" />
+          ) : saved ? (
+            <CheckCircle2 size={14} />
+          ) : (
+            <Save size={14} />
+          )}
           {saving ? "Saving..." : saved ? "Changes Saved" : "Save Changes"}
         </button>
       </div>

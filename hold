@@ -1,0 +1,14 @@
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/theograder"
+
+# Email Service (Gmail)
+EMAIL_HOST="smtp.gmail.com"
+EMAIL_PORT=587
+EMAIL_USER="your-email@gmail.com"
+EMAIL_PASS="your-app-password"
+
+# Session Security (IMPORTANT: Change in production!)
+SESSION_PASSWORD="p3bOrDWce65zuhpnj54FE4uNh2aWdAHDAf99cdXoTUY="
+
+# AI Service
+AI_SERVICE_URL="http://localhost:8000"

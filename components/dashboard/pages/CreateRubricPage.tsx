@@ -310,10 +310,10 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                   <div key={pIndex} className="px-5 py-3">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-teal-50 ring-1 ring-teal-200 text-[11px] font-bold text-teal-600">
-                        {part.label}
+                        {part.label || String.fromCharCode(97 + pIndex)}
                       </div>
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                        Part {part.label.toUpperCase()}
+                        Part {(part.label || String.fromCharCode(97 + pIndex)).toUpperCase()}
                       </span>
                       <div className="ml-auto flex items-center gap-2">
                         <label className="text-[11px] text-slate-500">Marks:</label>

@@ -12,6 +12,8 @@ import {
   Trash2,
   Zap,
   ChevronDown,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
@@ -35,6 +37,8 @@ interface Exam {
   id: string;
   title: string;
   courseCode?: string;
+  hasRubric?: boolean;
+  rubricTitle?: string;
 }
 
 interface ScriptsPageProps {
@@ -74,7 +78,26 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
         throw new Error('Failed to fetch exams');
       }
       const data = await response.json();
-      setExams(data.exams || []);
+      
+      // Fetch rubrics for each exam to check status
+      const examsWithRubricStatus = await Promise.all(
+        (data.exams || []).map(async (exam: Exam) => {
+          const rubricsResponse = await fetch(`/api/rubrics?examId=${exam.id}`);
+          if (rubricsResponse.ok) {
+            const rubricsData = await rubricsResponse.json();
+            return {
+              ...exam,
+              hasRubric: rubricsData.rubrics && rubricsData.rubrics.length > 0,
+              rubricTitle: rubricsData.rubrics && rubricsData.rubrics.length > 0 
+                ? rubricsData.rubrics[0].title 
+                : undefined,
+            };
+          }
+          return { ...exam, hasRubric: false };
+        })
+      );
+      
+      setExams(examsWithRubricStatus);
     } catch (err) {
       console.error('Error fetching exams:', err);
     }
@@ -124,6 +147,12 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   };
 
   const handleGradeScript = async (scriptId: string) => {
+    const selectedExam = exams.find(e => e.id === selectedExamId);
+    if (selectedExamId !== 'all' && !selectedExam?.hasRubric) {
+      toast.error('Please create a rubric for this exam before grading');
+      return;
+    }
+
     try {
       const response = await fetch('/api/grading', {
         method: 'POST',
@@ -147,6 +176,12 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const handleBatchGrade = async () => {
     if (selectedExamId === 'all') {
       toast.error('Please select an exam to grade');
+      return;
+    }
+
+    const selectedExam = exams.find(e => e.id === selectedExamId);
+    if (!selectedExam?.hasRubric) {
+      toast.error('Please create a rubric for this exam before grading');
       return;
     }
 
@@ -242,11 +277,25 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
               {exams.map((exam) => (
                 <option key={exam.id} value={exam.id}>
                   {exam.title} {exam.courseCode ? `(${exam.courseCode})` : ''}
+                  {exam.hasRubric ? ' ✓' : ' ⚠'}
                 </option>
               ))}
             </select>
             <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
           </div>
+          {selectedExamId !== 'all' && selectedExam && (
+            <div className="flex items-center gap-2 text-xs">
+              {selectedExam.hasRubric ? (
+                <span className="flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-full">
+                  <CheckCircle2 size={11} /> Rubric: {selectedExam.rubricTitle}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                  <AlertTriangle size={11} /> No rubric - Create one first
+                </span>
+              )}
+            </div>
+          )}
           {selectedExamId !== 'all' && (
             <button
               onClick={handleBatchGrade}

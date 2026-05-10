@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import {
   Upload,
   FileText,
@@ -12,6 +12,7 @@ import {
   ChevronRight,
   X,
   FileWarning,
+  ChevronDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
@@ -20,6 +21,12 @@ import { rubricsApi } from '@/lib/api/rubrics';
 
 interface CreateRubricPageProps {
   onNavigate: (page: Page) => void;
+}
+
+interface Exam {
+  id: string;
+  title: string;
+  courseCode?: string;
 }
 
 type InputMethod = 'upload' | 'paste' | 'manual' | null;
@@ -33,7 +40,28 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [selectedExamId, setSelectedExamId] = useState<string>('');
+  const [exams, setExams] = useState<Exam[]>([]);
+  const [examsLoading, setExamsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    fetchExams();
+  }, []);
+
+  const fetchExams = async () => {
+    try {
+      setExamsLoading(true);
+      const response = await fetch('/api/exams');
+      if (!response.ok) throw new Error('Failed to fetch exams');
+      const data = await response.json();
+      setExams(data.exams || []);
+    } catch (err) {
+      console.error('Error fetching exams:', err);
+    } finally {
+      setExamsLoading(false);
+    }
+  };
 
   const handleFileUpload = async (file: File) => {
     if (!file) return;
@@ -108,6 +136,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
       const createData = {
         title: extractedRubric.title,
         description: extractedRubric.description,
+        examId: selectedExamId || undefined,
         questions: questionsData,
       };
 
@@ -229,6 +258,28 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                 onChange={(e) => setExtractedRubric({ ...extractedRubric, title: e.target.value })}
                 className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
               />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+                Associate with Exam
+              </label>
+              <div className="relative">
+                <select
+                  value={selectedExamId}
+                  onChange={(e) => setSelectedExamId(e.target.value)}
+                  disabled={examsLoading}
+                  className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 px-3 pr-10 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all disabled:opacity-50"
+                >
+                  <option value="">Save as Template (no exam)</option>
+                  {exams.map((exam) => (
+                    <option key={exam.id} value={exam.id}>
+                      {exam.title} {exam.courseCode ? `(${exam.courseCode})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1">Select an exam to use this rubric for grading</p>
             </div>
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">

@@ -13,10 +13,18 @@ import {
   Upload,
   Trash2,
   Loader2,
+  Link,
+  Link2Off,
 } from 'lucide-react';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
 import { rubricsApi, type Rubric } from '@/lib/api/rubrics';
+
+interface Exam {
+  id: string;
+  title: string;
+  courseCode?: string;
+}
 
 interface RubricPageProps {
   onNavigate: (page: Page) => void;
@@ -24,15 +32,20 @@ interface RubricPageProps {
 
 export default function RubricPage({ onNavigate }: RubricPageProps) {
   const [rubrics, setRubrics] = useState<Rubric[]>([]);
+  const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showDuplicateModal, setShowDuplicateModal] = useState(false);
   const [duplicateTitle, setDuplicateTitle] = useState('');
   const [duplicatingRubric, setDuplicatingRubric] = useState<Rubric | null>(null);
   const [deletingRubric, setDeletingRubric] = useState<string | null>(null);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkingRubric, setLinkingRubric] = useState<Rubric | null>(null);
+  const [selectedExamId, setSelectedExamId] = useState<string>('');
 
   useEffect(() => {
     fetchRubrics();
+    fetchExams();
   }, []);
 
   const fetchRubrics = async () => {
@@ -50,6 +63,18 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
       setError('Failed to fetch rubrics');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchExams = async () => {
+    try {
+      const response = await fetch('/api/exams');
+      if (response.ok) {
+        const data = await response.json();
+        setExams(data.exams || []);
+      }
+    } catch (err) {
+      console.error('Error fetching exams:', err);
     }
   };
 
@@ -101,6 +126,57 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
     setDuplicatingRubric(rubric);
     setDuplicateTitle('');
     setShowDuplicateModal(true);
+  };
+
+  const openLinkModal = (rubric: Rubric) => {
+    setLinkingRubric(rubric);
+    setSelectedExamId('');
+    setShowLinkModal(true);
+  };
+
+  const handleLink = async () => {
+    if (!linkingRubric || !selectedExamId) return;
+
+    try {
+      const response = await fetch(`/api/rubrics/${linkingRubric.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId: selectedExamId }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to link rubric to exam');
+      }
+
+      setShowLinkModal(false);
+      setLinkingRubric(null);
+      setSelectedExamId('');
+      await fetchRubrics();
+    } catch (err) {
+      setError('Failed to link rubric to exam');
+    }
+  };
+
+  const handleUnlink = async (rubricId: string) => {
+    if (!confirm('Unlink this rubric from the exam? It will become a template.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/rubrics/${rubricId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ examId: null }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to unlink rubric');
+      }
+
+      await fetchRubrics();
+    } catch (err) {
+      setError('Failed to unlink rubric');
+    }
   };
 
 
@@ -191,6 +267,23 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
+                      {rubric.examId ? (
+                        <button
+                          onClick={() => handleUnlink(rubric.id)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                          title="Unlink from Exam"
+                        >
+                          <Link2Off size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => openLinkModal(rubric)}
+                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                          title="Link to Exam"
+                        >
+                          <Link size={14} />
+                        </button>
+                      )}
                       <button
                         onClick={() => openDuplicateModal(rubric)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
@@ -285,6 +378,67 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
               >
                 <Copy size={14} />
                 Duplicate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Link to Exam Modal */}
+      {showLinkModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-800">Link Rubric to Exam</h3>
+              <button
+                onClick={() => {
+                  setShowLinkModal(false);
+                  setLinkingRubric(null);
+                  setSelectedExamId('');
+                }}
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Select Exam
+              </label>
+              <select
+                value={selectedExamId}
+                onChange={(e) => setSelectedExamId(e.target.value)}
+                className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
+              >
+                <option value="">Choose an exam...</option>
+                {exams.map((exam) => (
+                  <option key={exam.id} value={exam.id}>
+                    {exam.title} {exam.courseCode ? `(${exam.courseCode})` : ''}
+                  </option>
+                ))}
+              </select>
+              {exams.length === 0 && (
+                <p className="text-xs text-slate-500 mt-2">No exams available. Create an exam first.</p>
+              )}
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  setShowLinkModal(false);
+                  setLinkingRubric(null);
+                  setSelectedExamId('');
+                }}
+                className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleLink}
+                disabled={!selectedExamId}
+                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <Link size={14} />
+                Link
               </button>
             </div>
           </div>

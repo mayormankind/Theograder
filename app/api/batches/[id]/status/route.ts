@@ -54,46 +54,110 @@ export async function GET(
     // Get AI service URL
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
-    // For now, we'll simulate polling since we don't have job_id stored
-    // In a real implementation, you'd store the job_id and poll the AI service
+    // Poll AI service for actual batch status
     try {
-      // Simulate checking AI service status
-      // This would normally be: GET ${aiServiceUrl}/batch-status/{job_id}
-      
-      // For demo purposes, let's update progress based on current items
-      const processedCount = await prisma.batchItem.count({
-        where: {
-          batchId: id,
-          status: 'COMPLETED',
-        },
-      });
+      if (!batch.jobId) {
+        // No job_id - fall back to counting database items
+        const processedCount = await prisma.batchItem.count({
+          where: {
+            batchId: id,
+            status: 'COMPLETED',
+          },
+        });
 
-      const failedCount = await prisma.batchItem.count({
-        where: {
-          batchId: id,
-          status: 'FAILED',
-        },
-      });
+        const failedCount = await prisma.batchItem.count({
+          where: {
+            batchId: id,
+            status: 'FAILED',
+          },
+        });
 
-      const progress = (processedCount + failedCount) / batch.totalFiles * 100;
+        const progress = (processedCount + failedCount) / batch.totalFiles * 100;
 
-      // Update batch with current progress
+        return NextResponse.json({
+          batchId: batch.id,
+          status: batch.status,
+          totalFiles: batch.totalFiles,
+          processedFiles: processedCount,
+          failedFiles: failedCount,
+          startedAt: batch.startedAt,
+          completedAt: batch.completedAt,
+          progress,
+        });
+      }
+
+      // Poll AI service for job status
+      const response = await fetch(`${aiServiceUrl}/batch-status/${batch.jobId}`);
+
+      if (!response.ok) {
+        throw new Error(`AI service error: ${response.statusText}`);
+      }
+
+      const jobStatus = await response.json();
+
+      // Update batch status based on AI service response
+      let newStatus: string = batch.status;
+      if (jobStatus.status === 'completed') {
+        newStatus = 'COMPLETED';
+      } else if (jobStatus.status === 'processing') {
+        newStatus = 'PROCESSING';
+      }
+
+      // Update batch with AI service status
       const updatedBatch = await prisma.batch.update({
         where: { id: id },
         data: {
-          processedFiles: processedCount,
-          failedFiles: failedCount,
-          status: processedCount + failedCount === batch.totalFiles ? 'COMPLETED' : 'PROCESSING',
-          completedAt: processedCount + failedCount === batch.totalFiles ? new Date() : undefined,
+          status: newStatus as any,
+          processedFiles: jobStatus.results?.length || 0,
+          completedAt: newStatus === 'COMPLETED' ? new Date() : undefined,
         },
       });
+
+      // If results are available, update batch items and create results
+      if (jobStatus.results && Array.isArray(jobStatus.results)) {
+        for (let i = 0; i < jobStatus.results.length; i++) {
+          const result = jobStatus.results[i];
+          const batchItem = batch.items[i];
+
+          if (batchItem && result) {
+            // Update batch item status
+            await prisma.batchItem.update({
+              where: { id: batchItem.id },
+              data: {
+                status: 'COMPLETED',
+                completedAt: new Date(),
+              },
+            });
+
+            // Create result record if script exists
+            if (batchItem.scriptId) {
+              // Calculate total score
+              const totalScore = result.questions?.reduce((sum: number, q: any) => sum + (q.score || 0), 0) || 0;
+
+              await prisma.result.create({
+                data: {
+                  scriptId: batchItem.scriptId,
+                  examId: batch.examId,
+                  gradedById: session.userId!,
+                  totalScore,
+                  maxScore: 60, // Default max score
+                  confidence: 1.0, // Default confidence for batch grading
+                  feedback: `Graded via batch processing`,
+                },
+              });
+            }
+          }
+        }
+      }
+
+      const progress = batch.totalFiles > 0 ? (updatedBatch.processedFiles / batch.totalFiles) * 100 : 0;
 
       return NextResponse.json({
         batchId: batch.id,
         status: updatedBatch.status,
         totalFiles: batch.totalFiles,
-        processedFiles: processedCount,
-        failedFiles: failedCount,
+        processedFiles: updatedBatch.processedFiles,
+        failedFiles: updatedBatch.failedFiles,
         startedAt: batch.startedAt,
         completedAt: updatedBatch.completedAt,
         progress,
@@ -101,7 +165,7 @@ export async function GET(
 
     } catch (aiError) {
       console.error('AI service polling error:', aiError);
-      
+
       // Mark batch as failed if we can't reach AI service
       await prisma.batch.update({
         where: { id: id },
@@ -111,7 +175,7 @@ export async function GET(
       });
 
       return NextResponse.json(
-        { 
+        {
           error: 'Failed to check batch status',
           batchId: batch.id,
           status: 'FAILED',

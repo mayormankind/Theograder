@@ -134,7 +134,15 @@ export async function POST(request: NextRequest) {
         createdById: session.userId,
       },
       include: {
-        rubrics: true,
+        rubrics: {
+          include: {
+            questions: {
+              include: {
+                points: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -144,6 +152,17 @@ export async function POST(request: NextRequest) {
 
     if (exam.rubrics.length === 0) {
       return NextResponse.json({ error: 'Exam has no rubric configured' }, { status: 400 });
+    }
+
+    // Convert rubric to the format expected by AI service
+    const rubric = exam.rubrics[0];
+    const rubricData: Record<string, Array<{ point: string; weight: number }>> = {};
+    
+    for (const question of rubric.questions) {
+      rubricData[question.questionId] = question.points.map(point => ({
+        point: point.point,
+        weight: point.weight,
+      }));
     }
 
     // Get AI service URL
@@ -270,8 +289,8 @@ export async function POST(request: NextRequest) {
     // Start batch processing by calling AI service
     try {
       const batchFormData = new FormData();
-      batchFormData.append('rubric_id', exam.rubrics[0].id);
-      
+      batchFormData.append('rubric_str', JSON.stringify(rubricData));
+
       // Add all files to form data
       if (useExistingScripts) {
         // Download files from Supabase and add to FormData
@@ -313,6 +332,7 @@ export async function POST(request: NextRequest) {
         data: {
           status: 'PROCESSING',
           startedAt: new Date(),
+          jobId: batchResult.job_id,
         },
       });
 

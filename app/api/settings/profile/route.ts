@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/session';
+import { requireAuth, updateSession } from '@/lib/session';
 import bcrypt from 'bcryptjs';
 
 const updateProfileSchema = z.object({
@@ -103,10 +103,19 @@ export async function PUT(request: NextRequest) {
         },
       });
 
-      return NextResponse.json({
+      // Update session with new profile data
+      const response = NextResponse.json({
         message: 'Profile updated successfully',
         user: updatedUser,
       });
+
+      await updateSession(request, response, {
+        name: updatedUser.name,
+        email: updatedUser.email,
+        avatar: updatedUser.avatar ?? undefined,
+      });
+
+      return response;
     }
   } catch (error) {
     console.error('Error updating profile:', error);

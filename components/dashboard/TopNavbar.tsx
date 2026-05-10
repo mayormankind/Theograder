@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const pageTitles: Record<Page, string> = {
   dashboard: "Dashboard",
@@ -60,10 +61,12 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
     try {
       const response = await fetch("/api/auth/logout", { method: "POST" });
       if (response.ok) {
+        toast.success("Logged out successfully");
         router.push("/auth/login");
       }
     } catch (error) {
       console.error("Logout failed:", error);
+      toast.error("Logout failed");
     }
   };
 

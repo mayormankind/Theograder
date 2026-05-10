@@ -244,6 +244,7 @@ model Batch {
   totalFiles  Int
   processedFiles Int @default(0)
   failedFiles Int @default(0)
+  jobId       String?
   startedAt   DateTime?
   completedAt DateTime?
   createdAt   DateTime @default(now())

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -50,6 +50,21 @@ export default function LoginPage() {
   const [useOTP, setUseOTP] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch("/api/auth/me");
+        if (response.ok) {
+          router.push("/dashboard");
+        }
+      } catch (error) {
+        // User is not logged in, continue to login page
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   // ── Derive which schema is active based on current login mode ─────────────
 

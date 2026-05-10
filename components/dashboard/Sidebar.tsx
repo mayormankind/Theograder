@@ -20,6 +20,7 @@ import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
+import { toast } from "sonner";
 
 interface SidebarProps {
   activePage: Page;
@@ -53,10 +54,12 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
     try {
       const response = await fetch("/api/auth/logout", { method: "POST" });
       if (response.ok) {
+        toast.success("Logged out successfully");
         router.push("/auth/login");
       }
     } catch (error) {
       console.error("Logout failed:", error);
+      toast.error("Logout failed");
     }
   };
 

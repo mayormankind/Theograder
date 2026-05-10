@@ -21,6 +21,7 @@ export const sessionOptions: SessionOptions = {
     sameSite: "lax" as const,
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days
+    expires: new Date(Date.now() + 60 * 60 * 24 * 7 * 1000), // 7 days from now
   },
 };
 

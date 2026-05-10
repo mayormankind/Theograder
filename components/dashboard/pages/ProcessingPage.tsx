@@ -9,6 +9,7 @@ import {
   Cpu,
   AlertCircle,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
@@ -54,6 +55,27 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
       setError('Failed to load batches');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteBatch = async (batchId: string) => {
+    if (!confirm('Delete this batch? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/batches/${batchId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete batch');
+      }
+
+      await fetchBatches();
+    } catch (err) {
+      console.error('Error deleting batch:', err);
+      setError('Failed to delete batch');
     }
   };
 
@@ -137,9 +159,18 @@ export default function ProcessingPage({ onNavigate }: ProcessingPageProps) {
                       </p>
                     </div>
                   </div>
-                  <span className={cn('rounded-full px-3 py-1 text-xs font-semibold border', getStatusColor(batch.status))}>
-                    {batch.status}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className={cn('rounded-full px-3 py-1 text-xs font-semibold border', getStatusColor(batch.status))}>
+                      {batch.status}
+                    </span>
+                    <button
+                      onClick={() => handleDeleteBatch(batch.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                      title="Delete batch"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-4 mb-4">

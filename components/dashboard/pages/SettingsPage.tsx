@@ -56,6 +56,13 @@ export default function SettingsPage({}: SettingsPageProps) {
     emailNotif: true,
     systemNotif: true,
   });
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  const [passwordSaving, setPasswordSaving] = useState(false);
 
   useEffect(() => {
     fetchSettings();
@@ -102,6 +109,46 @@ export default function SettingsPage({}: SettingsPageProps) {
       toast.error("Failed to save settings");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    try {
+      setPasswordSaving(true);
+      setPasswordError(null);
+
+      if (passwordData.newPassword !== passwordData.confirmPassword) {
+        setPasswordError("Passwords do not match");
+        toast.error("Passwords do not match");
+        return;
+      }
+
+      if (passwordData.newPassword.length < 8) {
+        setPasswordError("New password must be at least 8 characters");
+        toast.error("New password must be at least 8 characters");
+        return;
+      }
+
+      const response = await fetch("/api/settings/password", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(passwordData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to change password");
+      }
+
+      toast.success("Password changed successfully");
+      setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    } catch (err) {
+      console.error("Error changing password:", err);
+      const errorMessage = err instanceof Error ? err.message : "Failed to change password";
+      setPasswordError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setPasswordSaving(false);
     }
   };
 
@@ -442,20 +489,53 @@ export default function SettingsPage({}: SettingsPageProps) {
             </p>
           </div>
           <div className="flex flex-col gap-4">
-            {["Current Password", "New Password", "Confirm New Password"].map(
-              (label) => (
-                <div key={label}>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
-                    {label}
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="••••••••••"
-                    className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
-                  />
+            {passwordError && (
+              <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4">
+                <AlertCircle size={15} className="mt-0.5 shrink-0 text-red-500" />
+                <div>
+                  <p className="text-xs font-semibold text-red-800">Error</p>
+                  <p className="text-xs text-red-600 mt-0.5">{passwordError}</p>
                 </div>
-              ),
+              </div>
             )}
+            {[
+              { label: "Current Password", key: "currentPassword" as const },
+              { label: "New Password", key: "newPassword" as const },
+              { label: "Confirm New Password", key: "confirmPassword" as const },
+            ].map((field) => (
+              <div key={field.label}>
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+                  {field.label}
+                </label>
+                <input
+                  type="password"
+                  value={passwordData[field.key]}
+                  onChange={(e) =>
+                    setPasswordData({ ...passwordData, [field.key]: e.target.value })
+                  }
+                  placeholder="••••••••••"
+                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
+                />
+              </div>
+            ))}
+            <div className="flex justify-end pt-2">
+              <button
+                onClick={handlePasswordChange}
+                disabled={passwordSaving}
+                className={cn(
+                  "flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all",
+                  "bg-[#0f1f3d] text-white hover:bg-[#162b52]",
+                  passwordSaving && "opacity-70 cursor-not-allowed",
+                )}
+              >
+                {passwordSaving ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Save size={14} />
+                )}
+                {passwordSaving ? "Changing..." : "Change Password"}
+              </button>
+            </div>
           </div>
         </div>
       )}

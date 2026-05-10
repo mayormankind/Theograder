@@ -70,7 +70,7 @@ export async function GET(
   }
 }
 
-// DELETE /api/batches/[id] - Cancel a batch
+// DELETE /api/batches/[id] - Delete a batch
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -78,7 +78,7 @@ export async function DELETE(
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
-    
+
     const { id } = await params;
 
     // Check if batch exists and belongs to user
@@ -98,29 +98,25 @@ export async function DELETE(
       );
     }
 
-    if (batch.status === 'COMPLETED') {
-      return NextResponse.json(
-        { error: 'Cannot cancel completed batch' },
-        { status: 400 }
-      );
-    }
-
-    // Update batch status to cancelled
-    const cancelledBatch = await prisma.batch.update({
-      where: { id: id },
-      data: {
-        status: 'CANCELLED',
+    // Delete batch items first (cascade delete)
+    await prisma.batchItem.deleteMany({
+      where: {
+        batchId: id,
       },
     });
 
+    // Delete the batch
+    await prisma.batch.delete({
+      where: { id: id },
+    });
+
     return NextResponse.json({
-      message: 'Batch cancelled successfully',
-      batch: cancelledBatch,
+      message: 'Batch deleted successfully',
     });
   } catch (error) {
-    console.error('Error cancelling batch:', error);
+    console.error('Error deleting batch:', error);
     return NextResponse.json(
-      { error: 'Failed to cancel batch' },
+      { error: 'Failed to delete batch' },
       { status: 500 }
     );
   }

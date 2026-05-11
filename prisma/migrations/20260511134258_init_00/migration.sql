@@ -5,16 +5,10 @@ CREATE TYPE "UserRole" AS ENUM ('LECTURER', 'ADMIN');
 CREATE TYPE "ExamStatus" AS ENUM ('DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED');
 
 -- CreateEnum
-CREATE TYPE "ScriptStatus" AS ENUM ('PROCESSING', 'PROCESSED', 'FAILED', 'ARCHIVED');
+CREATE TYPE "ScriptStatus" AS ENUM ('UPLOADED', 'PROCESSING', 'PROCESSED', 'FAILED', 'ARCHIVED');
 
 -- CreateEnum
 CREATE TYPE "ResultStatus" AS ENUM ('PENDING', 'REVIEWED', 'APPROVED', 'REJECTED');
-
--- CreateEnum
-CREATE TYPE "BatchStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED', 'CANCELLED');
-
--- CreateEnum
-CREATE TYPE "BatchItemStatus" AS ENUM ('PENDING', 'PROCESSING', 'COMPLETED', 'FAILED');
 
 -- CreateTable
 CREATE TABLE "users" (
@@ -105,7 +99,7 @@ CREATE TABLE "scripts" (
     "extractedText" TEXT,
     "extractionMethod" TEXT,
     "confidenceFlag" TEXT,
-    "status" "ScriptStatus" NOT NULL DEFAULT 'PROCESSING',
+    "status" "ScriptStatus" NOT NULL DEFAULT 'UPLOADED',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "examId" TEXT NOT NULL,
@@ -149,59 +143,6 @@ CREATE TABLE "question_results" (
 );
 
 -- CreateTable
-CREATE TABLE "similarity_scores" (
-    "id" TEXT NOT NULL,
-    "score" DOUBLE PRECISION NOT NULL,
-    "rubricPointId" TEXT NOT NULL,
-    "questionResultId" TEXT NOT NULL,
-
-    CONSTRAINT "similarity_scores_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "batches" (
-    "id" TEXT NOT NULL,
-    "name" TEXT NOT NULL,
-    "description" TEXT,
-    "status" "BatchStatus" NOT NULL DEFAULT 'PENDING',
-    "totalFiles" INTEGER NOT NULL,
-    "processedFiles" INTEGER NOT NULL DEFAULT 0,
-    "failedFiles" INTEGER NOT NULL DEFAULT 0,
-    "startedAt" TIMESTAMP(3),
-    "completedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updatedAt" TIMESTAMP(3) NOT NULL,
-    "examId" TEXT NOT NULL,
-
-    CONSTRAINT "batches_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "batch_items" (
-    "id" TEXT NOT NULL,
-    "filename" TEXT NOT NULL,
-    "status" "BatchItemStatus" NOT NULL DEFAULT 'PENDING',
-    "errorMessage" TEXT,
-    "startedAt" TIMESTAMP(3),
-    "completedAt" TIMESTAMP(3),
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "batchId" TEXT NOT NULL,
-    "scriptId" TEXT,
-
-    CONSTRAINT "batch_items_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "sessions" (
-    "id" TEXT NOT NULL,
-    "sessionToken" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "expires" TIMESTAMP(3) NOT NULL,
-
-    CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "settings" (
     "id" TEXT NOT NULL,
     "key" TEXT NOT NULL,
@@ -228,24 +169,6 @@ CREATE TABLE "activity_logs" (
 );
 
 -- CreateTable
-CREATE TABLE "accounts" (
-    "id" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
-    "type" TEXT NOT NULL,
-    "provider" TEXT NOT NULL,
-    "providerAccountId" TEXT NOT NULL,
-    "refresh_token" TEXT,
-    "access_token" TEXT,
-    "expires_at" INTEGER,
-    "token_type" TEXT,
-    "scope" TEXT,
-    "id_token" TEXT,
-    "session_state" TEXT,
-
-    CONSTRAINT "accounts_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
 CREATE TABLE "verification_tokens" (
     "identifier" TEXT NOT NULL,
     "token" TEXT NOT NULL,
@@ -257,13 +180,7 @@ CREATE TABLE "verification_tokens" (
 CREATE UNIQUE INDEX "users_email_key" ON "users"("email");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "sessions_sessionToken_key" ON "sessions"("sessionToken");
-
--- CreateIndex
 CREATE UNIQUE INDEX "settings_key_key" ON "settings"("key");
-
--- CreateIndex
-CREATE UNIQUE INDEX "accounts_provider_providerAccountId_key" ON "accounts"("provider", "providerAccountId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "verification_tokens_token_key" ON "verification_tokens"("token");
@@ -303,27 +220,6 @@ ALTER TABLE "question_results" ADD CONSTRAINT "question_results_resultId_fkey" F
 
 -- AddForeignKey
 ALTER TABLE "question_results" ADD CONSTRAINT "question_results_rubricQuestionId_fkey" FOREIGN KEY ("rubricQuestionId") REFERENCES "rubric_questions"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "similarity_scores" ADD CONSTRAINT "similarity_scores_rubricPointId_fkey" FOREIGN KEY ("rubricPointId") REFERENCES "rubric_points"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "similarity_scores" ADD CONSTRAINT "similarity_scores_questionResultId_fkey" FOREIGN KEY ("questionResultId") REFERENCES "question_results"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "batches" ADD CONSTRAINT "batches_examId_fkey" FOREIGN KEY ("examId") REFERENCES "exams"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "batch_items" ADD CONSTRAINT "batch_items_batchId_fkey" FOREIGN KEY ("batchId") REFERENCES "batches"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "batch_items" ADD CONSTRAINT "batch_items_scriptId_fkey" FOREIGN KEY ("scriptId") REFERENCES "scripts"("id") ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "sessions" ADD CONSTRAINT "sessions_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "accounts" ADD CONSTRAINT "accounts_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "verification_tokens" ADD CONSTRAINT "verification_tokens_userId_fkey" FOREIGN KEY ("userId") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE;

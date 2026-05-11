@@ -34,10 +34,10 @@ interface NavItem {
   badge?: number;
 }
 
-const navItems: NavItem[] = [
+const navItemsStatic: Omit<NavItem, 'badge'>[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "exams", label: "Exams", icon: BookOpen, badge: 3 },
-  { id: "scripts", label: "Scripts", icon: FileText, badge: 15 },
+  { id: "exams", label: "Exams", icon: BookOpen },
+  { id: "scripts", label: "Scripts", icon: FileText },
   { id: "rubrics", label: "Rubrics", icon: ClipboardList },
   { id: "results", label: "Results", icon: BarChart3 },
   { id: "settings", label: "Settings", icon: Settings },
@@ -47,6 +47,8 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [examsCount, setExamsCount] = useState(0);
+  const [scriptsCount, setScriptsCount] = useState(0);
   const { user } = useUser();
   const router = useRouter();
 
@@ -80,12 +82,42 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const response = await fetch('/api/exams?limit=1000');
+        if (response.ok) {
+          const data = await response.json();
+          setExamsCount(data.pagination?.total || data.exams?.length || 0);
+          const totalScripts = data.exams?.reduce((sum: number, exam: any) => 
+            sum + (exam._count?.scripts || 0), 0) || 0;
+          setScriptsCount(totalScripts);
+        }
+      } catch (error) {
+        console.error('Error fetching counts:', error);
+      }
+    };
+
+    fetchCounts();
+  }, []);
+
   // Close mobile sidebar on route change
   useEffect(() => {
     if (isMobile) {
       setMobileOpen(false);
     }
   }, [activePage, isMobile]);
+
+  // Merge static nav items with dynamic badges
+  const navItems: NavItem[] = navItemsStatic.map((item: Omit<NavItem, 'badge'>): NavItem => {
+    if (item.id === 'exams' && examsCount > 0) {
+      return { ...item, badge: examsCount };
+    }
+    if (item.id === 'scripts' && scriptsCount > 0) {
+      return { ...item, badge: scriptsCount };
+    }
+    return item;
+  });
 
   return (
     <>
@@ -130,9 +162,9 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
             <Cpu size={18} className="text-teal-400" />
           </div>
           {!collapsed && (
-            <div className="flex flex-1 overflow-hidden">
+            <div className="flex flex-1 flex-col overflow-hidden">
               <span className="block truncate text-sm font-bold tracking-tight text-white">
-                AutoGrade <span className="text-teal-400">AI</span>
+                TheoGrade
               </span>
               <span className="block truncate text-[10px] font-medium uppercase tracking-widest text-white/40">
                 Academic System
@@ -158,7 +190,7 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
 
         {/* Nav Items */}
         <nav className="flex flex-col gap-0.5 px-2 py-2">
-          {navItems.map((item) => {
+          {navItems.map((item: NavItem) => {
             const Icon = item.icon;
             const isActive = activePage === item.id;
             return (
@@ -219,7 +251,7 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
               collapsed && "justify-center",
             )}
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-blue-500 text-xs font-bold text-white uppercase">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-500 text-xs font-bold text-white uppercase">
               {userInitials}
             </div>
             {!collapsed && (

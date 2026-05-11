@@ -47,20 +47,20 @@ The system processes scanned exam scripts and compares student answers with a le
 
 ## 🔄 System Workflow
 
-1. Lecturer logs in
+1. Lecturer logs in (Iron Session-based authentication)
 2. Uploads:
    - Exam script (image/PDF)
    - Marking rubric (structured JSON)
-3. System processes:
+3. System processes (per script):
    - OCR extracts text
    - Text is segmented into answers
    - Text is cleaned and normalized
-   - Sentence-BERT generates embeddings
+   - OpenAI embeddings generate vector representations
    - Cosine similarity is computed
    - Scores are assigned using rubric weights
 4. Output:
    - Scores per question
-   - Similarity breakdown
+   - Similarity breakdown (stored in JSON field)
    - Confidence score
 5. Lecturer reviews and overrides if needed
 
@@ -132,10 +132,9 @@ TheoGrader/
 │   ├── auth/                 # Authentication routes (/auth/login, /auth/signup, etc.)
 │   │   ├── login/
 │   │   ├── signup/
-│   │   ├── verify-email/
 │   │   ├── forgot-password/
 │   │   ├── reset-password/
-│   │   └── verify/
+│   │   └── verify/           # Deprecated (returns 410)
 │   ├── dashboard/            # Dashboard routes (/dashboard, /dashboard/settings, etc.)
 │   │   ├── page.tsx          # Main dashboard
 │   │   ├── settings/
@@ -145,11 +144,12 @@ TheoGrader/
 │   │   ├── results/
 │   │   ├── upload/
 │   │   ├── create-rubric/
-│   │   ├── processing/
 │   │   ├── report/
 │   │   └── scripts/
 │   ├── api/                  # Internal API routes
-│   │   ├── auth/             # Authentication API endpoints
+│   │   ├── auth/             # Authentication API endpoints (Iron Session)
+│   │   ├── scripts/          # Script processing API
+│   │   ├── grading/          # Grading list API
 │   │   ├── rubrics/          # Rubric management API
 │   │   └── upload/           # File upload API
 │   ├── layout.tsx            # Global root layout
@@ -172,7 +172,6 @@ TheoGrader/
 - `/` - Landing page
 - `/auth/login` - Login page
 - `/auth/signup` - Sign up page
-- `/auth/verify-email` - Email verification
 - `/auth/forgot-password` - Forgot password
 - `/auth/reset-password` - Reset password
 - `/dashboard` - Main dashboard
@@ -183,7 +182,6 @@ TheoGrader/
 - `/dashboard/results` - Results
 - `/dashboard/upload` - Upload scripts
 - `/dashboard/create-rubric` - Create rubric
-- `/dashboard/processing` - Processing status
 - `/dashboard/report` - Reports
 - `/dashboard/scripts` - Scripts management
 
@@ -197,3 +195,27 @@ The dashboard currently in `intelliGrade` (built with Vite/React) will be merged
 2.  **Style Migration**: Integrate `intelliGrade/src/index.css` into `TheoGrader/app/theograder.css` or as a module.
 3.  **Route Setup**: Create `TheoGrader/app/(dashboard)/dashboard/page.tsx` as the main entry point.
 4.  **State Management**: Transition from local Vite state to Next.js server/client state patterns.
+
+---
+
+## 🏗️ Architecture Decisions
+
+### Authentication
+- **Iron Session**: Cookie-based session management for authentication
+- **No NextAuth**: Removed in favor of simpler Iron Session approach
+- **OTP-based login**: Password or OTP authentication supported
+
+### Grading Pipeline
+- **Single-script processing**: Each script is processed individually via `/api/scripts/[scriptId]/process`
+- **No batch processing**: Redis-backed batch system removed
+- **Canonical route**: All grading goes through `/api/scripts/[scriptId]/process` POST endpoint
+
+### Embeddings
+- **OpenAI embeddings**: Using `text-embedding-3-small` model
+- **No SBERT**: Removed Sentence-BERT and torch dependencies
+- **In-memory caching**: Embeddings cached in AI service to reduce API calls
+
+### Data Storage
+- **Similarity data**: Stored as JSON in `breakdown` field on QuestionResult model
+- **No SimilarityScore model**: Removed duplicate storage model
+- **Simplified schema**: Removed unused NextAuth, Batch, and SimilarityScore models

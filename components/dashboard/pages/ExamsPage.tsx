@@ -101,8 +101,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
 
   const filtered = exams.filter((e) => {
     const matchSearch =
-      e.title.toLowerCase().includes(search.toLowerCase()) ||
-      e.courseCode?.toLowerCase().includes(search.toLowerCase());
+      (e.title?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (e.courseCode?.toLowerCase() || '').includes(search.toLowerCase());
     const matchFilter = filter === 'all' || e.status === filter;
     return matchSearch && matchFilter;
   });
@@ -264,8 +264,17 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
       </div>
 
       {/* Exam Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        {filtered.map((exam) => {
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 px-5">
+          <BookOpen size={48} className="text-slate-300 mb-4" />
+          <p className="text-sm font-medium text-slate-600">No exams found</p>
+          <p className="text-xs text-slate-500 mt-1">
+            {search ? 'Try adjusting your search or filter' : 'Create your first exam to get started'}
+          </p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {filtered.map((exam) => {
           const progress = exam._count && exam._count.scripts > 0 
             ? Math.round((exam._count.graded || 0) / exam._count.scripts * 100) 
             : 0;
@@ -364,7 +373,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
             </div>
           );
         })}
-      </div>
+        </div>
+      )}
 
       {/* Create/Edit Modal */}
       {(showCreateModal || showEditModal) && (
@@ -450,8 +460,11 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                     type="number"
                     required
                     min="1"
-                    value={formData.totalMarks}
-                    onChange={(e) => setFormData({ ...formData, totalMarks: parseInt(e.target.value) })}
+                    value={formData.totalMarks || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({ ...formData, totalMarks: value === '' ? 0 : parseInt(value, 10) || 0 });
+                    }}
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
                     placeholder="100"
                   />
@@ -463,8 +476,11 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                   <input
                     type="number"
                     min="1"
-                    value={formData.duration}
-                    onChange={(e) => setFormData({ ...formData, duration: parseInt(e.target.value) })}
+                    value={formData.duration || ''}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      setFormData({ ...formData, duration: value === '' ? 0 : parseInt(value, 10) || 0 });
+                    }}
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
                     placeholder="120"
                   />

@@ -38,9 +38,7 @@ model User {
   // Relations
   exams     Exam[]
   rubrics   Rubric[]
-  sessions  Session[]
   results   Result[]
-  accounts  Account[]
   verificationTokens VerificationToken[]
 
   @@map("users")
@@ -72,7 +70,6 @@ model Exam {
   rubrics     Rubric[]
   scripts     Script[]
   results     Result[]
-  batches     Batch[]
 
   @@map("exams")
 }
@@ -127,10 +124,9 @@ model RubricPoint {
   weight      Float  @default(1.0)
   maxScore    Float
   questionId  String
-  
+
   // Relations
   question    RubricQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  similarities SimilarityScore[]
 
   @@map("rubric_points")
 }
@@ -148,7 +144,7 @@ model Script {
   extractedText String?    // OCR extracted text
   extractionMethod String? // "tesseract", "gpt4", "hybrid"
   confidenceFlag  String?  // "acceptable", "low_quality_fallback_used"
-  status      ScriptStatus @default(PROCESSING)
+  status      ScriptStatus @default(UPLOADED)
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
 
@@ -156,12 +152,12 @@ model Script {
   examId      String
   exam        Exam @relation(fields: [examId], references: [id])
   results     Result[]
-  batchItems  BatchItem[]
 
   @@map("scripts")
 }
 
 enum ScriptStatus {
+  UPLOADED
   PROCESSING
   PROCESSED
   FAILED
@@ -216,92 +212,10 @@ model QuestionResult {
   result      Result @relation(fields: [resultId], references: [id], onDelete: Cascade)
   rubricQuestionId String
   rubricQuestion RubricQuestion @relation(fields: [rubricQuestionId], references: [id])
-  similarityScores SimilarityScore[]
 
   @@map("question_results")
 }
 
-// Similarity scores for detailed breakdown
-model SimilarityScore {
-  id        String @id @default(cuid())
-  score     Float
-  rubricPointId String
-  
-  // Relations
-  rubricPoint RubricPoint @relation(fields: [rubricPointId], references: [id])
-  questionResult QuestionResult @relation(fields: [questionResultId], references: [id])
-  questionResultId String
-
-  @@map("similarity_scores")
-}
-
-// Batch processing jobs
-model Batch {
-  id          String     @id @default(cuid())
-  name        String
-  description String?
-  status      BatchStatus @default(PENDING)
-  totalFiles  Int
-  processedFiles Int @default(0)
-  failedFiles Int @default(0)
-  jobId       String?
-  startedAt   DateTime?
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  // Relations
-  examId      String
-  exam        Exam @relation(fields: [examId], references: [id])
-  items       BatchItem[]
-
-  @@map("batches")
-}
-
-enum BatchStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-  CANCELLED
-}
-
-// Individual items within a batch
-model BatchItem {
-  id          String     @id @default(cuid())
-  filename    String
-  status      BatchItemStatus @default(PENDING)
-  errorMessage String?
-  startedAt   DateTime?
-  completedAt DateTime?
-  createdAt   DateTime @default(now())
-
-  // Relations
-  batchId     String
-  batch       Batch @relation(fields: [batchId], references: [id])
-  scriptId    String?
-  script      Script? @relation(fields: [scriptId], references: [id])
-
-  @@map("batch_items")
-}
-
-enum BatchItemStatus {
-  PENDING
-  PROCESSING
-  COMPLETED
-  FAILED
-}
-
-// Authentication sessions
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
 
 // System configuration and settings
 model Setting {
@@ -329,26 +243,6 @@ model ActivityLog {
   @@map("activity_logs")
 }
 
-// NextAuth.js Account model
-model Account {
-  id                String  @id @default(cuid())
-  userId            String
-  type              String
-  provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
-  scope             String?
-  id_token          String? @db.Text
-  session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([provider, providerAccountId])
-  @@map("accounts")
-}
 
 // NextAuth.js VerificationToken model
 model VerificationToken {

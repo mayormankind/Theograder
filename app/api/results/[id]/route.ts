@@ -47,11 +47,6 @@ export async function GET(
                 points: true,
               },
             },
-            similarityScores: {
-              include: {
-                rubricPoint: true,
-              },
-            },
           },
           orderBy: {
             questionId: 'asc',

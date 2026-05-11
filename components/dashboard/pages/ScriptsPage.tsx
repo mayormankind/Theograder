@@ -196,26 +196,41 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     }
 
     setBatchGrading(true);
-    try {
-      const response = await fetch('/api/batches', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: `Batch Grade - ${new Date().toLocaleDateString()}`,
-          examId: selectedExamId,
-        }),
-      });
+    let successCount = 0;
+    let failCount = 0;
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to start batch grading');
+    try {
+      // Process each script individually
+      for (const script of ungradedScripts) {
+        try {
+          const response = await fetch(`/api/scripts/${script.id}/process`, {
+            method: 'POST',
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Failed to grade script');
+          }
+
+          successCount++;
+        } catch (err) {
+          console.error(`Error grading script ${script.id}:`, err);
+          failCount++;
+        }
       }
 
-      toast.success(`Started grading ${ungradedScripts.length} script(s)`);
-      onNavigate('processing');
+      if (successCount > 0) {
+        toast.success(`Successfully graded ${successCount} script(s)`);
+      }
+      if (failCount > 0) {
+        toast.error(`Failed to grade ${failCount} script(s)`);
+      }
+
+      // Refresh scripts list
+      fetchScripts();
     } catch (err) {
-      console.error('Error starting batch grade:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to start batch grading');
+      console.error('Error during batch grade:', err);
+      toast.error(err instanceof Error ? err.message : 'Failed to complete batch grading');
     } finally {
       setBatchGrading(false);
     }

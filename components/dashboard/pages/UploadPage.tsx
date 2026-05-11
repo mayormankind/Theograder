@@ -194,6 +194,8 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
       // Navigate to scripts page after successful upload
       const successfulUploads = files.filter(f => f.status === 'done').length;
       if (successfulUploads > 0) {
+        // Clear the files list after successful upload to prevent re-uploading
+        setFiles([]);
         onNavigate('scripts');
       }
     } catch (err) {

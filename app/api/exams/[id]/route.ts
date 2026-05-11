@@ -51,7 +51,6 @@ export async function GET(
           select: {
             scripts: true,
             results: true,
-            batches: true,
           },
         },
       },
@@ -135,7 +134,68 @@ export async function PUT(
   }
 }
 
-// DELETE /api/exams/[id] - Soft delete an exam (archive)
+// PATCH /api/exams/[id] - Partially update an exam (e.g., status)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+    
+    const { id } = await params;
+
+    // Check if exam exists and belongs to user
+    const existingExam = await prisma.exam.findFirst({
+      where: {
+        id: id,
+        createdById: session.userId,
+      },
+    });
+
+    if (!existingExam) {
+      return NextResponse.json(
+        { error: 'Exam not found' },
+        { status: 404 }
+      );
+    }
+
+    const body = await request.json();
+    const validatedData = updateExamSchema.parse(body);
+
+    const updatedExam = await prisma.exam.update({
+      where: { id: id },
+      data: validatedData,
+      include: {
+        createdBy: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    return NextResponse.json(updatedExam);
+  } catch (error) {
+    console.error('Error updating exam:', error);
+    
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.issues },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to update exam' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/exams/[id] - Delete an exam
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -161,20 +221,18 @@ export async function DELETE(
       );
     }
 
-    // Soft delete by setting status to ARCHIVED
-    const archivedExam = await prisma.exam.update({
+    // Hard delete the exam
+    await prisma.exam.delete({
       where: { id: id },
-      data: { status: 'ARCHIVED' },
     });
 
     return NextResponse.json({
-      message: 'Exam archived successfully',
-      exam: archivedExam,
+      message: 'Exam deleted successfully',
     });
   } catch (error) {
-    console.error('Error archiving exam:', error);
+    console.error('Error deleting exam:', error);
     return NextResponse.json(
-      { error: 'Failed to archive exam' },
+      { error: 'Failed to delete exam' },
       { status: 500 }
     );
   }

@@ -5,7 +5,6 @@ export type Page =
   | 'upload'
   | 'rubrics'
   | 'create-rubric'
-  | 'processing'
   | 'results'
   | 'report'
   | 'settings'

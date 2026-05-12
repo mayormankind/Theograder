@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
           mimeType: file.type,
           filePath: storagePath, // Store Supabase path
           examId: validatedData.examId,
-          status: 'PROCESSING',
+          status: 'UPLOADED',
         },
       });
 

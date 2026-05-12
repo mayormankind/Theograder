@@ -245,7 +245,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
             className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
           />
         </div>
-        <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 overflow-x-auto no-scrollbar">
           {(['all', 'DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED'] as const).map((f) => (
             <button
               key={f}
@@ -378,8 +379,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
 
       {/* Create/Edit Modal */}
       {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md mx-4 shadow-xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-slate-800">
                 {editingExam ? 'Edit Exam' : 'Create New Exam'}

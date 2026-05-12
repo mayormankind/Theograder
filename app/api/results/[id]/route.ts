@@ -62,7 +62,21 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(result);
+    // Map the breakdown JSON for easier consumption in the frontend
+    const mappedQuestions = result.questions.map(q => {
+      const breakdown = (q.breakdown as any) || {};
+      return {
+        ...q,
+        matchedConcepts: breakdown.matchedConcepts || [],
+        missingConcepts: breakdown.missingConcepts || [],
+        similarityScore: Math.round(((breakdown.similarities as number[])?.[0] || 0) * 100),
+      };
+    });
+
+    return NextResponse.json({
+      ...result,
+      questions: mappedQuestions
+    });
   } catch (error) {
     console.error('Error fetching result:', error);
     return NextResponse.json(
@@ -97,7 +111,7 @@ export async function PUT(
       );
     }
 
-    const { status } = await request.json();
+    const { status, overrides } = await request.json();
 
     if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
       return NextResponse.json(
@@ -106,14 +120,45 @@ export async function PUT(
       );
     }
 
-    const updatedResult = await prisma.result.update({
-      where: { id: id },
-      data: { status },
+    const result = await prisma.$transaction(async (tx) => {
+      // 1. Update individual question scores if overrides provided
+      if (overrides && typeof overrides === 'object') {
+        for (const [qResultId, newScore] of Object.entries(overrides)) {
+          await tx.questionResult.update({
+            where: { id: qResultId },
+            data: { score: parseFloat(newScore as string) }
+          });
+        }
+      }
+
+      // 2. Update result status and total score
+      const updated = await tx.result.update({
+        where: { id: id },
+        data: { 
+          status,
+          ...(overrides ? {
+            totalScore: (await tx.questionResult.aggregate({
+              where: { resultId: id },
+              _sum: { score: true }
+            }))._sum.score || 0
+          } : {})
+        },
+      });
+
+      // 3. Update script status to GRADED if approved
+      if (status === 'APPROVED') {
+        await tx.script.update({
+          where: { id: updated.scriptId },
+          data: { status: 'GRADED' }
+        });
+      }
+
+      return updated;
     });
 
     return NextResponse.json({
       message: `Result ${status.toLowerCase()} successfully`,
-      result: updatedResult,
+      result,
     });
   } catch (error) {
     console.error('Error updating result status:', error);

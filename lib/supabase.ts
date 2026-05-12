@@ -43,6 +43,23 @@ export function getPublicUrl(bucket: string, path: string) {
   return data.publicUrl;
 }
 
+// Helper function to get a signed (time-limited) URL for a private file
+export async function getSignedUrl(
+  bucket: string,
+  path: string,
+  expiresInSeconds = 120
+): Promise<string> {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, expiresInSeconds);
+
+  if (error || !data?.signedUrl) {
+    throw new Error(`Failed to create signed URL: ${error?.message}`);
+  }
+
+  return data.signedUrl;
+}
+
 // Helper function to delete file from Supabase Storage
 export async function deleteFileFromSupabase(bucket: string, path: string) {
   const { error } = await supabase.storage

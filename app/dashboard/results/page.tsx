@@ -5,18 +5,33 @@ import ResultsPage from "@/components/dashboard/pages/ResultsPage";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
 
-function ResultsPageWrapper({ onNavigate }: { onNavigate: (page: Page, params?: Record<string, string>) => void }) {
+function ResultsPageWrapper({
+  onNavigate,
+}: {
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
+}) {
   return <ResultsPage onNavigate={onNavigate} />;
 }
 
 export default function Page() {
   const router = useRouter();
-  const handleNavigate = (page: Page) => {
-    router.push(`/dashboard/${page}`);
+  const handleNavigate = (page: Page, params?: Record<string, string>) => {
+    let url = `/dashboard/${page}`;
+    if (params) {
+      const searchParams = new URLSearchParams(params);
+      url += `?${searchParams.toString()}`;
+    }
+    router.push(url);
   };
 
   return (
-    <Suspense fallback={<div className="flex items-center justify-center min-h-[400px]">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-100">
+          Loading...
+        </div>
+      }
+    >
       <ResultsPageWrapper onNavigate={handleNavigate} />
     </Suspense>
   );

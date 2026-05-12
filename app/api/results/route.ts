@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 // GET /api/results - List results with filtering and pagination
 export async function GET(request: NextRequest) {
@@ -16,9 +18,58 @@ export async function GET(request: NextRequest) {
     const scoreMin = searchParams.get('scoreMin');
     const scoreMax = searchParams.get('scoreMax');
     const studentId = searchParams.get('studentId');
+    const scriptId = searchParams.get('scriptId');
     const exportFormat = searchParams.get('export'); // 'csv' or 'pdf'
 
     const skip = (page - 1) * limit;
+
+    // Special case: Fetch specific result by scriptId for ResultsPage
+    if (scriptId) {
+      const result = await prisma.result.findFirst({
+        where: { scriptId, gradedById: session.userId },
+        include: {
+          questions: {
+            include: {
+              rubricQuestion: {
+                include: {
+                  points: true,
+                },
+              },
+            },
+            orderBy: {
+              questionId: 'asc',
+            },
+          },
+        },
+      });
+
+      if (!result) {
+        return NextResponse.json({ results: [] });
+      }
+
+      // Map to GradingResult shape expected by frontend
+      const mappedResults = result.questions.map(q => {
+        const breakdown = (q.breakdown as any) || {};
+        return {
+          questionId: q.id,
+          questionNumber: q.questionId,
+          partLabel: q.questionId,
+          studentAnswer: q.answer || '',
+          expectedAnswer: q.rubricQuestion?.points?.map(p => p.point).join('; ') ?? '',
+          score: q.score,
+          maxScore: q.maxScore,
+          similarityScore: Math.round(((breakdown.similarities as number[])?.[0] || 0) * 100),
+          confidence: Math.round(q.confidence * 100),
+          matchedConcepts: breakdown.matchedConcepts || [],
+          missingConcepts: breakdown.missingConcepts || [],
+        };
+      });
+
+      return NextResponse.json({ 
+        resultId: result.id,
+        results: mappedResults 
+      });
+    }
 
     // Build where clause
     const where: any = {
@@ -188,29 +239,44 @@ function generateCSVExport(results: any[]) {
   });
 }
 
-// Helper function to generate PDF export (simplified version)
+// Helper function to generate PDF export
 function generatePDFExport(results: any[]) {
-  // For now, return a simple text-based PDF
-  // In a real implementation, you'd use a library like jsPDF or puppeteer
-  let pdfContent = 'TheoGrader - Results Export\n';
-  pdfContent += `Generated: ${new Date().toLocaleString()}\n\n`;
-  pdfContent += '='.repeat(80) + '\n\n';
-
-  results.forEach(result => {
-    pdfContent += `Student: ${result.script.studentName || 'Unknown'} (${result.script.studentId || 'N/A'})\n`;
-    pdfContent += `Exam: ${result.exam.title}\n`;
-    pdfContent += `Course: ${result.exam.courseCode || 'N/A'}\n`;
-    pdfContent += `Score: ${result.totalScore}/${result.maxScore} (${((result.totalScore / result.maxScore) * 100).toFixed(2)}%)\n`;
-    pdfContent += `Confidence: ${result.confidence?.toFixed(3) || 'N/A'}\n`;
-    pdfContent += `Status: ${result.status}\n`;
-    pdfContent += `Graded: ${result.gradedAt.toLocaleString()}\n`;
-    pdfContent += '-'.repeat(40) + '\n\n';
+  const doc = new jsPDF();
+  
+  // Title
+  doc.setFontSize(20);
+  doc.setTextColor(15, 31, 61); // #0f1f3d
+  doc.text('TheoGrader - Results Export', 14, 22);
+  
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
+  
+  const tableData = results.map(result => [
+    result.script.studentId || 'N/A',
+    result.script.studentName || 'Unknown',
+    result.exam.title,
+    `${result.totalScore}/${result.maxScore}`,
+    `${((result.totalScore / result.maxScore) * 100).toFixed(2)}%`,
+    result.confidence?.toFixed(2) || 'N/A',
+    result.status
+  ]);
+  
+  (doc as any).autoTable({
+    startY: 36,
+    head: [['Student ID', 'Name', 'Exam', 'Score', '%', 'Confidence', 'Status']],
+    body: tableData,
+    theme: 'grid',
+    headStyles: { fillColor: [15, 31, 61] },
+    styles: { fontSize: 9 },
   });
-
-  return new NextResponse(pdfContent, {
+  
+  const pdfBuffer = doc.output('arraybuffer');
+  
+  return new NextResponse(pdfBuffer, {
     headers: {
-      'Content-Type': 'text/plain',
-      'Content-Disposition': `attachment; filename="results-export-${new Date().toISOString().split('T')[0]}.txt"`,
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="results-export-${new Date().toISOString().split('T')[0]}.pdf"`,
     },
   });
 }

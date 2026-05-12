@@ -294,7 +294,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
             or <span className="text-teal-600 font-medium underline underline-offset-2">browse files</span> from your computer
           </p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
           <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-600">
             <FileText size={11} /> PDF
           </span>

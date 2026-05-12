@@ -215,12 +215,12 @@ const statusLabels: Record<string, string> = {
   return (
     <div className="flex flex-col gap-6 p-6">
       {/* Welcome Banner */}
-      <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-6 py-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-slate-200 bg-white px-6 py-4 gap-4">
         <div>
-          <h2 className="text-base font-semibold text-slate-800">
+          <h2 className="text-base font-semibold text-slate-800 text-center sm:text-left">
             Welcome back, {user?.name || 'User'}! 👋
           </h2>
-          <p className="text-sm text-slate-500 mt-0.5">
+          <p className="text-sm text-slate-500 mt-0.5 text-center sm:text-left">
             You have{" "}
             <span className="font-semibold text-amber-600">{stats.overview.pendingReview} scripts</span>{" "}
             awaiting review and{" "}
@@ -228,7 +228,7 @@ const statusLabels: Record<string, string> = {
             created.
           </p>
         </div>
-        <div className="hidden md:flex items-center gap-2">
+        <div className="flex sm:hidden md:flex items-center justify-center gap-2">
           <button
             onClick={() => onNavigate("upload")}
             className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"

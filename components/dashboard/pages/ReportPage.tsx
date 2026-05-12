@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Download,
   CheckCircle2,
@@ -24,7 +25,7 @@ import {
 } from 'recharts';
 
 interface ReportPageProps {
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
 }
 
 const gradeFromPct = (pct: number) => {
@@ -36,15 +37,37 @@ const gradeFromPct = (pct: number) => {
 };
 
 export default function ReportPage({ onNavigate }: ReportPageProps) {
+  const searchParams = useSearchParams();
+  const resultId = searchParams.get('resultId');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gradingResult, setGradingResult] = useState<any>(null);
 
   useEffect(() => {
-    // This page should receive a result ID parameter to fetch specific grading results
-    // For now, we'll keep the loading state but remove mock data
-    setLoading(false);
-  }, []);
+    if (resultId) {
+      fetchResult(resultId);
+    } else {
+      setLoading(false);
+    }
+  }, [resultId]);
+
+  const fetchResult = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/api/results/${id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch report');
+      }
+      const data = await response.json();
+      setGradingResult(data);
+    } catch (err) {
+      console.error('Error fetching report:', err);
+      setError('Failed to load report');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -103,16 +126,16 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
       {/* Report Card */}
       <div className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {/* Header Banner */}
-        <div className="border-b border-slate-100 bg-[#0f1f3d] px-8 py-6">
-          <div className="flex items-start justify-between">
+        <div className="border-b border-slate-100 bg-[#0f1f3d] px-4 sm:px-8 py-6">
+          <div className="flex flex-col sm:flex-row items-start justify-between gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">AutoGrade AI — Grading Report</p>
-              <h2 className="text-xl font-bold text-white mb-0.5">Database Systems — Final Examination</h2>
-              <p className="text-sm text-white/60">CSC 401 · Faculty of Computing Sciences · University of Lagos</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-1">TheoGrader AI — Grading Report</p>
+              <h2 className="text-lg sm:text-xl font-bold text-white mb-0.5">{gradingResult.exam?.title || 'Examination'}</h2>
+              <p className="text-xs sm:text-sm text-white/60">{gradingResult.exam?.courseCode} · {gradingResult.exam?.courseName}</p>
             </div>
-            <div className={cn('flex flex-col items-center justify-center rounded-xl px-5 py-3 ring-1', bg, ring)}>
-              <p className={cn('text-4xl font-black', color)}>{grade}</p>
-              <p className={cn('text-[11px] font-semibold', color)}>{pct}%</p>
+            <div className={cn('flex flex-col items-center justify-center rounded-xl px-5 py-3 ring-1 self-end sm:self-auto', bg, ring)}>
+              <p className={cn('text-3xl sm:text-4xl font-black', color)}>{grade}</p>
+              <p className={cn('text-[10px] sm:text-[11px] font-semibold', color)}>{pct}%</p>
             </div>
           </div>
         </div>
@@ -120,10 +143,10 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
         {/* Student Info */}
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 border-b border-slate-100 px-8 py-5">
           {[
-            { label: 'Student Name', value: gradingResult.studentName || 'N/A' },
-            { label: 'Student ID', value: gradingResult.studentId || 'N/A' },
-            { label: 'Date Graded', value: gradingResult.createdAt ? new Date(gradingResult.createdAt).toLocaleDateString() : 'N/A' },
-            { label: 'Graded By', value: 'AutoGrade AI' },
+            { label: 'Student Name', value: gradingResult.script?.studentName || 'N/A' },
+            { label: 'Student ID', value: gradingResult.script?.studentId || 'N/A' },
+            { label: 'Date Graded', value: gradingResult.gradedAt ? new Date(gradingResult.gradedAt).toLocaleDateString() : 'N/A' },
+            { label: 'Graded By', value: 'TheoGrader AI' },
           ].map((item) => (
             <div key={item.label}>
               <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{item.label}</p>
@@ -277,8 +300,8 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
 
         {/* Footer */}
         <div className="border-t border-slate-100 bg-slate-50/50 px-8 py-4">
-          <p className="text-[11px] text-slate-400">
-            This report was generated by AutoGrade AI using OCR text extraction and Sentence-BERT semantic similarity analysis.
+          <p className="text-[10px] sm:text-[11px] text-slate-400">
+            This report was generated by TheoGrader AI using OCR text extraction and Sentence-BERT semantic similarity analysis.
             Confidence scores below 70% are flagged for mandatory manual review. All overrides are logged.
           </p>
         </div>

@@ -61,10 +61,12 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
   const searchParams = useSearchParams();
   const scriptId = searchParams.get('scriptId');
   const [results, setResults] = useState<GradingResult[]>([]);
+  const [resultId, setResultId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<string[]>([]);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [finalizing, setFinalizing] = useState(false);
 
   useEffect(() => {
     if (scriptId) {
@@ -79,17 +81,52 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetch(`/api/grading?scriptId=${id}`);
+      const response = await fetch(`/api/results?scriptId=${id}`);
       if (!response.ok) {
         throw new Error('Failed to fetch results');
       }
       const data = await response.json();
       setResults(data.results || []);
+      setResultId(data.resultId || null);
     } catch (err) {
       console.error('Error fetching results:', err);
       setError('Failed to load results');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleFinalize = async () => {
+    if (!resultId) return;
+
+    try {
+      setFinalizing(true);
+      // Map overrides to questionResultId -> score
+      const overridePayload: Record<string, number> = {};
+      Object.entries(overrides).forEach(([key, val]) => {
+        const [qId] = key.split('-');
+        overridePayload[qId] = parseFloat(val);
+      });
+
+      const response = await fetch(`/api/results/${resultId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'APPROVED',
+          overrides: overridePayload,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to finalize results');
+      }
+
+      onNavigate('report', { resultId });
+    } catch (err) {
+      console.error('Error finalizing:', err);
+      alert('Failed to finalize results');
+    } finally {
+      setFinalizing(false);
     }
   };
 
@@ -161,7 +198,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
             <p className="text-sm font-semibold text-slate-800">Grading Results</p>
             <p className="text-xs text-slate-500">Script ID: {scriptId}</p>
           </div>
-          <div className="hidden md:flex items-center gap-3 border-l border-slate-200 pl-4">
+          <div className="hidden lg:flex items-center gap-3 border-l border-slate-200 pl-4">
             <div className="text-center">
               <p className="text-lg font-bold text-slate-900">{totalScore}/{totalMax}</p>
               <p className="text-[10px] text-slate-400 uppercase tracking-wide">Total Score</p>
@@ -183,18 +220,20 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
             <Flag size={12} /> Flag for Review
           </button>
           <button
-            onClick={() => onNavigate('report')}
-            className="flex items-center gap-1.5 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] transition-colors"
+            onClick={handleFinalize}
+            disabled={finalizing}
+            className="flex items-center gap-1.5 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] disabled:opacity-50 transition-colors"
           >
-            <Save size={12} /> Finalize Result
+            {finalizing ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} 
+            {finalizing ? 'Saving...' : 'Finalize Result'}
           </button>
         </div>
       </div>
 
       {/* Main Split */}
-      <div className="flex flex-1 min-h-0 overflow-hidden" style={{ height: 'calc(100vh - 64px - 58px)' }}>
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden lg:h-[calc(100vh-64px-58px)]">
         {/* Left: Student Script */}
-        <div className="w-[42%] shrink-0 flex flex-col border-r border-slate-200 bg-slate-50 overflow-y-auto">
+        <div className="w-full lg:w-[42%] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50 overflow-y-auto max-h-[40vh] lg:max-h-none">
           <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3">
             <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Student Answers (OCR Extract)</p>
           </div>
@@ -383,10 +422,12 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
               </p>
             </div>
             <button
-              onClick={() => onNavigate('report')}
-              className="flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 transition-colors"
+              onClick={handleFinalize}
+              disabled={finalizing}
+              className="flex items-center gap-2 rounded-lg bg-teal-600 px-5 py-2.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 transition-colors"
             >
-              Finalize & Generate Report <ArrowRight size={14} />
+              {finalizing ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
+              {finalizing ? 'Finalising...' : 'Finalize & Generate Report'}
             </button>
           </div>
         </div>

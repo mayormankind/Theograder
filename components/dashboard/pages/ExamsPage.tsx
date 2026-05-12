@@ -226,15 +226,15 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
         >
           <Plus size={15} />
-          Create New Exam
+          <span>New Exam</span>
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
         <div className="relative flex-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -245,14 +245,13 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
             className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
           />
         </div>
-        </div>
         <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 overflow-x-auto no-scrollbar">
           {(['all', 'DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED'] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
               className={cn(
-                'rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors',
+                'rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors whitespace-nowrap',
                 filter === f
                   ? 'bg-white text-slate-800 shadow-sm ring-1 ring-slate-200'
                   : 'text-slate-500 hover:text-slate-700'
@@ -341,31 +340,31 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
               )}
 
               {/* Actions */}
-              <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+              <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100">
                 <button
                   onClick={() => onNavigate('scripts')}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   <Users size={12} />
                   View Scripts
                 </button>
                 <button
                   onClick={() => onNavigate('rubrics')}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   <FileEdit size={12} />
                   Edit Rubric
                 </button>
                 <button
                   onClick={() => handleEdit(exam)}
-                  className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+                  className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                 >
                   <Edit2 size={12} />
                   Edit
                 </button>
                 <button
                   onClick={() => handleDelete(exam.id)}
-                  className="ml-auto flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
+                  className="sm:ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 transition-colors"
                 >
                   <Trash2 size={12} />
                   Delete

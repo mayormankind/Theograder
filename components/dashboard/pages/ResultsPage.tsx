@@ -192,54 +192,54 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
   return (
     <div className="flex flex-col gap-0 h-full">
       {/* Top Bar */}
-      <div className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3.5">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-4 border-b border-slate-200 bg-white px-4 py-3.5 sm:px-6 md:flex-row md:items-center md:justify-between md:gap-2">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:gap-4">
           <div>
             <p className="text-sm font-semibold text-slate-800">Grading Results</p>
-            <p className="text-xs text-slate-500">Script ID: {scriptId}</p>
+            <p className="text-[11px] text-slate-500">Script ID: {scriptId}</p>
           </div>
-          <div className="hidden lg:flex items-center gap-3 border-l border-slate-200 pl-4">
+          <div className="flex items-center gap-4 border-t border-slate-100 pt-3 md:border-t-0 md:border-l md:pl-4 md:pt-0">
             <div className="text-center">
-              <p className="text-lg font-bold text-slate-900">{totalScore}/{totalMax}</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide">Total Score</p>
+              <p className="text-base md:text-lg font-bold text-slate-900">{totalScore}/{totalMax}</p>
+              <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wide">Total Score</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold text-slate-900">{overallPct}%</p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide">Percentage</p>
+              <p className="text-base md:text-lg font-bold text-slate-900">{overallPct}%</p>
+              <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wide">Percentage</p>
             </div>
             <div className="text-center">
-              <p className="text-lg font-bold" style={{ color: confidenceColor(avgConfidence).text.replace('text-', '') }}>
+              <p className="text-base md:text-lg font-bold" style={{ color: confidenceColor(avgConfidence).text.replace('text-', '') }}>
                 <span className={confidenceColor(avgConfidence).text}>{avgConfidence}%</span>
               </p>
-              <p className="text-[10px] text-slate-400 uppercase tracking-wide">Avg Confidence</p>
+              <p className="text-[9px] md:text-[10px] text-slate-400 uppercase tracking-wide">Avg Confidence</p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button className="flex items-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors">
-            <Flag size={12} /> Flag for Review
+        <div className="flex items-center gap-2 mt-2 md:mt-0">
+          <button className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors md:flex-none">
+            <Flag size={12} /> <span className="sm:inline">Flag</span>
           </button>
           <button
             onClick={handleFinalize}
             disabled={finalizing}
-            className="flex items-center gap-1.5 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] disabled:opacity-50 transition-colors"
+            className="flex flex-2 items-center justify-center gap-1.5 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] disabled:opacity-50 transition-colors md:flex-none"
           >
             {finalizing ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} 
-            {finalizing ? 'Saving...' : 'Finalize Result'}
+            {finalizing ? 'Saving...' : 'Finalize'}
           </button>
         </div>
       </div>
 
       {/* Main Split */}
-      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden lg:h-[calc(100vh-64px-58px)]">
+      <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
         {/* Left: Student Script */}
-        <div className="w-full lg:w-[42%] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50 overflow-y-auto max-h-[40vh] lg:max-h-none">
+        <div className="w-full lg:w-[40%] shrink-0 flex flex-col border-b lg:border-b-0 lg:border-r border-slate-200 bg-slate-50 overflow-y-auto max-h-[35vh] lg:max-h-none">
           <div className="sticky top-0 z-10 border-b border-slate-200 bg-white px-5 py-3">
-            <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Student Answers (OCR Extract)</p>
+            <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wide">Student Answers (OCR Extract)</p>
           </div>
-          <div className="flex flex-col gap-3 p-5">
+          <div className="flex flex-col gap-3 p-4">
             {results.map((result) => (
-              <div key={result.questionId} className="rounded-lg border-l-2 border-teal-400 bg-teal-50/50 p-3.5 bg-white shadow-sm">
+              <div key={result.questionId} className="rounded-lg border-l-2 border-teal-400 bg-white p-3.5 shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <span className="rounded bg-slate-800 px-2 py-0.5 text-[10px] font-bold text-white">
                     {result.questionNumber} ({result.partLabel})
@@ -290,13 +290,13 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
                       <div key={key} className="border-t border-slate-50">
                         {/* Row Header */}
                         <div
-                          className="flex items-center gap-4 px-5 py-3.5 cursor-pointer hover:bg-slate-50/50 transition-colors"
+                          className="flex items-center gap-3 md:gap-4 px-4 md:px-5 py-3.5 cursor-pointer hover:bg-slate-50/50 transition-colors"
                           onClick={() => toggleRow(key)}
                         >
                           <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-teal-50 ring-1 ring-teal-200 text-[11px] font-bold text-teal-700">
                             {result.partLabel}
                           </div>
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
                               <div className="flex-1 h-1.5 rounded-full bg-slate-100">
                                 <div
@@ -305,11 +305,11 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
                                 />
                               </div>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className={cn('rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1', cfg.bg, cfg.text, cfg.ring)}>
-                                {cfg.label} confidence
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={cn('rounded-full px-2 py-0.5 text-[9px] md:text-[10px] font-semibold ring-1', cfg.bg, cfg.text, cfg.ring)}>
+                                {cfg.label}
                               </span>
-                              <span className="text-[11px] text-slate-400">{result.similarityScore}% similarity</span>
+                              <span className="text-[9px] md:text-[11px] text-slate-400">{result.similarityScore}% similarity</span>
                             </div>
                           </div>
                           <ScoreGauge score={displayScore} max={result.maxScore} />

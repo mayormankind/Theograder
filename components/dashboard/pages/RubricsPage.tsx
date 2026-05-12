@@ -195,7 +195,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
       )}
 
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-slate-800">Rubrics</h2>
           <p className="text-sm text-slate-500 mt-0.5">
@@ -204,10 +204,10 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
         </div>
         <button
           onClick={() => onNavigate('create-rubric')}
-          className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
+          className="flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
         >
           <Plus size={14} />
-          Create Rubric
+          <span>Create Rubric</span>
         </button>
       </div>
 
@@ -245,10 +245,10 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
             <div className="divide-y divide-slate-50">
               {rubrics.map((rubric) => (
                 <div key={rubric.id} className="px-5 py-4 hover:bg-slate-50 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3">
-                        <h4 className="text-sm font-semibold text-slate-800">{rubric.title}</h4>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h4 className="text-sm font-semibold text-slate-800 truncate max-w-[200px] sm:max-w-none">{rubric.title}</h4>
                         {rubric.examId ? (
                           <span className="rounded-full bg-teal-50 px-2 py-1 text-[10px] font-semibold text-teal-700 ring-1 ring-teal-200">
                             Linked
@@ -262,45 +262,45 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
                       <p className="text-xs text-slate-500 mt-1">
                         {rubric.exam?.courseCode || 'No course'} • {rubric.questions.length} questions • {rubric.totalMarks} marks
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">
+                      <p className="text-[10px] text-slate-400 mt-1">
                         Created {new Date(rubric.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 sm:ml-4">
                       {rubric.examId ? (
                         <button
                           onClick={() => handleUnlink(rubric.id)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 border border-slate-200 hover:bg-amber-50 hover:text-amber-600 transition-colors"
                           title="Unlink from Exam"
                         >
-                          <Link2Off size={14} />
+                          <Link2Off size={15} />
                         </button>
                       ) : (
                         <button
                           onClick={() => openLinkModal(rubric)}
-                          className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 border border-slate-200 hover:bg-blue-50 hover:text-blue-600 transition-colors"
                           title="Link to Exam"
                         >
-                          <Link size={14} />
+                          <Link size={15} />
                         </button>
                       )}
                       <button
                         onClick={() => openDuplicateModal(rubric)}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 border border-slate-200 hover:bg-slate-100 hover:text-slate-600 transition-colors"
                         title="Duplicate"
                       >
-                        <Copy size={14} />
+                        <Copy size={15} />
                       </button>
                       <button
                         onClick={() => handleDelete(rubric.id)}
                         disabled={deletingRubric === rubric.id}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 transition-colors"
+                        className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 border border-slate-200 hover:bg-red-50 hover:text-red-600 disabled:opacity-50 transition-colors"
                         title="Delete"
                       >
                         {deletingRubric === rubric.id ? (
-                          <Loader2 size={14} className="animate-spin" />
+                          <Loader2 size={15} className="animate-spin" />
                         ) : (
-                          <Trash2 size={14} />
+                          <Trash2 size={15} />
                         )}
                       </button>
                     </div>

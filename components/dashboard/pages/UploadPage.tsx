@@ -206,7 +206,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto w-full">
       {/* Error Display */}
       {error && (
         <div className="flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4">
@@ -266,7 +266,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
         className={cn(
-          'relative flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed bg-white px-8 py-14 text-center cursor-pointer transition-all',
+          'relative flex flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed bg-white px-6 py-10 sm:px-8 sm:py-14 text-center cursor-pointer transition-all',
           isDragging
             ? 'border-teal-400 bg-teal-50/50 scale-[1.01]'
             : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
@@ -281,28 +281,28 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
           onChange={(e) => addFiles(Array.from(e.target.files || []))}
         />
         <div className={cn(
-          'flex h-16 w-16 items-center justify-center rounded-2xl transition-colors',
+          'flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-2xl transition-colors',
           isDragging ? 'bg-teal-100' : 'bg-slate-100'
         )}>
-          <Upload size={28} className={isDragging ? 'text-teal-500' : 'text-slate-400'} />
+          <Upload size={isDragging ? 24 : 28} className={isDragging ? 'text-teal-500' : 'text-slate-400'} />
         </div>
         <div>
           <p className="text-sm font-semibold text-slate-700">
             {isDragging ? 'Drop files here' : 'Drag & drop script files here'}
           </p>
           <p className="text-xs text-slate-400 mt-1">
-            or <span className="text-teal-600 font-medium underline underline-offset-2">browse files</span> from your computer
+            or <span className="text-teal-600 font-medium underline underline-offset-2">browse files</span>
           </p>
         </div>
-        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-4">
-          <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-600">
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[10px] sm:text-[11px] font-medium text-slate-600">
             <FileText size={11} /> PDF
           </span>
-          <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-600">
+          <span className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-[10px] sm:text-[11px] font-medium text-slate-600">
             <ImageIcon size={11} /> JPG / PNG
           </span>
-          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-600">
-            Max 20 MB per file
+          <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] sm:text-[11px] font-medium text-slate-600">
+            Max 20 MB
           </span>
         </div>
         {isDragging && (
@@ -332,43 +332,47 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
               const Icon = cfg.icon;
               const isImg = file.type === 'image';
               return (
-                <div key={file.id} className="flex items-center gap-4 px-5 py-3.5">
-                  <div className={cn(
-                    'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
-                    isImg ? 'bg-violet-50 ring-1 ring-violet-200' : 'bg-blue-50 ring-1 ring-blue-200'
-                  )}>
-                    {isImg ? (
-                      <ImageIcon size={15} className="text-violet-600" />
-                    ) : (
-                      <FileText size={15} className="text-blue-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[13px] font-medium text-slate-800 truncate">{file.name}</p>
-                    <div className="flex items-center gap-3 mt-1">
-                      <span className="text-[11px] text-slate-400">{formatSize(file.size)}</span>
-                      {file.status === 'processing' && (
-                        <div className="flex-1 max-w-[120px]">
-                          <div className="h-1 w-full rounded-full bg-slate-100">
-                            <div
-                              className="h-1 rounded-full bg-amber-400 transition-all"
-                              style={{ width: `${file.progress}%` }}
-                            />
-                          </div>
-                        </div>
+                <div key={file.id} className="flex flex-col xs:flex-row xs:items-center gap-3 px-5 py-4 xs:gap-4">
+                  <div className="flex items-center gap-4 flex-1 min-w-0">
+                    <div className={cn(
+                      'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg',
+                      isImg ? 'bg-violet-50 ring-1 ring-violet-200' : 'bg-blue-50 ring-1 ring-blue-200'
+                    )}>
+                      {isImg ? (
+                        <ImageIcon size={15} className="text-violet-600" />
+                      ) : (
+                        <FileText size={15} className="text-blue-600" />
                       )}
                     </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[13px] font-medium text-slate-800 truncate">{file.name}</p>
+                      <div className="flex items-center gap-3 mt-1">
+                        <span className="text-[11px] text-slate-400">{formatSize(file.size)}</span>
+                        {file.status === 'processing' && (
+                          <div className="flex-1 max-w-[100px]">
+                            <div className="h-1 w-full rounded-full bg-slate-100">
+                              <div
+                                className="h-1 rounded-full bg-amber-400 transition-all"
+                                style={{ width: `${file.progress}%` }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <span className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1', cfg.bg, cfg.color, cfg.ring)}>
-                    <Icon size={11} className={file.status === 'processing' ? 'animate-spin' : ''} />
-                    {cfg.label}
-                  </span>
-                  <button
-                    onClick={() => removeFile(file.id)}
-                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                  >
-                    <X size={13} />
-                  </button>
+                  <div className="flex items-center justify-between xs:justify-end gap-3 xs:ml-auto">
+                    <span className={cn('flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-semibold ring-1', cfg.bg, cfg.color, cfg.ring)}>
+                      <Icon size={11} className={file.status === 'processing' ? 'animate-spin' : ''} />
+                      {cfg.label}
+                    </span>
+                    <button
+                      onClick={() => removeFile(file.id)}
+                      className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-500 transition-colors"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
                 </div>
               );
             })}

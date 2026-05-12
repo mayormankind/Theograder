@@ -316,34 +316,34 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       )}
 
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-base font-semibold text-slate-800">
             Examination Scripts
           </h2>
           <p className="text-sm text-slate-500 mt-0.5">
-            Manage and grade student answer scripts by examination.
+            Manage and grade student answer scripts.
           </p>
         </div>
         <button
           onClick={() => onNavigate("upload")}
-          className="inline-flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
         >
           <Upload size={14} /> Upload Scripts
         </button>
       </div>
 
       {/* Exam Filter & Batch Grade Bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto">
             <select
               value={selectedExamId}
               onChange={(e) => {
                 setSelectedExamId(e.target.value);
                 setCurrentPage(1);
               }}
-              className="h-10 appearance-none rounded-lg border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-medium text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all min-w-[250px]"
+              className="h-10 w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 px-4 pr-10 text-sm font-medium text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all sm:min-w-[250px]"
             >
               <option value="all">All Examinations</option>
               {exams.map((exam) => (
@@ -573,14 +573,14 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                         {canGrade && (
                           <button
                             onClick={() => handleGradeScript(script.id)}
                             className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-teal-600 hover:bg-teal-50 transition-colors"
                             title="Grade this script"
                           >
-                            <Zap size={11} /> Grade
+                            <Zap size={11} /> <span className="hidden xs:inline">Grade</span>
                           </button>
                         )}
                         {(script.status === "GRADED" ||
@@ -592,7 +592,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                             className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
                             title="View grading details"
                           >
-                            <Eye size={11} /> Review
+                            <Eye size={11} /> <span className="hidden xs:inline">Review</span>
                           </button>
                         )}
                         <button
@@ -602,7 +602,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                           className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
                           title="View results"
                         >
-                          <BarChart3 size={11} /> Results
+                          <BarChart3 size={11} /> <span className="hidden xs:inline">Results</span>
                         </button>
                       </div>
                     </td>

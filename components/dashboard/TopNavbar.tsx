@@ -10,6 +10,7 @@ import {
   LogOut,
   User,
   Settings as SettingsIcon,
+  Menu,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
@@ -31,24 +32,25 @@ const pageTitles: Record<Page, string> = {
 };
 
 const pageBreadcrumbs: Record<Page, string[]> = {
-  dashboard: ["AutoGrade AI", "Dashboard"],
-  exams: ["AutoGrade AI", "Exams"],
-  scripts: ["AutoGrade AI", "Scripts"],
-  upload: ["AutoGrade AI", "Scripts", "Upload Script"],
-  rubrics: ["AutoGrade AI", "Rubrics"],
-  "create-rubric": ["AutoGrade AI", "Rubrics", "Create Rubric"],
-  results: ["AutoGrade AI", "Results"],
-  report: ["AutoGrade AI", "Results", "Report"],
-  settings: ["AutoGrade AI", "Settings"],
-  grading: ["AutoGrade AI", "Grading"],
+  dashboard: ["TheoGrader", "Dashboard"],
+  exams: ["TheoGrader", "Exams"],
+  scripts: ["TheoGrader", "Scripts"],
+  upload: ["TheoGrader", "Scripts", "Upload Script"],
+  rubrics: ["TheoGrader", "Rubrics"],
+  "create-rubric": ["TheoGrader", "Rubrics", "Create Rubric"],
+  results: ["TheoGrader", "Results"],
+  report: ["TheoGrader", "Results", "Report"],
+  settings: ["TheoGrader", "Settings"],
+  grading: ["TheoGrader", "Grading"],
 };
 
 interface TopNavbarProps {
   activePage: Page;
   onNavigate: (page: Page) => void;
+  onMenuClick?: () => void;
 }
 
-export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
+export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNavbarProps) {
   const [notifications] = useState(4);
   const [showNotifs, setShowNotifs] = useState(false);
   const [showProfileDropdown, setShowProfileDropdown] = useState(false);
@@ -76,23 +78,31 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
         .toUpperCase()
     : "??";
 
-  const breadcrumbs = pageBreadcrumbs[activePage] || ["AutoGrade AI"];
+  const breadcrumbs = pageBreadcrumbs[activePage] || ["TheoGrader"];
   const title = pageTitles[activePage] || "Dashboard";
 
   return (
-    <header className="flex h-[64px] shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-6">
+    <header className="flex h-16 shrink-0 items-center gap-4 border-b border-slate-200 bg-white px-4 md:px-6">
+      {/* Mobile Menu Toggle */}
+      <button
+        onClick={onMenuClick}
+        className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 lg:hidden"
+      >
+        <Menu size={18} />
+      </button>
+
       {/* Breadcrumb / Title */}
-      <div className="flex flex-col justify-center">
-        <h1 className="text-[15px] font-semibold text-slate-800">{title}</h1>
-        <nav className="flex items-center gap-1">
+      <div className="flex flex-col justify-center overflow-hidden">
+        <h1 className="text-[14px] md:text-[15px] font-semibold text-slate-800 truncate">{title}</h1>
+        <nav className="hidden sm:flex items-center gap-1">
           {breadcrumbs.map((crumb, i) => (
             <span key={i} className="flex items-center gap-1">
               {i > 0 && <span className="text-slate-300 text-[10px]">/</span>}
               <span
                 className={
                   i === breadcrumbs.length - 1
-                    ? "text-[11px] font-medium text-teal-600"
-                    : "text-[11px] text-slate-400"
+                    ? "text-[10px] md:text-[11px] font-medium text-teal-600"
+                    : "text-[10px] md:text-[11px] text-slate-400"
                 }
               >
                 {crumb}
@@ -106,7 +116,7 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
       <div className="flex-1" />
 
       {/* Search */}
-      <div className="relative hidden md:block">
+      <div className="relative hidden lg:block">
         <Search
           size={14}
           className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
@@ -114,7 +124,7 @@ export default function TopNavbar({ activePage, onNavigate }: TopNavbarProps) {
         <input
           type="text"
           placeholder="Search scripts, exams…"
-          className="h-9 w-64 rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
+          className="h-9 w-48 xl:w-64 rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
         />
       </div>
 

@@ -198,9 +198,9 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
 
   if (isEditing && extractedRubric) {
     return (
-      <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto w-full">
+      <div className="flex flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto w-full">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-base font-semibold text-slate-800">Review Extracted Rubric</h2>
             <p className="text-sm text-slate-500 mt-0.5">
@@ -213,7 +213,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
               setExtractedRubric(null);
               setExtractionResult(null);
             }}
-            className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800"
+            className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800 self-start sm:self-auto"
           >
             <X size={14} />
             Start Over
@@ -248,8 +248,8 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
 
         {/* Rubric Details */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
+          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
                 Rubric Title
               </label>
@@ -270,7 +270,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                   disabled={examsLoading}
                   className="h-9 w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 px-3 pr-10 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all disabled:opacity-50"
                 >
-                  <option value="">Save as Template (no exam)</option>
+                  <option value="">Save as Template</option>
                   {exams.map((exam) => (
                     <option key={exam.id} value={exam.id}>
                       {exam.title} {exam.courseCode ? `(${exam.courseCode})` : ''}
@@ -279,7 +279,6 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                 </select>
                 <ChevronDown size={14} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
-              <p className="text-[10px] text-slate-400 mt-1">Select an exam to use this rubric for grading</p>
             </div>
             <div>
               <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
@@ -291,20 +290,22 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                 className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
               />
             </div>
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
-                Total Marks
-              </label>
-              <div className="flex h-9 items-center rounded-lg border border-teal-200 bg-teal-50 px-3">
-                <span className="text-sm font-bold text-teal-700">{extractedRubric.totalMarks} marks</span>
+            <div className="grid grid-cols-2 gap-4 sm:col-span-2">
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+                  Total Marks
+                </label>
+                <div className="flex h-9 items-center rounded-lg border border-teal-200 bg-teal-50 px-3">
+                  <span className="text-sm font-bold text-teal-700">{extractedRubric.totalMarks} marks</span>
+                </div>
               </div>
-            </div>
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
-                Number of Questions
-              </label>
-              <div className="flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3">
-                <span className="text-sm font-semibold text-slate-700">{extractedRubric.questions.length} questions</span>
+              <div>
+                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
+                  Questions
+                </label>
+                <div className="flex h-9 items-center rounded-lg border border-slate-200 bg-slate-50 px-3">
+                  <span className="text-sm font-semibold text-slate-700">{extractedRubric.questions.length} items</span>
+                </div>
               </div>
             </div>
           </div>
@@ -315,11 +316,11 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
           {extractedRubric.questions.map((question, qIndex) => (
             <div key={qIndex} className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
               <div className="px-5 py-4 border-b border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0f1f3d] text-xs font-bold text-white">
-                    {qIndex + 1}
-                  </div>
-                  <div className="flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+                  <div className="flex items-center gap-3 flex-1">
+                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0f1f3d] text-xs font-bold text-white">
+                      {qIndex + 1}
+                    </div>
                     <input
                       value={question.questionNumber}
                       onChange={(e) => {
@@ -327,10 +328,10 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                         updatedQuestions[qIndex] = { ...question, questionNumber: e.target.value };
                         setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
                       }}
-                      className="w-full text-sm font-medium text-slate-800 bg-transparent outline-none"
+                      className="w-full text-sm font-bold text-slate-800 bg-transparent outline-none"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 sm:ml-auto">
                     <input
                       type="number"
                       value={question.maxScore}
@@ -340,9 +341,9 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                         updatedQuestions[qIndex] = { ...question, maxScore: newMaxScore };
                         setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
                       }}
-                      className="h-7 w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 text-center text-xs font-semibold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
+                      className="h-8 w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 text-center text-xs font-bold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
                     />
-                    <span className="text-[11px] text-slate-400">marks</span>
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-tight">marks</span>
                   </div>
                 </div>
                 <textarea
@@ -358,16 +359,18 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
               </div>
               <div className="divide-y divide-slate-50">
                 {question.parts.map((part, pIndex) => (
-                  <div key={pIndex} className="px-5 py-3">
-                    <div className="flex items-center gap-3 mb-2">
-                      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-teal-50 ring-1 ring-teal-200 text-[11px] font-bold text-teal-600">
-                        {part.label || String.fromCharCode(97 + pIndex)}
+                  <div key={pIndex} className="px-5 py-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-teal-50 ring-1 ring-teal-200 text-[11px] font-bold text-teal-600">
+                          {part.label || String.fromCharCode(97 + pIndex)}
+                        </div>
+                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                          Part {(part.label || String.fromCharCode(97 + pIndex)).toUpperCase()}
+                        </span>
                       </div>
-                      <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                        Part {(part.label || String.fromCharCode(97 + pIndex)).toUpperCase()}
-                      </span>
-                      <div className="ml-auto flex items-center gap-2">
-                        <label className="text-[11px] text-slate-500">Marks:</label>
+                      <div className="flex items-center gap-2">
+                        <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Weight:</label>
                         <input
                           type="number"
                           value={part.marks}
@@ -377,7 +380,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                             updatedQuestions[qIndex].parts[pIndex] = { ...part, marks: newMarks };
                             setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
                           }}
-                          className="h-7 w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 text-center text-xs font-semibold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
+                          className="h-7 w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 text-center text-xs font-bold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
                         />
                       </div>
                     </div>
@@ -444,7 +447,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto w-full">
+    <div className="flex flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto w-full">
       {/* Header */}
       <div>
         <h2 className="text-base font-semibold text-slate-800">Create New Rubric</h2>

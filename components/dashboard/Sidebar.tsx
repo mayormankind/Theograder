@@ -25,6 +25,8 @@ import { toast } from "sonner";
 interface SidebarProps {
   activePage: Page;
   onNavigate: (page: Page, params?: Record<string, string>) => void;
+  mobileOpen: boolean;
+  setMobileOpen: (open: boolean) => void;
 }
 
 interface NavItem {
@@ -43,9 +45,8 @@ const navItemsStatic: Omit<NavItem, 'badge'>[] = [
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
+export default function Sidebar({ activePage, onNavigate, mobileOpen, setMobileOpen }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [examsCount, setExamsCount] = useState(0);
   const [scriptsCount, setScriptsCount] = useState(0);
@@ -101,13 +102,6 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
     fetchCounts();
   }, []);
 
-  // Close mobile sidebar on route change
-  useEffect(() => {
-    if (isMobile) {
-      setMobileOpen(false);
-    }
-  }, [activePage, isMobile]);
-
   // Merge static nav items with dynamic badges
   const navItems: NavItem[] = navItemsStatic.map((item: Omit<NavItem, 'badge'>): NavItem => {
     if (item.id === 'exams' && examsCount > 0) {
@@ -127,16 +121,6 @@ export default function Sidebar({ activePage, onNavigate }: SidebarProps) {
           className="fixed inset-0 bg-black/50 z-40 lg:hidden"
           onClick={() => setMobileOpen(false)}
         />
-      )}
-
-      {/* Mobile Toggle Button */}
-      {isMobile && (
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="lg:hidden fixed top-4 left-4 z-50 flex h-10 w-10 items-center justify-center rounded-lg bg-[#0f1f3d] text-white shadow-lg"
-        >
-          <Menu size={20} />
-        </button>
       )}
 
       <aside

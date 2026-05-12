@@ -85,29 +85,29 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
     try {
       setLoading(true);
       setError(null);
-      
+
       // Fetch dashboard stats and user data in parallel
       const [statsResponse, userResponse] = await Promise.all([
-        fetch('/api/dashboard/stats'),
-        fetch('/api/auth/me')
+        fetch("/api/dashboard/stats"),
+        fetch("/api/auth/me"),
       ]);
-      
+
       if (!statsResponse.ok) {
-        throw new Error('Failed to fetch dashboard stats');
+        throw new Error("Failed to fetch dashboard stats");
       }
-      
+
       if (!userResponse.ok) {
-        throw new Error('Failed to fetch user data');
+        throw new Error("Failed to fetch user data");
       }
-      
+
       const statsData = await statsResponse.json();
       const userData = await userResponse.json();
-      
+
       setStats(statsData);
       setUser(userData.user);
     } catch (err) {
-      console.error('Error fetching dashboard data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+      console.error("Error fetching dashboard data:", err);
+      setError(err instanceof Error ? err.message : "Failed to load dashboard");
     } finally {
       setLoading(false);
     }
@@ -180,68 +180,73 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
     },
   ];
 
-const activityIcons: Record<
-  string,
-  {
-    icon: React.ComponentType<{ size?: number; className?: string }>;
-    color: string;
-    bg: string;
-  }
-> = {
-  upload: { icon: Upload, color: "text-blue-600", bg: "bg-blue-50" },
-  processed: { icon: CheckCircle2, color: "text-teal-600", bg: "bg-teal-50" },
-  reviewed: { icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
-  exam_created: {
-    icon: BookOpen,
-    color: "text-violet-600",
-    bg: "bg-violet-50",
-  },
-};
+  const activityIcons: Record<
+    string,
+    {
+      icon: React.ComponentType<{ size?: number; className?: string }>;
+      color: string;
+      bg: string;
+    }
+  > = {
+    upload: { icon: Upload, color: "text-blue-600", bg: "bg-blue-50" },
+    processed: { icon: CheckCircle2, color: "text-teal-600", bg: "bg-teal-50" },
+    reviewed: { icon: Activity, color: "text-amber-600", bg: "bg-amber-50" },
+    exam_created: {
+      icon: BookOpen,
+      color: "text-violet-600",
+      bg: "bg-violet-50",
+    },
+  };
 
-const statusStyles: Record<string, string> = {
-  done: "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
-  processing: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-  pending_review: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-  uploaded: "bg-slate-50 text-slate-600 ring-1 ring-slate-200",
-};
+  const statusStyles: Record<string, string> = {
+    done: "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
+    processing: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
+    pending_review: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
+    uploaded: "bg-slate-50 text-slate-600 ring-1 ring-slate-200",
+  };
 
-const statusLabels: Record<string, string> = {
-  done: "Graded",
-  processing: "Processing",
-  pending_review: "Review Needed",
-  uploaded: "Queued",
-};
+  const statusLabels: Record<string, string> = {
+    done: "Graded",
+    processing: "Processing",
+    pending_review: "Review Needed",
+    uploaded: "Queued",
+  };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 p-4 md:p-6">
       {/* Welcome Banner */}
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-slate-200 bg-white px-6 py-4 gap-4">
-        <div>
-          <h2 className="text-base font-semibold text-slate-800 text-center sm:text-left">
-            Welcome back, {user?.name || 'User'}! 👋
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between rounded-xl border border-slate-200 bg-white px-5 py-4 gap-4">
+        <div className="text-center sm:text-left">
+          <h2 className="text-[15px] md:text-base font-semibold text-slate-800">
+            Welcome back, {user?.name || "User"}! 👋
           </h2>
-          <p className="text-sm text-slate-500 mt-0.5 text-center sm:text-left">
+          <p className="text-xs md:text-sm text-slate-500 mt-0.5">
             You have{" "}
-            <span className="font-semibold text-amber-600">{stats.overview.pendingReview} scripts</span>{" "}
+            <span className="font-semibold text-amber-600">
+              {stats.overview.pendingReview} scripts
+            </span>{" "}
             awaiting review and{" "}
-            <span className="font-semibold text-blue-600">{stats.overview.totalExams} total exams</span>{" "}
+            <span className="font-semibold text-blue-600">
+              {stats.overview.totalExams} total exams
+            </span>{" "}
             created.
           </p>
         </div>
-        <div className="flex sm:hidden md:flex items-center justify-center gap-2">
+        <div className="flex items-center justify-center gap-2">
           <button
             onClick={() => onNavigate("upload")}
-            className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs md:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
           >
             <Upload size={14} />
-            Upload Script
+            <span className="hidden xs:inline">Upload</span>
+            <span className="xs:hidden">Upload</span>
           </button>
           <button
             onClick={() => onNavigate("exams")}
-            className="flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+            className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
           >
             <Plus size={14} />
-            Create Exam
+            <span>New Exam</span>
           </button>
         </div>
       </div>
@@ -406,10 +411,7 @@ const statusLabels: Record<string, string> = {
               />
               <Bar dataKey="percentage" radius={[4, 4, 0, 0]}>
                 {stats.scoreDistribution.map((_, i) => (
-                  <Cell
-                    key={i}
-                    fill={i % 2 === 0 ? "#14b8a6" : "#e2e8f0"}
-                  />
+                  <Cell key={i} fill={i % 2 === 0 ? "#14b8a6" : "#e2e8f0"} />
                 ))}
               </Bar>
             </BarChart>
@@ -433,10 +435,7 @@ const statusLabels: Record<string, string> = {
             const cfg = activityIcons[actionType] || activityIcons.upload;
             const Icon = cfg.icon;
             return (
-              <div
-                key={item.id}
-                className="flex items-start gap-3 px-5 py-3.5"
-              >
+              <div key={item.id} className="flex items-start gap-3 px-5 py-3.5">
                 <div
                   className={cn(
                     "mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg",
@@ -453,9 +452,9 @@ const statusLabels: Record<string, string> = {
                     <p className="text-[10px] text-slate-400">You</p>
                     <span className="text-slate-200">·</span>
                     <p className="text-[10px] text-slate-400">
-                      {new Date(item.createdAt).toLocaleTimeString('en-US', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
+                      {new Date(item.createdAt).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
                       })}
                     </p>
                   </div>

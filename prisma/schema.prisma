@@ -161,6 +161,7 @@ enum ScriptStatus {
   PROCESSING
   PROCESSED
   FAILED
+  GRADED
   ARCHIVED
 }
 

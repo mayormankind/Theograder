@@ -1,15 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { getSessionData } from '@/lib/session';
 
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
-    if (!session?.user) {
+    const session = await getSessionData(request);
+    if (!session || !session.userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
@@ -19,7 +18,7 @@ export async function POST(
     const originalRubric = await prisma.rubric.findFirst({
       where: {
         id: id,
-        createdById: session.user.id,
+        createdById: session.userId,
       },
       include: {
         questions: {
@@ -39,7 +38,7 @@ export async function POST(
         title: title || `${originalRubric.title} (Copy)`,
         description: originalRubric.description,
         totalMarks: originalRubric.totalMarks,
-        createdById: session.user.id,
+        createdById: session.userId,
         examId: originalRubric.examId,
         questions: {
           create: originalRubric.questions.map((q: any) => ({

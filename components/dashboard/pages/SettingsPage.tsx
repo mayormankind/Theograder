@@ -21,6 +21,17 @@ import { toast } from "sonner";
 
 type Tab = "profile" | "ai" | "notifications" | "security";
 
+const TABS: {
+  id: Tab;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+}[] = [
+  { id: "profile", label: "Profile", icon: User },
+  { id: "ai", label: "AI & Processing", icon: Cpu },
+  { id: "notifications", label: "Notifications", icon: Bell },
+  { id: "security", label: "Security", icon: Shield },
+];
+
 interface SettingsPageProps {
   onNavigate: (page: Page) => void;
 }
@@ -82,7 +93,7 @@ export default function SettingsPage({}: SettingsPageProps) {
 
   useEffect(() => {
     const tab = searchParams.get("tab") as Tab;
-    if (tab && tabs.some(t => t.id === tab)) {
+    if (tab && TABS.some(t => t.id === tab)) {
       setActiveTab(tab);
     }
     fetchSettings();
@@ -225,16 +236,6 @@ export default function SettingsPage({}: SettingsPageProps) {
     );
   }
 
-  const tabs: {
-    id: Tab;
-    label: string;
-    icon: React.ComponentType<{ size?: number; className?: string }>;
-  }[] = [
-    { id: "profile", label: "Profile", icon: User },
-    { id: "ai", label: "AI & Processing", icon: Cpu },
-    { id: "notifications", label: "Notifications", icon: Bell },
-    { id: "security", label: "Security", icon: Shield },
-  ];
 
   return (
     <div className="flex flex-col gap-6 p-4 md:p-6 max-w-3xl mx-auto w-full">
@@ -258,7 +259,7 @@ export default function SettingsPage({}: SettingsPageProps) {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto no-scrollbar scroll-smooth">
-        {tabs.map((tab) => {
+        {TABS.map((tab) => {
           const Icon = tab.icon;
           return (
             <button

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import {
   Save,
   CheckCircle2,
@@ -10,6 +11,9 @@ import {
   Cpu,
   Loader2,
   AlertCircle,
+  Eye,
+  EyeOff,
+  Camera,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Page } from "@/types";
@@ -34,6 +38,7 @@ interface UserSettings {
   autoFlag: boolean;
   emailNotif: boolean;
   systemNotif: boolean;
+  avatar?: string | null;
 }
 
 export default function SettingsPage({}: SettingsPageProps) {
@@ -55,6 +60,7 @@ export default function SettingsPage({}: SettingsPageProps) {
     autoFlag: true,
     emailNotif: true,
     systemNotif: true,
+    avatar: null,
   });
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
@@ -63,10 +69,24 @@ export default function SettingsPage({}: SettingsPageProps) {
   });
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [avatarUploading, setAvatarUploading] = useState(false);
+  
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const tab = searchParams.get("tab") as Tab;
+    if (tab && tabs.some(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
     fetchSettings();
-  }, []);
+  }, [searchParams]);
 
   const fetchSettings = async () => {
     try {
@@ -112,6 +132,38 @@ export default function SettingsPage({}: SettingsPageProps) {
     }
   };
 
+  const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setAvatarUploading(true);
+      const formData = new FormData();
+      formData.append("avatar", file);
+
+      const response = await fetch("/api/settings/avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to upload avatar");
+      }
+
+      const data = await response.json();
+      toast.success("Avatar updated successfully");
+      
+      // Update local state or refresh
+      window.location.reload(); 
+    } catch (err) {
+      console.error("Error uploading avatar:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to upload avatar");
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const handlePasswordChange = async () => {
     try {
       setPasswordSaving(true);
@@ -140,8 +192,21 @@ export default function SettingsPage({}: SettingsPageProps) {
         throw new Error(data.error || "Failed to change password");
       }
 
-      toast.success("Password changed successfully");
+      toast.success("Password changed successfully. Logging out...");
+      
+      // Clear data
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      
+      // Informed logout procedure for UX
+      setTimeout(async () => {
+        try {
+          await fetch("/api/auth/logout", { method: "POST" });
+          router.push("/auth/login?message=Password changed successfully. Please log in again.");
+        } catch (error) {
+          router.push("/auth/login");
+        }
+      }, 2000);
+
     } catch (err) {
       console.error("Error changing password:", err);
       const errorMessage = err instanceof Error ? err.message : "Failed to change password";
@@ -217,21 +282,60 @@ export default function SettingsPage({}: SettingsPageProps) {
       {activeTab === "profile" && (
         <div className="flex flex-col gap-4">
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 text-center sm:text-left">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-blue-500 text-xl font-bold text-white shadow-md mx-auto sm:mx-0">
-                {settings.firstName?.[0] || ""}
-                {settings.lastName?.[0] || "" || settings.firstName?.[0] || "?"}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-8 text-center sm:text-left">
+              <div className="relative group mx-auto sm:mx-0">
+                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-blue-500 text-2xl font-bold text-white shadow-md overflow-hidden">
+                  {avatarUploading ? (
+                    <Loader2 className="animate-spin" size={24} />
+                  ) : settings.avatar ? (
+                    <img 
+                      src={settings.avatar} 
+                      alt="Avatar" 
+                      className="h-full w-full object-cover"
+                    />
+                  ) : settings.firstName ? (
+                    <div className="flex h-full w-full items-center justify-center">
+                      {settings.firstName?.[0]}
+                      {settings.lastName?.[0] || ""}
+                    </div>
+                  ) : (
+                    "?"
+                  )}
+                </div>
+                <button 
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={avatarUploading}
+                  className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-600 shadow-sm hover:bg-slate-50 transition-colors"
+                >
+                  <Camera size={14} />
+                </button>
+                <input 
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handleAvatarChange}
+                />
               </div>
               <div>
-                <p className="text-base font-semibold text-slate-800">
+                <p className="text-base font-bold text-slate-800">
                   {settings.title} {settings.firstName} {settings.lastName}
                 </p>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 font-medium">
                   Senior Lecturer · {settings.department}
                 </p>
-                <button className="mt-1 text-xs font-medium text-teal-600 hover:text-teal-700">
-                  Change avatar
-                </button>
+                <div className="mt-2 flex flex-wrap gap-2 justify-center sm:justify-start">
+                  <button 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="text-xs font-semibold text-teal-600 hover:text-teal-700 transition-colors"
+                  >
+                    Change avatar
+                  </button>
+                  <span className="text-slate-300 hidden xs:inline">|</span>
+                  <button className="text-xs font-semibold text-red-500 hover:text-red-600 transition-colors">
+                    Remove
+                  </button>
+                </div>
               </div>
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -386,8 +490,8 @@ export default function SettingsPage({}: SettingsPageProps) {
                 >
                   <span
                     className={cn(
-                      "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
-                      settings.autoFlag ? "left-5.5 translate-x-5" : "left-0.5",
+                      "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                      settings.autoFlag ? "translate-x-5" : "translate-x-0",
                     )}
                   />
                 </button>
@@ -469,8 +573,8 @@ export default function SettingsPage({}: SettingsPageProps) {
                 >
                   <span
                     className={cn(
-                      "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all",
-                      item.value ? "translate-x-5" : "translate-x-0.5",
+                      "absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform",
+                      item.value ? "translate-x-5" : "translate-x-0",
                     )}
                   />
                 </button>
@@ -499,23 +603,32 @@ export default function SettingsPage({}: SettingsPageProps) {
               </div>
             )}
             {[
-              { label: "Current Password", key: "currentPassword" as const },
-              { label: "New Password", key: "newPassword" as const },
-              { label: "Confirm New Password", key: "confirmPassword" as const },
+              { label: "Current Password", key: "currentPassword" as const, showKey: "current" as const },
+              { label: "New Password", key: "newPassword" as const, showKey: "new" as const },
+              { label: "Confirm New Password", key: "confirmPassword" as const, showKey: "confirm" as const },
             ].map((field) => (
               <div key={field.label}>
                 <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
                   {field.label}
                 </label>
-                <input
-                  type="password"
-                  value={passwordData[field.key]}
-                  onChange={(e) =>
-                    setPasswordData({ ...passwordData, [field.key]: e.target.value })
-                  }
-                  placeholder="••••••••••"
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
-                />
+                <div className="relative">
+                  <input
+                    type={showPasswords[field.showKey] ? "text" : "password"}
+                    value={passwordData[field.key]}
+                    onChange={(e) =>
+                      setPasswordData({ ...passwordData, [field.key]: e.target.value })
+                    }
+                    placeholder="••••••••••"
+                    className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-3 pr-10 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords({ ...showPasswords, [field.showKey]: !showPasswords[field.showKey] })}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                  >
+                    {showPasswords[field.showKey] ? <EyeOff size={14} /> : <Eye size={14} />}
+                  </button>
+                </div>
               </div>
             ))}
             <div className="flex justify-end pt-2">

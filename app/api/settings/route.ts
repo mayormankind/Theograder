@@ -37,6 +37,7 @@ export async function GET(request: NextRequest) {
       staffId: "STAFF-" + user.id.slice(-4).toUpperCase(), // Placeholder
       department: "Computer Science", // Default
       faculty: "Science", // Default
+      avatar: user.avatar,
       confidenceThreshold: 70,
       batchSize: 20,
       autoFlag: true,

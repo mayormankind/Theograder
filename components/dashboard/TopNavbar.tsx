@@ -46,7 +46,7 @@ const pageBreadcrumbs: Record<Page, string[]> = {
 
 interface TopNavbarProps {
   activePage: Page;
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
   onMenuClick?: () => void;
 }
 
@@ -246,7 +246,7 @@ export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNa
             <div className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
               <button
                 onClick={() => {
-                  onNavigate("settings");
+                  onNavigate("settings", { tab: "profile" });
                   setShowProfileDropdown(false);
                 }}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
@@ -256,7 +256,7 @@ export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNa
               </button>
               <button
                 onClick={() => {
-                  onNavigate("settings");
+                  onNavigate("settings", { tab: "security" });
                   setShowProfileDropdown(false);
                 }}
                 className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"

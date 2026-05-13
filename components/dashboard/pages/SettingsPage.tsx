@@ -163,10 +163,14 @@ export default function SettingsPage({}: SettingsPageProps) {
       }
 
       const data = await response.json();
-      toast.success("Avatar updated successfully");
       
-      // Update local state or refresh
-      window.location.reload(); 
+      // Update local state instead of reloading the page
+      setSettings(prev => ({
+        ...prev,
+        avatar: data.avatarUrl
+      }));
+      
+      toast.success("Avatar updated successfully");
     } catch (err) {
       console.error("Error uploading avatar:", err);
       toast.error(err instanceof Error ? err.message : "Failed to upload avatar");

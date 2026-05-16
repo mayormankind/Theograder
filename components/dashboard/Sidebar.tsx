@@ -235,8 +235,18 @@ export default function Sidebar({ activePage, onNavigate, mobileOpen, setMobileO
               collapsed && "justify-center",
             )}
           >
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-teal-500 text-xs font-bold text-white uppercase">
-              {userInitials}
+            <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-full bg-teal-500 ring-1 ring-white/20">
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name || "User"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-xs font-bold text-white uppercase">
+                  {userInitials}
+                </div>
+              )}
             </div>
             {!collapsed && (
               <div className="overflow-hidden">

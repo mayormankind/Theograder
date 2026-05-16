@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Page } from "@/types";
 import { toast } from "sonner";
+import { useUser } from "@/hooks/useUser";
 
 type Tab = "profile" | "ai" | "notifications" | "security";
 
@@ -53,6 +54,7 @@ interface UserSettings {
 }
 
 export default function SettingsPage({}: SettingsPageProps) {
+  const { refresh: refreshUser } = useUser();
   const [activeTab, setActiveTab] = useState<Tab>("ai");
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -169,6 +171,9 @@ export default function SettingsPage({}: SettingsPageProps) {
         ...prev,
         avatar: data.avatarUrl
       }));
+      
+      // Update global user state (for sidebar/navbar)
+      refreshUser();
       
       toast.success("Avatar updated successfully");
     } catch (err) {

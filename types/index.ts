@@ -59,8 +59,10 @@ export interface GradingResult {
   similarityScore: number;
   confidence: number;
   matchedConcepts: string[];
+  partialConcepts: string[];
   missingConcepts: string[];
   overrideScore?: number;
+  answer?: string;
 }
 
 export interface ActivityItem {

@@ -262,7 +262,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
             <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">AI Grading Breakdown</p>
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
               <Sparkles size={11} className="text-teal-500" />
-              Powered by Sentence-BERT
+              Powered by OpenAI Embeddings
             </div>
           </div>
 
@@ -321,7 +321,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
                         {/* Expanded Detail */}
                         {isExpanded && (
                           <div className="border-t border-slate-100 bg-slate-50/50 px-5 py-4">
-                            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 mb-4">
+                            <div className="grid grid-cols-1 gap-3 md:grid-cols-3 mb-4">
                               {/* Matched Concepts */}
                               <div className="rounded-lg border border-teal-100 bg-white p-3">
                                 <div className="flex items-center gap-1.5 mb-2">
@@ -336,6 +336,28 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
                                   ))}
                                   {result.matchedConcepts.length === 0 && (
                                     <span className="text-[11px] text-slate-400 italic">None detected</span>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Partial - new amber card */}
+                              <div className="rounded-lg border border-amber-100 bg-white p-3">
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <AlertTriangle size={12} className="text-amber-500" />
+                                  <p className="text-[11px] font-semibold text-amber-700">
+                                    Partial Credit
+                                  </p>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                  {result.partialConcepts?.map((c, i) => (
+                                    <span key={i} className="rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700 ring-1 ring-amber-200">
+                                      ~ {c}
+                                    </span>
+                                  ))}
+                                  {(!result.partialConcepts || result.partialConcepts.length === 0) && (
+                                    <span className="text-[11px] text-slate-400 italic">
+                                      None
+                                    </span>
                                   )}
                                 </div>
                               </div>

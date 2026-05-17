@@ -73,25 +73,10 @@ export async function DELETE(
           createdById: session.userId,
         },
       },
-      include: {
-        _count: {
-          select: {
-            results: true,
-          },
-        },
-      },
     });
 
     if (!script) {
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
-    }
-
-    // Don't allow deletion if script has results
-    if (script._count.results > 0) {
-      return NextResponse.json(
-        { error: "Cannot delete script that has grading results" },
-        { status: 400 },
-      );
     }
 
     // Delete from Supabase Storage
@@ -101,9 +86,14 @@ export async function DELETE(
       console.error("Error deleting file from Supabase:", error);
     }
 
-    // Delete script
-    await prisma.script.delete({
-      where: { id: scriptId },
+    // Delete script and associated results in transaction (cascades to QuestionResult)
+    await prisma.$transaction(async (tx) => {
+      await tx.result.deleteMany({
+        where: { scriptId: scriptId },
+      });
+      await tx.script.delete({
+        where: { id: scriptId },
+      });
     });
 
     return NextResponse.json({

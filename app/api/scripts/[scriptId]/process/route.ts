@@ -133,6 +133,7 @@ export async function POST(
     const formData = new FormData();
     formData.append('file', fileBlob, script.originalName);
     formData.append('rubric_str', JSON.stringify(rubricPayload));
+    formData.append('extracted_text', extractedText);
 
     const gradeResponse = await fetch(`${AI_SERVICE_URL}/grade`, {
       method: 'POST',
@@ -178,18 +179,24 @@ export async function POST(
           );
 
           if (rubricQuestion) {
+            // Find the student answer from segments
+            const answerFromSegments = Object.entries(segments)
+              .find(([k]) => normalize(k) === target)?.[1] || '';
+
             await tx.questionResult.create({
               data: {
                 resultId: newResult.id,
                 questionId: question.question,
                 question: question.question,
-                answer: question.answer || '',
+                answer: question.answer || 
+                        (answerFromSegments as string) || '',
                 score: question.score || 0,
                 maxScore: rubricQuestion.maxScore,
                 confidence: question.confidence || 0.5,
                 breakdown: {
                   similarities: question.breakdown || [],
                   matchedConcepts: question.matched_concepts || [],
+                  partialConcepts: question.partial_concepts || [],
                   missingConcepts: question.missing_concepts || [],
                 },
                 rubricQuestionId: rubricQuestion.id,

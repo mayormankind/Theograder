@@ -74,6 +74,7 @@ const statusStyles: Record<
 
 export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const [scripts, setScripts] = useState<Script[]>([]);
+  const [selectedScriptIds, setSelectedScriptIds] = useState<string[]>([]);
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -145,6 +146,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     try {
       setLoading(true);
       setError(null);
+      setSelectedScriptIds([]); // Reset selection when fetching/paging
       const urlParams = new URLSearchParams({
         page: pageToFetch.toString(),
         limit: "15",
@@ -176,7 +178,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     setConfirmState({
       isOpen: true,
       title: "Delete Script",
-      description: "Are you sure you want to delete this script? This action cannot be undone.",
+      description: "Are you sure you want to delete this script? This will also permanently delete all associated grading results and student answers. This action cannot be undone.",
       isDestructive: true,
       onConfirm: async () => {
         try {
@@ -193,6 +195,39 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
         } catch (err) {
           console.error("Error deleting script:", err);
           toast.error("Failed to delete script");
+        }
+      },
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedScriptIds.length === 0) return;
+
+    setConfirmState({
+      isOpen: true,
+      title: "Bulk Delete Scripts",
+      description: `Are you sure you want to delete the ${selectedScriptIds.length} selected script(s)? This will also permanently delete all associated grading results and student answers. This action cannot be undone.`,
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          const response = await fetch("/api/upload", {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ scriptIds: selectedScriptIds }),
+          });
+
+          if (!response.ok) {
+            throw new Error("Failed to delete scripts");
+          }
+
+          setScripts(scripts.filter((s) => !selectedScriptIds.includes(s.id)));
+          setSelectedScriptIds([]);
+          toast.success("Selected scripts deleted successfully");
+        } catch (err) {
+          console.error("Error bulk deleting scripts:", err);
+          toast.error("Failed to delete selected scripts");
         }
       },
     });
@@ -338,12 +373,22 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
             Manage and grade student answer scripts.
           </p>
         </div>
-        <button
-          onClick={() => onNavigate("upload")}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
-        >
-          <Upload size={14} /> Upload Scripts
-        </button>
+        <div className="flex items-center gap-3">
+          {selectedScriptIds.length > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+            >
+              <Trash2 size={14} /> Delete Selected ({selectedScriptIds.length})
+            </button>
+          )}
+          <button
+            onClick={() => onNavigate("upload")}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+          >
+            <Upload size={14} /> Upload Scripts
+          </button>
+        </div>
       </div>
 
       {/* Exam Filter & Batch Grade Bar */}
@@ -455,6 +500,27 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100 bg-slate-50">
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 w-10">
+                  <input
+                    type="checkbox"
+                    checked={
+                      filtered.length > 0 &&
+                      filtered.every((s) => selectedScriptIds.includes(s.id))
+                    }
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setSelectedScriptIds((prev) => [
+                          ...new Set([...prev, ...filtered.map((s) => s.id)]),
+                        ]);
+                      } else {
+                        setSelectedScriptIds((prev) =>
+                          prev.filter((id) => !filtered.some((s) => s.id === id)),
+                        );
+                      }
+                    }}
+                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5 cursor-pointer"
+                  />
+                </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
                   Student
                 </th>
@@ -493,6 +559,22 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                     key={script.id}
                     className="hover:bg-slate-50/80 transition-colors group"
                   >
+                    <td className="px-5 py-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedScriptIds.includes(script.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedScriptIds((prev) => [...prev, script.id]);
+                          } else {
+                            setSelectedScriptIds((prev) =>
+                              prev.filter((id) => id !== script.id),
+                            );
+                          }
+                        }}
+                        className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5 cursor-pointer"
+                      />
+                    </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-[10px] font-bold text-slate-600">
@@ -616,6 +698,13 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                           title="View results"
                         >
                           <BarChart3 size={11} /> <span className="hidden xs:inline">Results</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(script.id)}
+                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+                          title="Delete script"
+                        >
+                          <Trash2 size={11} /> <span className="hidden xs:inline">Delete</span>
                         </button>
                       </div>
                     </td>

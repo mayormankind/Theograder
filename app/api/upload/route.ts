@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadFileToSupabase } from '@/lib/supabase';
+import { uploadFileToSupabase, deleteFileFromSupabase } from '@/lib/supabase';
 
 const uploadSchema = z.object({
   examId: z.string().min(1, 'Exam ID is required'),
@@ -246,6 +246,76 @@ export async function GET(request: NextRequest) {
     console.error('Error fetching uploaded files:', error);
     return NextResponse.json(
       { error: 'Failed to fetch uploaded files' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/upload - Bulk delete scripts
+export async function DELETE(request: NextRequest) {
+  try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
+    const body = await request.json();
+    const { scriptIds } = body;
+
+    if (!scriptIds || !Array.isArray(scriptIds) || scriptIds.length === 0) {
+      return NextResponse.json(
+        { error: 'Script IDs are required and must be a non-empty array' },
+        { status: 400 }
+      );
+    }
+
+    // Find all scripts that exist and belong to the user
+    const scripts = await prisma.script.findMany({
+      where: {
+        id: { in: scriptIds },
+        exam: {
+          createdById: session.userId,
+        },
+      },
+      select: {
+        id: true,
+        filePath: true,
+      },
+    });
+
+    if (scripts.length === 0) {
+      return NextResponse.json({ error: 'No scripts found or access denied' }, { status: 404 });
+    }
+
+    const foundIds = scripts.map((s) => s.id);
+
+    // Delete files from Supabase Storage
+    for (const script of scripts) {
+      try {
+        await deleteFileFromSupabase('uploads', script.filePath);
+      } catch (error) {
+        console.error(`Error deleting file ${script.filePath} from Supabase:`, error);
+      }
+    }
+
+    // Perform database deletion in transaction
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete associated results (which cascades to QuestionResult)
+      await tx.result.deleteMany({
+        where: { scriptId: { in: foundIds } },
+      });
+      // 2. Delete the scripts themselves
+      await tx.script.deleteMany({
+        where: { id: { in: foundIds } },
+      });
+    });
+
+    return NextResponse.json({
+      message: `Successfully deleted ${foundIds.length} scripts`,
+      deletedCount: foundIds.length,
+    });
+  } catch (error) {
+    console.error('Error bulk deleting scripts:', error);
+    return NextResponse.json(
+      { error: 'Failed to delete scripts' },
       { status: 500 }
     );
   }

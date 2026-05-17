@@ -66,11 +66,17 @@ export async function GET(
     // Map the breakdown JSON for easier consumption in the frontend
     const mappedQuestions = result.questions.map(q => {
       const breakdown = (q.breakdown as any) || {};
+      const similarities = (breakdown.similarities as number[]) || [];
+      const avgSimilarity = similarities.length > 0
+        ? similarities.reduce((sum: number, s: number) => sum + s, 0) / similarities.length
+        : 0;
+
       return {
         ...q,
         matchedConcepts: breakdown.matchedConcepts || [],
+        partialConcepts: breakdown.partialConcepts || [],
         missingConcepts: breakdown.missingConcepts || [],
-        similarityScore: Math.round(((breakdown.similarities as number[])?.[0] || 0) * 100),
+        similarityScore: Math.round(avgSimilarity * 100),
       };
     });
 

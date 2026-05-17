@@ -247,6 +247,7 @@ export const mockGradingResults: GradingResult[] = [
     similarityScore: 88,
     confidence: 92,
     matchedConcepts: ["all-or-nothing", "rollback", "bank transfer example"],
+    partialConcepts: [],
     missingConcepts: ["commit"],
   },
   {
@@ -262,6 +263,7 @@ export const mockGradingResults: GradingResult[] = [
     similarityScore: 82,
     confidence: 85,
     matchedConcepts: ["integrity constraints", "valid state", "rules"],
+    partialConcepts: [],
     missingConcepts: ["referential integrity"],
   },
   {
@@ -277,6 +279,7 @@ export const mockGradingResults: GradingResult[] = [
     similarityScore: 67,
     confidence: 71,
     matchedConcepts: ["concurrency"],
+    partialConcepts: [],
     missingConcepts: [
       "dirty read",
       "non-repeatable read",
@@ -302,6 +305,7 @@ export const mockGradingResults: GradingResult[] = [
       "write-ahead log",
       "persistence",
     ],
+    partialConcepts: [],
     missingConcepts: [],
   },
   {
@@ -317,6 +321,7 @@ export const mockGradingResults: GradingResult[] = [
     similarityScore: 76,
     confidence: 80,
     matchedConcepts: ["tables", "foreign keys", "SQL"],
+    partialConcepts: [],
     missingConcepts: ["fixed schema", "joins"],
   },
   {
@@ -332,6 +337,7 @@ export const mockGradingResults: GradingResult[] = [
     similarityScore: 78,
     confidence: 83,
     matchedConcepts: ["JSON", "horizontal scaling", "MongoDB"],
+    partialConcepts: [],
     missingConcepts: ["BSON", "schema-less", "nested documents"],
   },
   {
@@ -347,6 +353,7 @@ export const mockGradingResults: GradingResult[] = [
     similarityScore: 71,
     confidence: 74,
     matchedConcepts: ["consistency", "scalability", "trade-offs"],
+    partialConcepts: [],
     missingConcepts: ["CAP theorem"],
   },
 ];

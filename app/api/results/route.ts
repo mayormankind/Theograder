@@ -1,9 +1,9 @@
 // src/app/api/results/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/session';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
+import { jsPDF } from "jspdf";
+import "jspdf-autotable";
 
 // GET /api/results - List results with filtering and pagination
 export async function GET(request: NextRequest) {
@@ -12,15 +12,15 @@ export async function GET(request: NextRequest) {
     if (session instanceof NextResponse) return session;
 
     const { searchParams } = new URL(request.url);
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const examId = searchParams.get('examId');
-    const status = searchParams.get('status') as any;
-    const scoreMin = searchParams.get('scoreMin');
-    const scoreMax = searchParams.get('scoreMax');
-    const studentId = searchParams.get('studentId');
-    const scriptId = searchParams.get('scriptId');
-    const exportFormat = searchParams.get('export'); // 'csv' or 'pdf'
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const examId = searchParams.get("examId");
+    const status = searchParams.get("status") as any;
+    const scoreMin = searchParams.get("scoreMin");
+    const scoreMax = searchParams.get("scoreMax");
+    const studentId = searchParams.get("studentId");
+    const scriptId = searchParams.get("scriptId");
+    const exportFormat = searchParams.get("export"); // 'csv' or 'pdf'
 
     const skip = (page - 1) * limit;
 
@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
               },
             },
             orderBy: {
-              questionId: 'asc',
+              questionId: "asc",
             },
           },
         },
@@ -49,26 +49,36 @@ export async function GET(request: NextRequest) {
       }
 
       // Map to GradingResult shape expected by frontend
-      const mappedResults = result.questions.map(q => {
+      const mappedResults = result.questions.map((q) => {
         const breakdown = (q.breakdown as any) || {};
+        const similarities = (breakdown.similarities as number[]) || [];
+
+        const avgSimilarity =
+          similarities.length > 0
+            ? similarities.reduce((sum: number, s: number) => sum + s, 0) /
+              similarities.length
+            : 0;
+
         return {
           questionId: q.id,
           questionNumber: q.questionId,
           partLabel: q.questionId,
-          studentAnswer: q.answer || '',
-          expectedAnswer: q.rubricQuestion?.points?.map(p => p.point).join('; ') ?? '',
+          studentAnswer: q.answer || "",
+          expectedAnswer:
+            q.rubricQuestion?.points?.map((p) => p.point).join("; ") ?? "",
           score: q.score,
           maxScore: q.maxScore,
-          similarityScore: Math.round(((breakdown.similarities as number[])?.[0] || 0) * 100),
+          similarityScore: Math.round(avgSimilarity * 100),
           confidence: Math.round(q.confidence * 100),
           matchedConcepts: breakdown.matchedConcepts || [],
+          partialConcepts: breakdown.partialConcepts || [],
           missingConcepts: breakdown.missingConcepts || [],
         };
       });
 
-      return NextResponse.json({ 
+      return NextResponse.json({
         resultId: result.id,
-        results: mappedResults 
+        results: mappedResults,
       });
     }
 
@@ -81,7 +91,7 @@ export async function GET(request: NextRequest) {
       where.examId = examId;
     }
 
-    if (status && status !== 'ALL') {
+    if (status && status !== "ALL") {
       where.status = status;
     }
 
@@ -93,12 +103,12 @@ export async function GET(request: NextRequest) {
 
     if (studentId) {
       where.script = {
-        studentId: { contains: studentId, mode: 'insensitive' }
+        studentId: { contains: studentId, mode: "insensitive" },
       };
     }
 
     // If export format is requested, return all results without pagination
-    if (exportFormat === 'csv' || exportFormat === 'pdf') {
+    if (exportFormat === "csv" || exportFormat === "pdf") {
       const results = await prisma.result.findMany({
         where,
         include: {
@@ -127,19 +137,16 @@ export async function GET(request: NextRequest) {
               confidence: true,
             },
             orderBy: {
-              questionId: 'asc',
+              questionId: "asc",
             },
           },
         },
-        orderBy: [
-          { exam: { title: 'asc' } },
-          { script: { studentId: 'asc' } },
-        ],
+        orderBy: [{ exam: { title: "asc" } }, { script: { studentId: "asc" } }],
       });
 
-      if (exportFormat === 'csv') {
+      if (exportFormat === "csv") {
         return generateCSVExport(results);
-      } else if (exportFormat === 'pdf') {
+      } else if (exportFormat === "pdf") {
         return generatePDFExport(results);
       }
     }
@@ -175,7 +182,7 @@ export async function GET(request: NextRequest) {
             },
           },
         },
-        orderBy: { gradedAt: 'desc' },
+        orderBy: { gradedAt: "desc" },
       }),
       prisma.result.count({ where }),
     ]);
@@ -189,12 +196,11 @@ export async function GET(request: NextRequest) {
         pages: Math.ceil(total / limit),
       },
     });
-
   } catch (error) {
-    console.error('Error fetching results:', error);
+    console.error("Error fetching results:", error);
     return NextResponse.json(
-      { error: 'Failed to fetch results' },
-      { status: 500 }
+      { error: "Failed to fetch results" },
+      { status: 500 },
     );
   }
 }
@@ -202,40 +208,42 @@ export async function GET(request: NextRequest) {
 // Helper function to generate CSV export
 function generateCSVExport(results: any[]) {
   const headers = [
-    'Student ID',
-    'Student Name',
-    'Exam Title',
-    'Course Code',
-    'Total Score',
-    'Max Score',
-    'Percentage',
-    'Confidence',
-    'Status',
-    'Graded Date',
+    "Student ID",
+    "Student Name",
+    "Exam Title",
+    "Course Code",
+    "Total Score",
+    "Max Score",
+    "Percentage",
+    "Confidence",
+    "Status",
+    "Graded Date",
   ];
 
   const csvRows = [
-    headers.join(','),
-    ...results.map(result => [
-      `"${result.script.studentId || ''}"`,
-      `"${result.script.studentName || ''}"`,
-      `"${result.exam.title}"`,
-      `"${result.exam.courseCode || ''}"`,
-      result.totalScore,
-      result.maxScore,
-      `${((result.totalScore / result.maxScore) * 100).toFixed(2)}%`,
-      result.confidence?.toFixed(3) || '',
-      result.status,
-      `"${result.gradedAt.toISOString()}"`,
-    ].join(',')),
+    headers.join(","),
+    ...results.map((result) =>
+      [
+        `"${result.script.studentId || ""}"`,
+        `"${result.script.studentName || ""}"`,
+        `"${result.exam.title}"`,
+        `"${result.exam.courseCode || ""}"`,
+        result.totalScore,
+        result.maxScore,
+        `${((result.totalScore / result.maxScore) * 100).toFixed(2)}%`,
+        result.confidence?.toFixed(3) || "",
+        result.status,
+        `"${result.gradedAt.toISOString()}"`,
+      ].join(","),
+    ),
   ];
 
-  const csvContent = csvRows.join('\n');
+  const csvContent = csvRows.join("\n");
 
   return new NextResponse(csvContent, {
     headers: {
-      'Content-Type': 'text/csv',
-      'Content-Disposition': `attachment; filename="results-export-${new Date().toISOString().split('T')[0]}.csv"`,
+      "Content-Type": "text/csv",
+      "Content-Disposition": `attachment; filename="results-export-${new Date().toISOString().split("T")[0]}.csv"`,
     },
   });
 }
@@ -243,41 +251,43 @@ function generateCSVExport(results: any[]) {
 // Helper function to generate PDF export
 function generatePDFExport(results: any[]) {
   const doc = new jsPDF();
-  
+
   // Title
   doc.setFontSize(20);
   doc.setTextColor(15, 31, 61); // #0f1f3d
-  doc.text('TheoGrader - Results Export', 14, 22);
-  
+  doc.text("TheoGrader - Results Export", 14, 22);
+
   doc.setFontSize(11);
   doc.setTextColor(100);
   doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 30);
-  
-  const tableData = results.map(result => [
-    result.script.studentId || 'N/A',
-    result.script.studentName || 'Unknown',
+
+  const tableData = results.map((result) => [
+    result.script.studentId || "N/A",
+    result.script.studentName || "Unknown",
     result.exam.title,
     `${result.totalScore}/${result.maxScore}`,
     `${((result.totalScore / result.maxScore) * 100).toFixed(2)}%`,
-    result.confidence?.toFixed(2) || 'N/A',
-    result.status
+    result.confidence?.toFixed(2) || "N/A",
+    result.status,
   ]);
-  
+
   (doc as any).autoTable({
     startY: 36,
-    head: [['Student ID', 'Name', 'Exam', 'Score', '%', 'Confidence', 'Status']],
+    head: [
+      ["Student ID", "Name", "Exam", "Score", "%", "Confidence", "Status"],
+    ],
     body: tableData,
-    theme: 'grid',
+    theme: "grid",
     headStyles: { fillColor: [15, 31, 61] },
     styles: { fontSize: 9 },
   });
-  
-  const pdfBuffer = doc.output('arraybuffer');
-  
+
+  const pdfBuffer = doc.output("arraybuffer");
+
   return new NextResponse(pdfBuffer, {
     headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="results-export-${new Date().toISOString().split('T')[0]}.pdf"`,
+      "Content-Type": "application/pdf",
+      "Content-Disposition": `attachment; filename="results-export-${new Date().toISOString().split("T")[0]}.pdf"`,
     },
   });
 }
@@ -292,15 +302,15 @@ export async function PUT(request: NextRequest) {
 
     if (!resultIds || !Array.isArray(resultIds) || resultIds.length === 0) {
       return NextResponse.json(
-        { error: 'Result IDs are required' },
-        { status: 400 }
+        { error: "Result IDs are required" },
+        { status: 400 },
       );
     }
 
-    if (!status || !['APPROVED', 'REJECTED'].includes(status)) {
+    if (!status || !["APPROVED", "REJECTED"].includes(status)) {
       return NextResponse.json(
-        { error: 'Invalid status. Must be APPROVED or REJECTED' },
-        { status: 400 }
+        { error: "Invalid status. Must be APPROVED or REJECTED" },
+        { status: 400 },
       );
     }
 
@@ -319,12 +329,11 @@ export async function PUT(request: NextRequest) {
       message: `Successfully ${status.toLowerCase()} ${updatedResults.count} results`,
       updatedCount: updatedResults.count,
     });
-
   } catch (error) {
-    console.error('Error updating results:', error);
+    console.error("Error updating results:", error);
     return NextResponse.json(
-      { error: 'Failed to update results' },
-      { status: 500 }
+      { error: "Failed to update results" },
+      { status: 500 },
     );
   }
 }

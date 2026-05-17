@@ -50,7 +50,14 @@ export async function GET(
         _count: {
           select: {
             scripts: true,
-            results: true,
+          },
+        },
+        scripts: {
+          where: {
+            status: 'GRADED',
+          },
+          select: {
+            id: true,
           },
         },
       },
@@ -63,7 +70,16 @@ export async function GET(
       );
     }
 
-    return NextResponse.json(exam);
+    const mappedExam = {
+      ...exam,
+      _count: {
+        scripts: exam._count?.scripts || 0,
+        graded: exam.scripts?.length || 0,
+      },
+      scripts: undefined, // Keep HTTP response payload lightweight
+    };
+
+    return NextResponse.json(mappedExam);
   } catch (error) {
     console.error('Error fetching exam:', error);
     return NextResponse.json(

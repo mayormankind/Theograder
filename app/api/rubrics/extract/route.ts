@@ -1,3 +1,4 @@
+// app/api/rubrics/extract/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/session';
 

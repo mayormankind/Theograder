@@ -1,3 +1,4 @@
+// src/app/dashboard/results/page.tsx
 "use client";
 
 import { Suspense } from "react";

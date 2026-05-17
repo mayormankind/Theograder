@@ -60,7 +60,14 @@ export async function GET(request: NextRequest) {
           _count: {
             select: {
               scripts: true,
-              results: true,
+            },
+          },
+          scripts: {
+            where: {
+              status: 'GRADED',
+            },
+            select: {
+              id: true,
             },
           },
         },
@@ -68,8 +75,17 @@ export async function GET(request: NextRequest) {
       prisma.exam.count({ where }),
     ]);
 
+    const mappedExams = exams.map(exam => ({
+      ...exam,
+      _count: {
+        scripts: exam._count?.scripts || 0,
+        graded: exam.scripts?.length || 0,
+      },
+      scripts: undefined, // Keep HTTP response payload lightweight
+    }));
+
     return NextResponse.json({
-      exams,
+      exams: mappedExams,
       pagination: {
         page,
         limit,

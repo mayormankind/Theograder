@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 
 export default function Footer() {
@@ -7,30 +8,12 @@ export default function Footer() {
         <div className="footer-top">
           <div className="footer-brand">
             <Link href="/" className="logo">
-              <div className="logo-icon">
-                <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                  <rect width="32" height="32" rx="8" fill="url(#logo-grad2)" />
-                  <path
-                    d="M8 16L13 21L24 10"
-                    stroke="white"
-                    strokeWidth="3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                  <defs>
-                    <linearGradient
-                      id="logo-grad2"
-                      x1="0"
-                      y1="0"
-                      x2="32"
-                      y2="32"
-                    >
-                      <stop stopColor="#1a6b3c" />
-                      <stop offset="1" stopColor="#2dd4a8" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-              </div>
+              <Image
+                src="/logo.png"
+                alt="TheoGrader Logo"
+                width={50}
+                height={50}
+              />
               <span className="logo-text">
                 Theo<span className="logo-accent">Grader</span>
               </span>
@@ -58,7 +41,6 @@ export default function Footer() {
               <h5>Legal</h5>
               <a href="#">Privacy Policy</a>
               <a href="#">Terms of Service</a>
-              <a href="#">NDPR Compliance</a>
             </div>
           </div>
         </div>

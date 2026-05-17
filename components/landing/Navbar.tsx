@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -12,9 +13,16 @@ export default function Navbar() {
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
       setMounted(true);
-      const savedTheme = localStorage.getItem("theograder-theme") as "dark" | "light" | null;
-      const initialTheme = savedTheme || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-      
+      const savedTheme = localStorage.getItem("theograder-theme") as
+        | "dark"
+        | "light"
+        | null;
+      const initialTheme =
+        savedTheme ||
+        (window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light");
+
       if (initialTheme !== activeTheme) {
         setActiveTheme(initialTheme);
       }
@@ -58,33 +66,29 @@ export default function Navbar() {
       <nav className={`nav ${isScrolled ? "scrolled" : ""}`} id="navbar">
         <div className="nav-inner">
           <Link href="/" className="logo">
-            <div className="logo-icon">
-              <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                <rect width="32" height="32" rx="8" fill="url(#logo-grad)" />
-                <path
-                  d="M8 16L13 21L24 10"
-                  stroke="white"
-                  strokeWidth="3"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <defs>
-                  <linearGradient id="logo-grad" x1="0" y1="0" x2="32" y2="32">
-                    <stop stopColor="#1a6b3c" />
-                    <stop offset="1" stopColor="#2dd4a8" />
-                  </linearGradient>
-                </defs>
-              </svg>
-            </div>
+            <Image
+              src="/logo.png"
+              alt="TheoGrader Logo"
+              width={50}
+              height={50}
+            />
             <span className="logo-text">
               Theo<span className="logo-accent">Grader</span>
             </span>
           </Link>
           <div className="nav-links" id="navLinks">
-            <a href="#features" className="nav-link">Features</a>
-            <a href="#how-it-works" className="nav-link">How It Works</a>
-            <a href="#preview" className="nav-link">Preview</a>
-            <a href="#faq" className="nav-link">FAQ</a>
+            <a href="#features" className="nav-link">
+              Features
+            </a>
+            <a href="#how-it-works" className="nav-link">
+              How It Works
+            </a>
+            <a href="#preview" className="nav-link">
+              Preview
+            </a>
+            <a href="#faq" className="nav-link">
+              FAQ
+            </a>
           </div>
           <div className="nav-actions">
             <button
@@ -104,7 +108,9 @@ export default function Navbar() {
                 <div className="theme-toggle-thumb"></div>
               </div>
             </button>
-            <Link href="/auth/login" className="btn-ghost">Log in</Link>
+            <Link href="/auth/login" className="btn-ghost">
+              Log in
+            </Link>
             <Link href="/auth/signup" className="btn-primary-sm">
               Get Started <i className="fas fa-arrow-right"></i>
             </Link>
@@ -114,17 +120,34 @@ export default function Navbar() {
             onClick={toggleMobileMenu}
             aria-label="Toggle menu"
           >
-            <span></span><span></span><span></span>
+            <span></span>
+            <span></span>
+            <span></span>
           </button>
         </div>
       </nav>
 
-      <div className={`mobile-menu ${isMobileMenuOpen ? "active" : ""}`} id="mobileMenu">
+      <div
+        className={`mobile-menu ${isMobileMenuOpen ? "active" : ""}`}
+        id="mobileMenu"
+      >
         <div className="mobile-menu-inner">
-          <a href="#features" className="mobile-link" onClick={closeMobileMenu}>Features</a>
-          <a href="#how-it-works" className="mobile-link" onClick={closeMobileMenu}>How It Works</a>
-          <a href="#preview" className="mobile-link" onClick={closeMobileMenu}>Preview</a>
-          <a href="#faq" className="mobile-link" onClick={closeMobileMenu}>FAQ</a>
+          <a href="#features" className="mobile-link" onClick={closeMobileMenu}>
+            Features
+          </a>
+          <a
+            href="#how-it-works"
+            className="mobile-link"
+            onClick={closeMobileMenu}
+          >
+            How It Works
+          </a>
+          <a href="#preview" className="mobile-link" onClick={closeMobileMenu}>
+            Preview
+          </a>
+          <a href="#faq" className="mobile-link" onClick={closeMobileMenu}>
+            FAQ
+          </a>
           <div className="mobile-theme-toggle">
             <button
               className="theme-toggle-mobile"
@@ -132,13 +155,27 @@ export default function Navbar() {
               aria-label="Toggle theme"
             >
               {mounted && (
-                <i className={`fas ${activeTheme === "dark" ? "fa-moon" : "fa-sun"} theme-icon-${activeTheme}`}></i>
+                <i
+                  className={`fas ${activeTheme === "dark" ? "fa-moon" : "fa-sun"} theme-icon-${activeTheme}`}
+                ></i>
               )}
             </button>
           </div>
           <div className="mobile-actions">
-            <Link href="/auth/login" className="btn-ghost-full" onClick={closeMobileMenu}>Log in</Link>
-            <Link href="/auth/signup" className="btn-primary-full" onClick={closeMobileMenu}>Get Started</Link>
+            <Link
+              href="/auth/login"
+              className="btn-ghost-full"
+              onClick={closeMobileMenu}
+            >
+              Log in
+            </Link>
+            <Link
+              href="/auth/signup"
+              className="btn-primary-full"
+              onClick={closeMobileMenu}
+            >
+              Get Started
+            </Link>
           </div>
         </div>
       </div>

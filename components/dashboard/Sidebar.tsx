@@ -21,6 +21,7 @@ import type { Page } from "@/types";
 import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
+import Image from "next/image";
 
 interface SidebarProps {
   activePage: Page;
@@ -36,7 +37,7 @@ interface NavItem {
   badge?: number;
 }
 
-const navItemsStatic: Omit<NavItem, 'badge'>[] = [
+const navItemsStatic: Omit<NavItem, "badge">[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "exams", label: "Exams", icon: BookOpen },
   { id: "scripts", label: "Scripts", icon: FileText },
@@ -45,7 +46,12 @@ const navItemsStatic: Omit<NavItem, 'badge'>[] = [
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
-export default function Sidebar({ activePage, onNavigate, mobileOpen, setMobileOpen }: SidebarProps) {
+export default function Sidebar({
+  activePage,
+  onNavigate,
+  mobileOpen,
+  setMobileOpen,
+}: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [examsCount, setExamsCount] = useState(0);
@@ -86,16 +92,19 @@ export default function Sidebar({ activePage, onNavigate, mobileOpen, setMobileO
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const response = await fetch('/api/exams?limit=1000');
+        const response = await fetch("/api/exams?limit=1000");
         if (response.ok) {
           const data = await response.json();
           setExamsCount(data.pagination?.total || data.exams?.length || 0);
-          const totalScripts = data.exams?.reduce((sum: number, exam: any) => 
-            sum + (exam._count?.scripts || 0), 0) || 0;
+          const totalScripts =
+            data.exams?.reduce(
+              (sum: number, exam: any) => sum + (exam._count?.scripts || 0),
+              0,
+            ) || 0;
           setScriptsCount(totalScripts);
         }
       } catch (error) {
-        console.error('Error fetching counts:', error);
+        console.error("Error fetching counts:", error);
       }
     };
 
@@ -103,15 +112,17 @@ export default function Sidebar({ activePage, onNavigate, mobileOpen, setMobileO
   }, []);
 
   // Merge static nav items with dynamic badges
-  const navItems: NavItem[] = navItemsStatic.map((item: Omit<NavItem, 'badge'>): NavItem => {
-    if (item.id === 'exams' && examsCount > 0) {
-      return { ...item, badge: examsCount };
-    }
-    if (item.id === 'scripts' && scriptsCount > 0) {
-      return { ...item, badge: scriptsCount };
-    }
-    return item;
-  });
+  const navItems: NavItem[] = navItemsStatic.map(
+    (item: Omit<NavItem, "badge">): NavItem => {
+      if (item.id === "exams" && examsCount > 0) {
+        return { ...item, badge: examsCount };
+      }
+      if (item.id === "scripts" && scriptsCount > 0) {
+        return { ...item, badge: scriptsCount };
+      }
+      return item;
+    },
+  );
 
   return (
     <>
@@ -142,13 +153,17 @@ export default function Sidebar({ activePage, onNavigate, mobileOpen, setMobileO
             collapsed ? "justify-center" : "gap-3",
           )}
         >
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-teal-500/20 ring-1 ring-teal-400/30">
-            <Cpu size={18} className="text-teal-400" />
-          </div>
+          <Image
+            src="/logo.png"
+            alt="TheoGrader Logo"
+            width={50}
+            height={50}
+            className="rounded-lg"
+          />
           {!collapsed && (
             <div className="flex flex-1 flex-col overflow-hidden">
               <span className="block truncate text-sm font-bold tracking-tight text-white">
-                TheoGrade
+                TheoGrader
               </span>
               <span className="block truncate text-[10px] font-medium uppercase tracking-widest text-white/40">
                 Academic System

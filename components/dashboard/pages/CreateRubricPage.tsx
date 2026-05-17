@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
   Upload,
   FileText,
@@ -20,7 +21,7 @@ import { aiClient, type ExtractedRubric, type ExtractionResult } from '@/lib/ser
 import { rubricsApi } from '@/lib/api/rubrics';
 
 interface CreateRubricPageProps {
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
 }
 
 interface Exam {
@@ -32,6 +33,9 @@ interface Exam {
 type InputMethod = 'upload' | 'paste' | 'manual' | null;
 
 export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) {
+  const searchParams = useSearchParams();
+  const editId = searchParams.get('edit');
+
   const [selectedMethod, setSelectedMethod] = useState<InputMethod>(null);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [pastedText, setPastedText] = useState('');
@@ -47,7 +51,55 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
 
   useEffect(() => {
     fetchExams();
-  }, []);
+    if (editId) {
+      fetchRubricForEditing(editId);
+    }
+  }, [editId]);
+
+  const fetchRubricForEditing = async (id: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+      const result = await rubricsApi.getById(id);
+      if (result.success && result.data) {
+        const rubric = result.data;
+        setSelectedExamId(rubric.examId || '');
+        
+        // Map to ExtractedRubric format
+        const mappedQuestions = rubric.questions.map((q) => ({
+          questionNumber: q.questionId,
+          questionText: q.question,
+          maxScore: q.maxScore,
+          parts: q.points.map((p, index) => {
+            const label = p.id.includes('-') ? p.id.split('-').pop() || '' : String.fromCharCode(97 + index);
+            return {
+              label,
+              marks: p.maxScore,
+              expectedAnswer: p.point,
+              keyPoints: [],
+            };
+          }),
+        }));
+
+        setExtractedRubric({
+          title: rubric.title,
+          description: rubric.description || '',
+          courseCode: rubric.exam?.courseCode || '',
+          totalMarks: rubric.totalMarks,
+          questions: mappedQuestions,
+        });
+        
+        setIsEditing(true);
+      } else {
+        setError(result.error || 'Failed to load rubric for editing');
+      }
+    } catch (err) {
+      console.error('Error fetching rubric for editing:', err);
+      setError('An error occurred while loading the rubric');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchExams = async () => {
     try {
@@ -147,7 +199,15 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
         return;
       }
 
-      const result = await rubricsApi.create(createData);
+      let result;
+      if (editId) {
+        result = await rubricsApi.update({
+          id: editId,
+          ...createData,
+        });
+      } else {
+        result = await rubricsApi.create(createData);
+      }
 
       if (result.success) {
         // Navigate to rubrics page with success message

@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import Sidebar from "@/components/dashboard/Sidebar";
 import TopNavbar from "@/components/dashboard/TopNavbar";
 import type { Page } from "@/types";
+import { UserProvider } from "@/hooks/useUser";
 
 export default function DashboardLayout({
   children,
@@ -41,23 +42,25 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden">
-      <Sidebar 
-        activePage={activePage} 
-        onNavigate={handleNavigate} 
-        mobileOpen={mobileOpen}
-        setMobileOpen={setMobileOpen}
-      />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <TopNavbar 
+    <UserProvider>
+      <div className="flex h-screen bg-slate-50 overflow-hidden">
+        <Sidebar 
           activePage={activePage} 
           onNavigate={handleNavigate} 
-          onMenuClick={() => setMobileOpen(true)}
+          mobileOpen={mobileOpen}
+          setMobileOpen={setMobileOpen}
         />
-        <main className="flex-1 overflow-y-auto overflow-x-hidden">
-          {children}
-        </main>
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+          <TopNavbar 
+            activePage={activePage} 
+            onNavigate={handleNavigate} 
+            onMenuClick={() => setMobileOpen(true)}
+          />
+          <main className="flex-1 overflow-y-auto overflow-x-hidden">
+            {children}
+          </main>
+        </div>
       </div>
-    </div>
+    </UserProvider>
   );
 }

@@ -5,6 +5,7 @@ import { BookOpen, Plus, Search, ChevronRight, Calendar, Users, CheckCircle2, Cl
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface ExamsPageProps {
   onNavigate: (page: Page) => void;
@@ -55,6 +56,18 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
   const [formData, setFormData] = useState<{
     title: string;
     description: string;
@@ -173,25 +186,29 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
   };
 
   const handleDelete = async (examId: string) => {
-    if (!confirm('Are you sure you want to delete this exam? This action cannot be undone.')) {
-      return;
-    }
+    setConfirmState({
+      isOpen: true,
+      title: 'Delete Exam',
+      description: 'Are you sure you want to delete this exam? This action cannot be undone.',
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/exams/${examId}`, {
+            method: 'DELETE',
+          });
 
-    try {
-      const response = await fetch(`/api/exams/${examId}`, {
-        method: 'DELETE',
-      });
+          if (!response.ok) {
+            throw new Error('Failed to delete exam');
+          }
 
-      if (!response.ok) {
-        throw new Error('Failed to delete exam');
-      }
-
-      setExams(exams.filter(exam => exam.id !== examId));
-      toast.success('Exam deleted successfully');
-    } catch (err) {
-      console.error('Error deleting exam:', err);
-      toast.error(err instanceof Error ? err.message : 'Failed to delete exam');
-    }
+          setExams(exams.filter(exam => exam.id !== examId));
+          toast.success('Exam deleted successfully');
+        } catch (err) {
+          console.error('Error deleting exam:', err);
+          toast.error(err instanceof Error ? err.message : 'Failed to delete exam');
+        }
+      },
+    });
   };
 
   if (loading) {
@@ -522,6 +539,15 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        description={confirmState.description}
+        isDestructive={confirmState.isDestructive}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

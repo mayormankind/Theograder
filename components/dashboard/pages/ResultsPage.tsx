@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { Page, GradingResult } from '@/types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 interface ResultsPageProps {
   onNavigate: (page: Page, params?: Record<string, string>) => void;
@@ -124,7 +125,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
       onNavigate('report', { resultId });
     } catch (err) {
       console.error('Error finalizing:', err);
-      alert('Failed to finalize results');
+      toast.error('Failed to finalize results');
     } finally {
       setFinalizing(false);
     }
@@ -155,7 +156,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex items-center justify-center min-h-100">
         <Loader2 className="animate-spin text-slate-400" size={32} />
       </div>
     );
@@ -163,7 +164,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-100 gap-4">
         <p className="text-slate-600">{error}</p>
         <button
           onClick={() => window.location.reload()}
@@ -177,7 +178,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
 
   if (results.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+      <div className="flex flex-col items-center justify-center min-h-100 gap-4">
         <p className="text-slate-600">No results to display</p>
         <button
           onClick={() => onNavigate('scripts')}

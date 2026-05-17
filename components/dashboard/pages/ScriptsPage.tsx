@@ -18,6 +18,7 @@ import {
 import type { Page } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
 interface Script {
   id: string;
@@ -80,6 +81,18 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedExamId, setSelectedExamId] = useState<string>("all");
   const [batchGrading, setBatchGrading] = useState(false);
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: "",
+    description: "",
+    onConfirm: () => {},
+  });
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -160,29 +173,29 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   };
 
   const handleDelete = async (scriptId: string) => {
-    if (
-      !confirm(
-        "Are you sure you want to delete this script? This action cannot be undone.",
-      )
-    ) {
-      return;
-    }
+    setConfirmState({
+      isOpen: true,
+      title: "Delete Script",
+      description: "Are you sure you want to delete this script? This action cannot be undone.",
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/upload/${scriptId}`, {
+            method: "DELETE",
+          });
 
-    try {
-      const response = await fetch(`/api/upload/${scriptId}`, {
-        method: "DELETE",
-      });
+          if (!response.ok) {
+            throw new Error("Failed to delete script");
+          }
 
-      if (!response.ok) {
-        throw new Error("Failed to delete script");
-      }
-
-      setScripts(scripts.filter((s) => s.id !== scriptId));
-      toast.success("Script deleted successfully");
-    } catch (err) {
-      console.error("Error deleting script:", err);
-      toast.error("Failed to delete script");
-    }
+          setScripts(scripts.filter((s) => s.id !== scriptId));
+          toast.success("Script deleted successfully");
+        } catch (err) {
+          console.error("Error deleting script:", err);
+          toast.error("Failed to delete script");
+        }
+      },
+    });
   };
 
   const handleGradeScript = async (scriptId: string) => {
@@ -232,55 +245,55 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       return;
     }
 
-    if (
-      !confirm(
-        `Grade ${ungradedScripts.length} script(s) for this exam? This may take a while.`,
-      )
-    ) {
-      return;
-    }
+    setConfirmState({
+      isOpen: true,
+      title: "Batch Grade Scripts",
+      description: `Grade ${ungradedScripts.length} script(s) for this exam? This may take a while.`,
+      isDestructive: false,
+      onConfirm: async () => {
+        setBatchGrading(true);
+        let successCount = 0;
+        let failCount = 0;
 
-    setBatchGrading(true);
-    let successCount = 0;
-    let failCount = 0;
-
-    try {
-      // Process each script individually
-      for (const script of ungradedScripts) {
         try {
-          const response = await fetch(`/api/scripts/${script.id}/process`, {
-            method: "POST",
-          });
+          // Process each script individually
+          for (const script of ungradedScripts) {
+            try {
+              const response = await fetch(`/api/scripts/${script.id}/process`, {
+                method: "POST",
+              });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to grade script");
+              if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to grade script");
+              }
+
+              successCount++;
+            } catch (err) {
+              console.error(`Error grading script ${script.id}:`, err);
+              failCount++;
+            }
           }
 
-          successCount++;
+          if (successCount > 0) {
+            toast.success(`Successfully graded ${successCount} script(s)`);
+          }
+          if (failCount > 0) {
+            toast.error(`Failed to grade ${failCount} script(s)`);
+          }
+
+          // Refresh scripts list
+          fetchScripts();
         } catch (err) {
-          console.error(`Error grading script ${script.id}:`, err);
-          failCount++;
+          console.error("Error during batch grade:", err);
+          toast.error(
+            err instanceof Error ? err.message : "Failed to complete batch grading",
+          );
+        } finally {
+          setBatchGrading(false);
         }
-      }
-
-      if (successCount > 0) {
-        toast.success(`Successfully graded ${successCount} script(s)`);
-      }
-      if (failCount > 0) {
-        toast.error(`Failed to grade ${failCount} script(s)`);
-      }
-
-      // Refresh scripts list
-      fetchScripts();
-    } catch (err) {
-      console.error("Error during batch grade:", err);
-      toast.error(
-        err instanceof Error ? err.message : "Failed to complete batch grading",
-      );
-    } finally {
-      setBatchGrading(false);
-    }
+      },
+    });
   };
 
   const filtered = scripts.filter((s: Script) => {
@@ -651,6 +664,15 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           </button>
         </div>
       </div>
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        description={confirmState.description}
+        isDestructive={confirmState.isDestructive}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
     </div>
   );
 }

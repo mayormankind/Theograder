@@ -19,6 +19,8 @@ import {
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
 import { rubricsApi, type Rubric } from '@/lib/api/rubrics';
+import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 
 interface Exam {
   id: string;
@@ -27,7 +29,7 @@ interface Exam {
 }
 
 interface RubricPageProps {
-  onNavigate: (page: Page) => void;
+  onNavigate: (page: Page, params?: Record<string, string>) => void;
 }
 
 export default function RubricPage({ onNavigate }: RubricPageProps) {
@@ -35,13 +37,22 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
   const [exams, setExams] = useState<Exam[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showDuplicateModal, setShowDuplicateModal] = useState(false);
-  const [duplicateTitle, setDuplicateTitle] = useState('');
-  const [duplicatingRubric, setDuplicatingRubric] = useState<Rubric | null>(null);
   const [deletingRubric, setDeletingRubric] = useState<string | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkingRubric, setLinkingRubric] = useState<Rubric | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string>('');
+  const [confirmState, setConfirmState] = useState<{
+    isOpen: boolean;
+    title: string;
+    description: string;
+    isDestructive?: boolean;
+    onConfirm: () => void;
+  }>({
+    isOpen: false,
+    title: '',
+    description: '',
+    onConfirm: () => {},
+  });
 
   useEffect(() => {
     fetchRubrics();
@@ -78,54 +89,31 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
     }
   };
 
-
-
-  const handleDuplicate = async () => {
-    if (!duplicatingRubric) return;
-    
-    try {
-      const result = await rubricsApi.duplicate(
-        duplicatingRubric.id,
-        duplicateTitle || `${duplicatingRubric.title} (Copy)`
-      );
-      
-      if (result.success) {
-        setShowDuplicateModal(false);
-        setDuplicateTitle('');
-        setDuplicatingRubric(null);
-        await fetchRubrics();
-      } else {
-        setError(result.error || 'Failed to duplicate rubric');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    }
-  };
-
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this rubric? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      setDeletingRubric(id);
-      const result = await rubricsApi.delete(id);
-      if (result.success) {
-        setRubrics(rubrics.filter(r => r.id !== id));
-      } else {
-        setError(result.error || 'Failed to delete rubric');
-      }
-    } catch (err) {
-      setError('An unexpected error occurred');
-    } finally {
-      setDeletingRubric(null);
-    }
-  };
-
-  const openDuplicateModal = (rubric: Rubric) => {
-    setDuplicatingRubric(rubric);
-    setDuplicateTitle('');
-    setShowDuplicateModal(true);
+    setConfirmState({
+      isOpen: true,
+      title: 'Delete Rubric',
+      description: 'Are you sure you want to delete this rubric? This action cannot be undone.',
+      isDestructive: true,
+      onConfirm: async () => {
+        try {
+          setDeletingRubric(id);
+          const result = await rubricsApi.delete(id);
+          if (result.success) {
+            setRubrics(rubrics.filter(r => r.id !== id));
+            toast.success('Rubric deleted successfully');
+          } else {
+            setError(result.error || 'Failed to delete rubric');
+            toast.error(result.error || 'Failed to delete rubric');
+          }
+        } catch (err) {
+          setError('An unexpected error occurred');
+          toast.error('An unexpected error occurred');
+        } finally {
+          setDeletingRubric(null);
+        }
+      },
+    });
   };
 
   const openLinkModal = (rubric: Rubric) => {
@@ -158,25 +146,31 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
   };
 
   const handleUnlink = async (rubricId: string) => {
-    if (!confirm('Unlink this rubric from the exam? It will become a template.')) {
-      return;
-    }
+    setConfirmState({
+      isOpen: true,
+      title: 'Unlink Rubric',
+      description: 'Unlink this rubric from the exam? It will become a template.',
+      isDestructive: false,
+      onConfirm: async () => {
+        try {
+          const response = await fetch(`/api/rubrics/${rubricId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ examId: null }),
+          });
 
-    try {
-      const response = await fetch(`/api/rubrics/${rubricId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ examId: null }),
-      });
+          if (!response.ok) {
+            throw new Error('Failed to unlink rubric');
+          }
 
-      if (!response.ok) {
-        throw new Error('Failed to unlink rubric');
-      }
-
-      await fetchRubrics();
-    } catch (err) {
-      setError('Failed to unlink rubric');
-    }
+          toast.success('Rubric unlinked successfully');
+          await fetchRubrics();
+        } catch (err) {
+          setError('Failed to unlink rubric');
+          toast.error('Failed to unlink rubric');
+        }
+      },
+    });
   };
 
 
@@ -285,11 +279,11 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
                         </button>
                       )}
                       <button
-                        onClick={() => openDuplicateModal(rubric)}
+                        onClick={() => onNavigate('create-rubric', { edit: rubric.id })}
                         className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 border border-slate-200 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                        title="Duplicate"
+                        title="Edit"
                       >
-                        <Copy size={15} />
+                        <Edit3 size={15} />
                       </button>
                       <button
                         onClick={() => handleDelete(rubric.id)}
@@ -331,58 +325,6 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
           </div>
         </div>
       </div>
-
-      {/* Duplicate Modal */}
-      {showDuplicateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-800">Duplicate Rubric</h3>
-              <button
-                onClick={() => {
-                  setShowDuplicateModal(false);
-                  setDuplicatingRubric(null);
-                  setDuplicateTitle('');
-                }}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-              >
-                <X size={16} />
-              </button>
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                New Rubric Title
-              </label>
-              <input
-                type="text"
-                value={duplicateTitle}
-                onChange={(e) => setDuplicateTitle(e.target.value)}
-                placeholder={`${duplicatingRubric?.title} (Copy)`}
-                className="w-full h-10 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
-              />
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  setShowDuplicateModal(false);
-                  setDuplicatingRubric(null);
-                  setDuplicateTitle('');
-                }}
-                className="flex-1 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDuplicate}
-                className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-all"
-              >
-                <Copy size={14} />
-                Duplicate
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Link to Exam Modal */}
       {showLinkModal && (
@@ -444,6 +386,15 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        isOpen={confirmState.isOpen}
+        title={confirmState.title}
+        description={confirmState.description}
+        isDestructive={confirmState.isDestructive}
+        onConfirm={confirmState.onConfirm}
+        onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
+      />
 
       {/* Info Banner */}
       <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">

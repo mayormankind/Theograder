@@ -4,7 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const inter = Inter({
   variable: "--font-inter",
@@ -18,8 +18,7 @@ const jetbrainsMono = JetBrains_Mono({
 
 export const metadata: Metadata = {
   title: "TheoGrader",
-  description:
-    "Intelligent assessment grading for Nigerian universities.",
+  description: "Intelligent assessment grading for Nigerian universities.",
 };
 
 export default function RootLayout({
@@ -28,7 +27,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("font-sans", geist.variable)}
+    >
       <head>
         <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
         <link
@@ -45,7 +48,7 @@ export default function RootLayout({
         className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
       >
         {children}
-        <Toaster richColors/>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   );

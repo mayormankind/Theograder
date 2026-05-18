@@ -178,7 +178,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     setConfirmState({
       isOpen: true,
       title: "Delete Script",
-      description: "Are you sure you want to delete this script? This will also permanently delete all associated grading results and student answers. This action cannot be undone.",
+      description:
+        "Are you sure you want to delete this script? This will also permanently delete all associated grading results and student answers. This action cannot be undone.",
       isDestructive: true,
       onConfirm: async () => {
         try {
@@ -294,9 +295,12 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           // Process each script individually
           for (const script of ungradedScripts) {
             try {
-              const response = await fetch(`/api/scripts/${script.id}/process`, {
-                method: "POST",
-              });
+              const response = await fetch(
+                `/api/scripts/${script.id}/process`,
+                {
+                  method: "POST",
+                },
+              );
 
               if (!response.ok) {
                 const errorData = await response.json();
@@ -319,10 +323,34 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
 
           // Refresh scripts list
           fetchScripts();
+
+          // Collect flagged scripts for email
+          const flaggedScripts = scripts
+            .filter((s) => s.status === "PENDING_REVIEW")
+            .map((s) => ({
+              studentId: s.studentId || "Unknown",
+              studentName: s.studentName || "Unknown",
+              reason: "Flagged for manual review",
+            }));
+
+          // Send notification email (fire and forget)
+          fetch("/api/notifications/grading-complete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              examId: selectedExamId,
+              total: ungradedScripts.length,
+              successful: successCount,
+              failed: failCount,
+              flagged: flaggedScripts,
+            }),
+          }).catch((err) => console.error("Failed to send notification:", err));
         } catch (err) {
           console.error("Error during batch grade:", err);
           toast.error(
-            err instanceof Error ? err.message : "Failed to complete batch grading",
+            err instanceof Error
+              ? err.message
+              : "Failed to complete batch grading",
           );
         } finally {
           setBatchGrading(false);
@@ -514,7 +542,9 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                         ]);
                       } else {
                         setSelectedScriptIds((prev) =>
-                          prev.filter((id) => !filtered.some((s) => s.id === id)),
+                          prev.filter(
+                            (id) => !filtered.some((s) => s.id === id),
+                          ),
                         );
                       }
                     }}
@@ -539,7 +569,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                 <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden md:table-cell">
                   Confidence
                 </th>
-                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 min-w-45">
                   Actions
                 </th>
               </tr>
@@ -565,7 +595,10 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                         checked={selectedScriptIds.includes(script.id)}
                         onChange={(e) => {
                           if (e.target.checked) {
-                            setSelectedScriptIds((prev) => [...prev, script.id]);
+                            setSelectedScriptIds((prev) => [
+                              ...prev,
+                              script.id,
+                            ]);
                           } else {
                             setSelectedScriptIds((prev) =>
                               prev.filter((id) => id !== script.id),
@@ -577,7 +610,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-slate-200 to-slate-300 text-[10px] font-bold text-slate-600">
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-slate-200 to-slate-300 text-[10px] font-bold text-slate-600">
                           {script.studentName
                             .split(" ")
                             .map((n) => n[0])
@@ -668,14 +701,14 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                       )}
                     </td>
                     <td className="px-5 py-4">
-                      <div className="flex items-center gap-1 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-1 flex-wrap">
                         {canGrade && (
                           <button
                             onClick={() => handleGradeScript(script.id)}
-                            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-teal-600 hover:bg-teal-50 transition-colors"
+                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors whitespace-nowrap"
                             title="Grade this script"
                           >
-                            <Zap size={11} /> <span className="hidden xs:inline">Grade</span>
+                            <Zap size={12} /> Grade
                           </button>
                         )}
                         {(script.status === "GRADED" ||
@@ -684,27 +717,18 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                             onClick={() =>
                               onNavigate("results", { scriptId: script.id })
                             }
-                            className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-blue-600 hover:bg-blue-50 transition-colors"
-                            title="View grading details"
+                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors whitespace-nowrap"
+                            title="Review grading"
                           >
-                            <Eye size={11} /> <span className="hidden xs:inline">Review</span>
+                            <Eye size={12} /> Review
                           </button>
                         )}
                         <button
-                          onClick={() =>
-                            onNavigate("results", { scriptId: script.id })
-                          }
-                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-                          title="View results"
-                        >
-                          <BarChart3 size={11} /> <span className="hidden xs:inline">Results</span>
-                        </button>
-                        <button
                           onClick={() => handleDelete(script.id)}
-                          className="flex items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+                          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors whitespace-nowrap"
                           title="Delete script"
                         >
-                          <Trash2 size={11} /> <span className="hidden xs:inline">Delete</span>
+                          <Trash2 size={12} /> Delete
                         </button>
                       </div>
                     </td>

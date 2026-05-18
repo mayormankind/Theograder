@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 import { v4 as uuidv4 } from 'uuid';
-import { uploadFileToSupabase, deleteFileFromSupabase } from '@/lib/supabase';
+import { uploadFileToSupabase, deleteFileFromSupabase, getSignedUrl } from '@/lib/supabase';
 
 const uploadSchema = z.object({
   examId: z.string().min(1, 'Exam ID is required'),
@@ -96,6 +96,15 @@ export async function POST(request: NextRequest) {
           status: 'UPLOADED',
         },
       });
+
+      // Fire and forget identity extraction
+      getSignedUrl('uploads', storagePath, 120).then(signedUrl => {
+        extractAndSaveIdentity(
+          script.id, 
+          signedUrl, 
+          process.env.AI_SERVICE_URL || 'http://localhost:8000'
+        ).catch(err => console.error('[Upload] Identity extraction failed:', err));
+      }).catch(err => console.error('[Upload] Failed to get signed URL for identity extraction:', err));
 
       uploadedScripts.push({
         id: script.id,
@@ -318,5 +327,46 @@ export async function DELETE(request: NextRequest) {
       { error: 'Failed to delete scripts' },
       { status: 500 }
     );
+  }
+}
+
+async function extractAndSaveIdentity(
+  scriptId: string,
+  fileUrl: string,
+  aiServiceUrl: string
+): Promise<void> {
+  try {
+    const response = await fetch(
+      `${aiServiceUrl}/extract-identity`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: fileUrl })
+      }
+    );
+
+    if (!response.ok) return;
+
+    const data = await response.json();
+
+    // Only update if we got something useful
+    if (data.matric && data.matric !== 'UNKNOWN') {
+      await prisma.script.update({
+        where: { id: scriptId },
+        data: {
+          studentId: data.matric,
+          // Only update name if extracted
+          ...(data.student_name && {
+            studentName: data.student_name
+          })
+        }
+      });
+      console.log(
+        `[Upload] Identity extracted for ${scriptId}:`,
+        data.matric
+      );
+    }
+  } catch (err) {
+    console.error('[Upload] extractAndSaveIdentity:', err);
   }
 }

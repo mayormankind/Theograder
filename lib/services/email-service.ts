@@ -270,6 +270,107 @@ class EmailService {
       text: `Hi ${name},\n\nWelcome to TheoGrader! Your account is now active.\n\nVisit your dashboard to get started: ${process.env.NEXT_PUBLIC_APP_URL}/dashboard\n\nTheoGrader Team`,
     });
   }
+
+  async sendGradingCompleteEmail(
+    to: string,
+    lecturerName: string,
+    summary: {
+      examTitle: string,
+      examId: string,
+      total: number,
+      successful: number,
+      failed: number,
+      flagged: { 
+        studentId: string, 
+        studentName: string, 
+        reason: string 
+      }[]
+    }
+  ): Promise<boolean> {
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const resultsUrl = `${appUrl}/dashboard/results?examId=${summary.examId}`;
+
+    const flaggedRows = summary.flagged.length > 0
+      ? summary.flagged.map(f => `
+          <tr>
+            <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
+              ${f.studentId || 'Unknown'}
+            </td>
+            <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
+              ${f.studentName || 'Unknown'}
+            </td>
+            <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#d97706;">
+              ${f.reason}
+            </td>
+          </tr>`).join('')
+      : `<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">
+          No scripts flagged for review
+         </td></tr>`;
+
+    const html = `
+      <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px 24px;">
+        <div style="background:#0f1f3d;padding:20px 24px;border-radius:12px 12px 0 0;">
+          <h1 style="color:white;margin:0;font-size:20px;">TheoGrader</h1>
+          <p style="color:#94a3b8;margin:4px 0 0;font-size:13px;">Grading Complete</p>
+        </div>
+        <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-top:none;border-radius:0 0 12px 12px;">
+          <p style="color:#334155;font-size:15px;">Hi ${lecturerName},</p>
+          <p style="color:#334155;font-size:14px;">
+            Batch grading for <strong>${summary.examTitle}</strong> has completed.
+          </p>
+
+          <div style="display:flex;gap:12px;margin:20px 0;">
+            <div style="flex:1;background:white;border:1px solid #e2e8f0;border-radius:8px;padding:16px;text-align:center;">
+              <p style="font-size:24px;font-weight:700;color:#0f1f3d;margin:0;">${summary.total}</p>
+              <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Total</p>
+            </div>
+            <div style="flex:1;background:white;border:1px solid #99f6e4;border-radius:8px;padding:16px;text-align:center;">
+              <p style="font-size:24px;font-weight:700;color:#0d9488;margin:0;">${summary.successful}</p>
+              <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Graded</p>
+            </div>
+            <div style="flex:1;background:white;border:1px solid #fde68a;border-radius:8px;padding:16px;text-align:center;">
+              <p style="font-size:24px;font-weight:700;color:#d97706;margin:0;">${summary.flagged.length}</p>
+              <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Needs Review</p>
+            </div>
+            <div style="flex:1;background:white;border:1px solid #fecaca;border-radius:8px;padding:16px;text-align:center;">
+              <p style="font-size:24px;font-weight:700;color:#ef4444;margin:0;">${summary.failed}</p>
+              <p style="font-size:12px;color:#64748b;margin:4px 0 0;">Failed</p>
+            </div>
+          </div>
+
+          ${summary.flagged.length > 0 ? `
+          <p style="color:#334155;font-size:14px;font-weight:600;margin:20px 0 8px;">
+            Scripts Needing Attention:
+          </p>
+          <table style="width:100%;border-collapse:collapse;background:white;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;">
+            <thead>
+              <tr style="background:#f8fafc;">
+                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Matric No</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Name</th>
+                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Reason</th>
+              </tr>
+            </thead>
+            <tbody>${flaggedRows}</tbody>
+          </table>` : ''}
+
+          <div style="margin-top:24px;text-align:center;">
+            <a href="${resultsUrl}" style="background:#0f1f3d;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-size:14px;font-weight:500;display:inline-block;">
+              View Full Results →
+            </a>
+          </div>
+
+          <p style="color:#94a3b8;font-size:12px;margin-top:24px;text-align:center;">
+            TheoGrader — Intelligent Examination System
+          </p>
+        </div>
+      </div>`;
+
+    return this.sendEmail({
+      to,
+      subject: `Grading Complete: ${summary.examTitle} (${summary.total} scripts)`,
+      html,
+    });
+  }
 }
 
 export const emailService = new EmailService();

@@ -516,7 +516,7 @@ export default function SettingsPage({}: SettingsPageProps) {
                   {[
                     { label: "Embedding Model", value: "all-MiniLM-L6-v2" },
                     { label: "Similarity Metric", value: "Cosine Similarity" },
-                    { label: "OCR Engine", value: "Tesseract v5.3" },
+                    { label: "OCR Engine", value: "GPT-4o-mini Vision" },
                     { label: "Preprocessing", value: "Deskew + Binarize" },
                   ].map((item) => (
                     <div key={item.label}>

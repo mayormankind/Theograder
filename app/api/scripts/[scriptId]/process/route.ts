@@ -1,13 +1,13 @@
 // app/api/scripts/[scriptId]/process/route.ts
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { requireAuth } from '@/lib/session';
-import { downloadFileFromSupabase, getSignedUrl } from '@/lib/supabase';
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { requireAuth } from "@/lib/session";
+import { downloadFileFromSupabase, getSignedUrl } from "@/lib/supabase";
 
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ scriptId: string }> }
+  { params }: { params: Promise<{ scriptId: string }> },
 ) {
   const { scriptId } = await params;
   const AI_SERVICE_URL = process.env.AI_SERVICE_URL;
@@ -42,13 +42,16 @@ export async function POST(
     });
 
     if (!script) {
-      return NextResponse.json({ error: 'Script not found' }, { status: 404 });
+      return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
     if (!script.exam.rubrics || script.exam.rubrics.length === 0) {
       return NextResponse.json(
-        { error: 'No rubric found for this exam. Create a rubric before grading.' },
-        { status: 400 }
+        {
+          error:
+            "No rubric found for this exam. Create a rubric before grading.",
+        },
+        { status: 400 },
       );
     }
 
@@ -57,16 +60,16 @@ export async function POST(
     // Update status to PROCESSING
     await prisma.script.update({
       where: { id: scriptId },
-      data: { status: 'PROCESSING' },
+      data: { status: "PROCESSING" },
     });
 
     // ── STAGE 1: OCR ──────────────────────────────────────
     // Generate a signed URL so the AI service can download from private Supabase storage
-    const signedFileUrl = await getSignedUrl('uploads', script.filePath, 120);
+    const signedFileUrl = await getSignedUrl("uploads", script.filePath, 120);
 
     const ocrResponse = await fetch(`${AI_SERVICE_URL}/ocr-from-url`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ url: signedFileUrl }),
     });
 
@@ -78,7 +81,7 @@ export async function POST(
     const extractedText = ocrData.extracted_text;
 
     if (!extractedText) {
-      throw new Error('OCR returned no text');
+      throw new Error("OCR returned no text");
     }
 
     // Save extracted text
@@ -86,8 +89,8 @@ export async function POST(
       where: { id: scriptId },
       data: {
         extractedText: extractedText,
-        extractionMethod: ocrData.extraction_method || 'hybrid',
-        confidenceFlag: ocrData.confidence_flag || 'acceptable',
+        extractionMethod: ocrData.extraction_method || "hybrid",
+        confidenceFlag: ocrData.confidence_flag || "acceptable",
         studentId: ocrData.student_id,
         studentName: ocrData.student_name,
       },
@@ -95,8 +98,8 @@ export async function POST(
 
     // ── STAGE 2: SEGMENTATION ─────────────────────────────
     const segmentResponse = await fetch(`${AI_SERVICE_URL}/segment`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ raw_text: extractedText }),
     });
 
@@ -112,31 +115,38 @@ export async function POST(
 
     for (const question of rubric.questions) {
       const questionKey = question.questionId;
-      rubricPayload[questionKey] = question.points.map(point => ({
+      rubricPayload[questionKey] = question.points.map((point) => ({
         point: point.point,
         weight: point.weight,
+        maxScore: point.maxScore,
+        // Pass question total marks on every point
+        // so grading.py can access it regardless of
+        // which point it reads from
+        questionMaxScore: question.maxScore,
       }));
     }
 
     // Download file from Supabase for grading
     let fileBuffer: Buffer;
     try {
-      fileBuffer = await downloadFileFromSupabase('uploads', script.filePath);
+      fileBuffer = await downloadFileFromSupabase("uploads", script.filePath);
     } catch (downloadError) {
-      console.error('Failed to download file from Supabase:', downloadError);
-      throw new Error('Failed to download script file from storage');
+      console.error("Failed to download file from Supabase:", downloadError);
+      throw new Error("Failed to download script file from storage");
     }
 
-    const fileBlob = new Blob([new Uint8Array(fileBuffer)], { type: script.mimeType });
+    const fileBlob = new Blob([new Uint8Array(fileBuffer)], {
+      type: script.mimeType,
+    });
 
     // Create form data for AI service
     const formData = new FormData();
-    formData.append('file', fileBlob, script.originalName);
-    formData.append('rubric_str', JSON.stringify(rubricPayload));
-    formData.append('extracted_text', extractedText);
+    formData.append("file", fileBlob, script.originalName);
+    formData.append("rubric_str", JSON.stringify(rubricPayload));
+    formData.append("extracted_text", extractedText);
 
     const gradeResponse = await fetch(`${AI_SERVICE_URL}/grade`, {
-      method: 'POST',
+      method: "POST",
       body: formData,
     });
 
@@ -149,10 +159,18 @@ export async function POST(
 
     // ── SAVE GRADES TO DB ─────────────────────────────────
     await prisma.$transaction(async (tx) => {
-      const totalScore = gradeData.questions?.reduce((sum: number, q: any) => sum + (q.score || 0), 0) || 0;
-      const avgConfidence = gradeData.questions?.length > 0 
-        ? gradeData.questions.reduce((sum: number, q: any) => sum + (q.confidence || 0), 0) / gradeData.questions.length
-        : 0.5;
+      const totalScore =
+        gradeData.questions?.reduce(
+          (sum: number, q: any) => sum + (q.score || 0),
+          0,
+        ) || 0;
+      const avgConfidence =
+        gradeData.questions?.length > 0
+          ? gradeData.questions.reduce(
+              (sum: number, q: any) => sum + (q.confidence || 0),
+              0,
+            ) / gradeData.questions.length
+          : 0.5;
 
       // Create main result
       const newResult = await tx.result.create({
@@ -163,7 +181,7 @@ export async function POST(
           totalScore: totalScore,
           maxScore: script.exam.totalMarks,
           confidence: avgConfidence,
-          status: 'PENDING',
+          status: "PENDING",
         },
       });
 
@@ -171,25 +189,31 @@ export async function POST(
       if (gradeData.questions && Array.isArray(gradeData.questions)) {
         for (const question of gradeData.questions) {
           // Normalize rubric matching logic to match AI service normalization
-          const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, "").replace(/^question/, "").replace(/^q/, "");
+          const normalize = (s: string) =>
+            s
+              .toLowerCase()
+              .replace(/\s+/g, "")
+              .replace(/^question/, "")
+              .replace(/^q/, "");
           const target = normalize(question.question);
-          
+
           const rubricQuestion = rubric.questions.find(
-            rq => normalize(rq.questionId) === target
+            (rq) => normalize(rq.questionId) === target,
           );
 
           if (rubricQuestion) {
             // Find the student answer from segments
-            const answerFromSegments = Object.entries(segments)
-              .find(([k]) => normalize(k) === target)?.[1] || '';
+            const answerFromSegments =
+              Object.entries(segments).find(
+                ([k]) => normalize(k) === target,
+              )?.[1] || "";
 
             await tx.questionResult.create({
               data: {
                 resultId: newResult.id,
                 questionId: question.question,
                 question: question.question,
-                answer: question.answer || 
-                        (answerFromSegments as string) || '',
+                answer: question.answer || (answerFromSegments as string) || "",
                 score: question.score || 0,
                 maxScore: rubricQuestion.maxScore,
                 confidence: question.confidence || 0.5,
@@ -209,12 +233,16 @@ export async function POST(
       // Update script status
       await tx.script.update({
         where: { id: scriptId },
-        data: { status: 'PROCESSED' },
+        data: { status: "PROCESSED" },
       });
     });
 
     // Compute total score to return to frontend
-    const totalScore = gradeData.questions?.reduce((sum: number, q: any) => sum + (q.score || 0), 0) || 0;
+    const totalScore =
+      gradeData.questions?.reduce(
+        (sum: number, q: any) => sum + (q.score || 0),
+        0,
+      ) || 0;
     const totalPossible = script.exam.totalMarks;
 
     return NextResponse.json({
@@ -224,19 +252,20 @@ export async function POST(
       totalPossible,
       grades: gradeData.questions,
     });
-
   } catch (error: any) {
     console.error(`Processing failed for script ${scriptId}:`, error);
 
     // Mark script as UPLOADED so it can be retried
-    await prisma.script.update({
-      where: { id: scriptId },
-      data: { status: 'UPLOADED' },
-    }).catch(() => {});
+    await prisma.script
+      .update({
+        where: { id: scriptId },
+        data: { status: "UPLOADED" },
+      })
+      .catch(() => {});
 
     return NextResponse.json(
-      { error: error.message || 'Processing failed' },
-      { status: 500 }
+      { error: error.message || "Processing failed" },
+      { status: 500 },
     );
   }
 }

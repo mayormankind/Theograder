@@ -16,6 +16,8 @@ import {
   AlertTriangle,
   Download,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import type { Page } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -360,54 +362,118 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     });
   };
 
-  const handleExportCSV = () => {
+  const handleExportPDF = () => {
     if (filtered.length === 0) {
       toast.error("No scripts to export");
       return;
     }
 
-    const csvRows = [
-      [
-        "Student Name",
-        "Matric Number",
-        "Examination",
-        "Status",
-        "Score",
-        "Total Marks",
-        "Percentage",
-        "Upload Date",
-      ],
-    ];
+    const doc = new jsPDF();
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    filtered.forEach((script) => {
-      const scorePct =
+    // -- Header Section --
+    doc.setFillColor(15, 31, 61); // #0f1f3d
+    doc.rect(0, 0, pageWidth, 40, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
+    doc.setFont("helvetica", "bold");
+    doc.text("Examination Results", 14, 25);
+
+    // Filter to graded scripts for statistics
+    const gradedScripts = filtered.filter(
+      (s) => s.status === "GRADED" || s.status === "PENDING_REVIEW",
+    );
+    const totalScripts = gradedScripts.length;
+    let avgScoreText = "N/A";
+
+    if (totalScripts > 0) {
+      const totalScore = gradedScripts.reduce(
+        (acc, curr) => acc + (curr.score || 0),
+        0,
+      );
+      const totalPossible = gradedScripts.reduce(
+        (acc, curr) => acc + (curr.totalMarks || 0),
+        0,
+      );
+      if (totalPossible > 0) {
+        const avgPct = Math.round((totalScore / totalPossible) * 100);
+        avgScoreText = `${avgPct}%`;
+
+        // Draw Circular Average in Header
+        doc.setFillColor(255, 255, 255);
+        doc.circle(pageWidth - 30, 20, 12, "F");
+        doc.setTextColor(15, 31, 61);
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "bold");
+        doc.text(avgScoreText, pageWidth - 30, 20, {
+          align: "center",
+          baseline: "middle",
+        });
+        doc.setFontSize(7);
+        doc.setFont("helvetica", "normal");
+        doc.text("Avg Score", pageWidth - 30, 26, {
+          align: "center",
+          baseline: "middle",
+        });
+      }
+    }
+
+    // -- Exam Details --
+    doc.setTextColor(50, 50, 50);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "normal");
+    const examName = selectedExam ? selectedExam.title : "All Examinations";
+    doc.text(`Exam: ${examName}`, 14, 50);
+    doc.text(`Date Generated: ${new Date().toLocaleDateString()}`, 14, 56);
+    doc.text(`Total Graded: ${totalScripts}`, 14, 62);
+
+    // -- Table Data --
+    const tableColumns = [
+      "Matric Number",
+      "Status",
+      "Score",
+      "Total",
+      "Percentage",
+    ];
+    const tableRows = filtered.map((script) => {
+      const pct =
         script.score !== undefined && script.totalMarks !== undefined
-          ? Math.round((script.score / script.totalMarks) * 100)
-          : "";
-      csvRows.push([
-        `"${script.studentName}"`,
-        `"${script.studentId}"`,
-        `"${script.examTitle || ""}"`,
-        `"${script.status}"`,
-        `"${script.score !== undefined ? script.score : ""}"`,
-        `"${script.totalMarks !== undefined ? script.totalMarks : ""}"`,
-        `"${scorePct !== "" ? scorePct + "%" : ""}"`,
-        `"${script.uploadedAt}"`,
-      ]);
+          ? Math.round((script.score / script.totalMarks) * 100) + "%"
+          : "-";
+
+      return [
+        script.studentId || "Unknown",
+        script.status,
+        script.score !== undefined ? script.score : "-",
+        script.totalMarks !== undefined ? script.totalMarks : "-",
+        pct,
+      ];
     });
 
-    const csvContent = csvRows.map((e) => e.join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute(
-      "download",
-      `examination_results_${new Date().toISOString().split("T")[0]}.csv`,
+    autoTable(doc, {
+      startY: 70,
+      head: [tableColumns],
+      body: tableRows,
+      theme: "grid",
+      headStyles: { fillColor: [15, 31, 61], textColor: 255 },
+      styles: { fontSize: 10, cellPadding: 4 },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+    });
+
+    // -- Footer Section --
+    doc.setFontSize(9);
+    doc.setTextColor(150, 150, 150);
+    doc.text(
+      "Generated with TheoGrader",
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 10,
+      { align: "center" },
     );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    doc.save(
+      `examination_results_${new Date().toISOString().split("T")[0]}.pdf`,
+    );
   };
 
   const filtered = scripts.filter((s: Script) => {
@@ -524,10 +590,10 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           )}
           {selectedExamId !== "all" && (
             <button
-              onClick={handleExportCSV}
-              className="inline-flex items-center rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              onClick={handleExportPDF}
+              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
             >
-              <Download size={14} /> Export Results
+              <Download size={14} /> Export PDF Results
             </button>
           )}
         </div>

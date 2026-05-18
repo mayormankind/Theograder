@@ -14,6 +14,7 @@ import {
   ChevronDown,
   CheckCircle2,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 import type { Page } from "@/types";
 import { cn } from "@/lib/utils";
@@ -359,6 +360,56 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     });
   };
 
+  const handleExportCSV = () => {
+    if (filtered.length === 0) {
+      toast.error("No scripts to export");
+      return;
+    }
+
+    const csvRows = [
+      [
+        "Student Name",
+        "Matric Number",
+        "Examination",
+        "Status",
+        "Score",
+        "Total Marks",
+        "Percentage",
+        "Upload Date",
+      ],
+    ];
+
+    filtered.forEach((script) => {
+      const scorePct =
+        script.score !== undefined && script.totalMarks !== undefined
+          ? Math.round((script.score / script.totalMarks) * 100)
+          : "";
+      csvRows.push([
+        `"${script.studentName}"`,
+        `"${script.studentId}"`,
+        `"${script.examTitle || ""}"`,
+        `"${script.status}"`,
+        `"${script.score !== undefined ? script.score : ""}"`,
+        `"${script.totalMarks !== undefined ? script.totalMarks : ""}"`,
+        `"${scorePct !== "" ? scorePct + "%" : ""}"`,
+        `"${script.uploadedAt}"`,
+      ]);
+    });
+
+    const csvContent = csvRows.map((e) => e.join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `examination_results_${new Date().toISOString().split("T")[0]}.csv`,
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filtered = scripts.filter((s: Script) => {
     const matchSearch =
       s.studentName.toLowerCase().includes(search.toLowerCase()) ||
@@ -469,6 +520,14 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                 <Zap size={14} />
               )}
               {batchGrading ? "Grading..." : `Grade All (${ungradedCount})`}
+            </button>
+          )}
+          {selectedExamId !== "all" && (
+            <button
+              onClick={handleExportCSV}
+              className="inline-flex items-center rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            >
+              <Download size={14} /> Export Results
             </button>
           )}
         </div>

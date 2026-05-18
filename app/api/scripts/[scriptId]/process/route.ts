@@ -63,18 +63,30 @@ export async function POST(
       data: { status: "PROCESSING" },
     });
 
-    // ── STAGE 1: OCR ──────────────────────────────────────
-    // Generate a signed URL so the AI service can download from private Supabase storage
-    const signedFileUrl = await getSignedUrl("uploads", script.filePath, 120);
+    // ── STAGE 1: DOWNLOAD & OCR ───────────────────────────
+    let fileBuffer: Buffer;
+    try {
+      fileBuffer = await downloadFileFromSupabase("uploads", script.filePath);
+    } catch (downloadError) {
+      console.error("Failed to download file from Supabase:", downloadError);
+      throw new Error("Failed to download script file from storage");
+    }
 
-    const ocrResponse = await fetch(`${AI_SERVICE_URL}/ocr-from-url`, {
+    const fileBlob = new Blob([new Uint8Array(fileBuffer)], {
+      type: script.mimeType,
+    });
+
+    const ocrFormData = new FormData();
+    ocrFormData.append("file", fileBlob, script.originalName);
+
+    const ocrResponse = await fetch(`${AI_SERVICE_URL}/ocr`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: signedFileUrl }),
+      body: ocrFormData,
     });
 
     if (!ocrResponse.ok) {
-      throw new Error(`OCR failed: ${ocrResponse.statusText}`);
+      const errorText = await ocrResponse.text();
+      throw new Error(`OCR failed: ${errorText}`);
     }
 
     const ocrData = await ocrResponse.json();
@@ -91,8 +103,8 @@ export async function POST(
         extractedText: extractedText,
         extractionMethod: ocrData.extraction_method || "hybrid",
         confidenceFlag: ocrData.confidence_flag || "acceptable",
-        studentId: ocrData.student_id,
-        studentName: ocrData.student_name,
+        ...(ocrData.student_id ? { studentId: ocrData.student_id } : {}),
+        ...(ocrData.student_name ? { studentName: ocrData.student_name } : {}),
       },
     });
 
@@ -125,19 +137,6 @@ export async function POST(
         questionMaxScore: question.maxScore,
       }));
     }
-
-    // Download file from Supabase for grading
-    let fileBuffer: Buffer;
-    try {
-      fileBuffer = await downloadFileFromSupabase("uploads", script.filePath);
-    } catch (downloadError) {
-      console.error("Failed to download file from Supabase:", downloadError);
-      throw new Error("Failed to download script file from storage");
-    }
-
-    const fileBlob = new Blob([new Uint8Array(fileBuffer)], {
-      type: script.mimeType,
-    });
 
     // Create form data for AI service
     const formData = new FormData();

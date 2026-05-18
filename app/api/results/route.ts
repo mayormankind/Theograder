@@ -108,7 +108,77 @@ export async function GET(request: NextRequest) {
     }
 
     // If export format is requested, return all results without pagination
-    if (exportFormat === "csv" || exportFormat === "pdf") {
+    if (exportFormat === "csv" || exportFormat === "pdf" || exportFormat === "json") {
+      if (exportFormat === "json") {
+        const results = await prisma.result.findMany({
+          where,
+          include: {
+            script: {
+              select: {
+                id: true,
+                filename: true,
+                originalName: true,
+                studentId: true,
+                studentName: true,
+                extractedText: true,
+                filePath: true,
+                status: true,
+              },
+            },
+            exam: {
+              select: {
+                id: true,
+                title: true,
+                courseCode: true,
+                courseName: true,
+                totalMarks: true,
+              },
+            },
+            questions: {
+              include: {
+                rubricQuestion: {
+                  include: {
+                    points: true,
+                  },
+                },
+              },
+              orderBy: {
+                questionId: "asc",
+              },
+            },
+          },
+          orderBy: [{ exam: { title: "asc" } }, { script: { studentId: "asc" } }],
+        });
+
+        // Map the breakdown JSON for easier consumption in the frontend
+        const mappedResults = results.map((result) => {
+          const mappedQuestions = result.questions.map((q) => {
+            const breakdown = (q.breakdown as any) || {};
+            const similarities = (breakdown.similarities as number[]) || [];
+            const avgSimilarity =
+              similarities.length > 0
+                ? similarities.reduce((sum: number, s: number) => sum + s, 0) /
+                  similarities.length
+                : 0;
+
+            return {
+              ...q,
+              matchedConcepts: breakdown.matchedConcepts || [],
+              partialConcepts: breakdown.partialConcepts || [],
+              missingConcepts: breakdown.missingConcepts || [],
+              similarityScore: Math.round(avgSimilarity * 100),
+            };
+          });
+
+          return {
+            ...result,
+            questions: mappedQuestions,
+          };
+        });
+
+        return NextResponse.json({ results: mappedResults });
+      }
+
       const results = await prisma.result.findMany({
         where,
         include: {

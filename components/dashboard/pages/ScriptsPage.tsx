@@ -20,6 +20,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import type { Page } from "@/types";
 import { cn } from "@/lib/utils";
+import { generateIndividualReportPDF } from "@/lib/pdf-report";
 import { toast } from "sonner";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 
@@ -85,6 +86,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedExamId, setSelectedExamId] = useState<string>("all");
   const [batchGrading, setBatchGrading] = useState(false);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -476,6 +478,47 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     );
   };
 
+  const handleDownloadAllReports = async () => {
+    if (selectedExamId === "all") {
+      toast.error("Please select a specific exam first");
+      return;
+    }
+
+    try {
+      setDownloadingAll(true);
+      toast.info("Preparing and exporting all student reports...");
+
+      const response = await fetch(`/api/results?examId=${selectedExamId}&export=json`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch detailed results for bulk download");
+      }
+
+      const data = await response.json();
+      const resultsToDownload = data.results || [];
+
+      if (resultsToDownload.length === 0) {
+        toast.error("No graded results found for this exam");
+        return;
+      }
+
+      // Loop and download each PDF report with a short delay to avoid overwhelming the browser
+      for (let i = 0; i < resultsToDownload.length; i++) {
+        const result = resultsToDownload[i];
+        generateIndividualReportPDF(result);
+        if (i < resultsToDownload.length - 1) {
+          await new Promise((resolve) => setTimeout(resolve, 300));
+        }
+      }
+
+      toast.success(`Successfully downloaded ${resultsToDownload.length} report(s)!`);
+    } catch (err) {
+      console.error("Error bulk downloading reports:", err);
+      toast.error(err instanceof Error ? err.message : "Failed to bulk download reports");
+    } finally {
+      setDownloadingAll(false);
+    }
+  };
+
   const filtered = scripts.filter((s: Script) => {
     const matchSearch =
       s.studentName.toLowerCase().includes(search.toLowerCase()) ||
@@ -590,10 +633,24 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           )}
           {selectedExamId !== "all" && (
             <button
+              onClick={handleDownloadAllReports}
+              disabled={downloadingAll || scripts.filter(s => s.status === "GRADED" || s.status === "PENDING_REVIEW").length === 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {downloadingAll ? (
+                <Loader2 className="animate-spin" size={14} />
+              ) : (
+                <Download size={14} />
+              )}
+              {downloadingAll ? "Downloading..." : "Download All Reports"}
+            </button>
+          )}
+          {selectedExamId !== "all" && (
+            <button
               onClick={handleExportPDF}
               className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
             >
-              <Download size={14} /> Export PDF Results
+              <Download size={14} /> Export Summary
             </button>
           )}
         </div>

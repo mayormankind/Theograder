@@ -8,7 +8,6 @@ import {
   Award,
   BarChart3,
   FileText,
-  Printer,
   ChevronLeft,
   AlertTriangle,
   Loader2,
@@ -22,7 +21,13 @@ import {
   PolarAngleAxis,
   ResponsiveContainer,
   Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
 } from "recharts";
+import { generateIndividualReportPDF } from "@/lib/pdf-report";
 
 interface ReportPageProps {
   onNavigate: (page: Page, params?: Record<string, string>) => void;
@@ -130,9 +135,9 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
   const avgConf = Math.round((gradingResult.overallConfidence || 0.8) * 100);
   const { grade, color, bg, ring } = gradeFromPct(pct);
   const radarData =
-    gradingResult.questions?.map((q: any) => ({
-      subject: q.questionNumber || "Q",
-      score: Math.round((q.score / q.maxScore) * 100),
+    gradingResult.questions?.map((q: any, i: number) => ({
+      subject: q.questionId || q.questionNumber || `Q${i + 1}`,
+      score: Math.round((q.score / (q.maxScore || 1)) * 100),
     })) || [];
 
   return (
@@ -146,12 +151,11 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
           <ChevronLeft size={14} /> Back to Grading
         </button>
         <div className="flex items-center gap-2">
-          <button className="flex flex-1 sm:flex-none items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors">
-            <Printer size={13} /> <span className="hidden sm:inline">Print</span>
-          </button>
-          <button className="flex flex-2 sm:flex-none items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] transition-colors">
-            <Download size={13} /> <span className="hidden sm:inline">Download Report</span>
-            <span className="sm:hidden">PDF</span>
+          <button
+            onClick={() => generateIndividualReportPDF(gradingResult)}
+            className="flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] transition-colors w-full sm:w-auto"
+          >
+            <Download size={13} /> <span>Download Report (PDF)</span>
           </button>
         </div>
       </div>
@@ -410,66 +414,71 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
             </table>
           </div>
 
-          {/* Radar */}
-          <div className="px-8 py-5 flex flex-col">
-            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-4">
-              Performance Profile
-            </p>
-            <div className="flex-1 flex items-center justify-center">
-              <ResponsiveContainer width="100%" height={220}>
-                <RadarChart data={radarData}>
-                  <PolarGrid stroke="#e2e8f0" />
-                  <PolarAngleAxis
-                    dataKey="subject"
-                    tick={{ fontSize: 11, fill: "#94a3b8" }}
-                  />
-                  <Radar
-                    name="Score %"
-                    dataKey="score"
-                    stroke="#14b8a6"
-                    fill="#14b8a6"
-                    fillOpacity={0.15}
-                    strokeWidth={2}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: 8,
-                      border: "1px solid #e2e8f0",
-                      fontSize: 12,
-                    }}
-                    formatter={(v) => [`${v}%`, "Score"]}
-                  />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 px-4 py-3">
-              <p className="text-[11px] font-semibold text-slate-600 mb-1">
-                Areas for Improvement
+          {/* Radar / Bar Chart */}
+          <div className="px-8 py-5 flex flex-col justify-between">
+            <div className="mb-4">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                Performance Profile
               </p>
-              <div className="flex flex-col gap-1">
-                {gradingResult.questions
-                  ?.filter(
-                    (q: any) =>
-                      q.missingConcepts && q.missingConcepts.length > 0,
-                  )
-                  .map((r: any, i: number) => (
-                    <p key={i} className="text-[11px] text-slate-500">
-                      <span className="font-semibold text-slate-700">
-                        {r.questionNumber || `Q${i + 1}`}:
-                      </span>{" "}
-                      {r.missingConcepts.join(", ")}
-                    </p>
-                  )) || []}
-                {(!gradingResult.questions ||
-                  gradingResult.questions.filter(
-                    (q: any) =>
-                      q.missingConcepts && q.missingConcepts.length > 0,
-                  ).length === 0) && (
-                  <p className="text-[11px] text-slate-400 italic">
-                    No areas for improvement identified
-                  </p>
-                )}
-              </div>
+              <p className="text-[10px] text-slate-400 mt-0.5">
+                Score percentage per question part
+              </p>
+            </div>
+            <div className="flex-1 flex items-center justify-center min-h-[220px]">
+              {radarData.length >= 3 ? (
+                <ResponsiveContainer width="100%" height={220}>
+                  <RadarChart data={radarData}>
+                    <PolarGrid stroke="#e2e8f0" />
+                    <PolarAngleAxis
+                      dataKey="subject"
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                    />
+                    <Radar
+                      name="Score"
+                      dataKey="score"
+                      stroke="#14b8a6"
+                      fill="#14b8a6"
+                      fillOpacity={0.15}
+                      strokeWidth={2}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                        fontSize: 12,
+                      }}
+                      formatter={(v) => [`${v}%`, "Score"]}
+                    />
+                  </RadarChart>
+                </ResponsiveContainer>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart data={radarData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis
+                      dataKey="subject"
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis
+                      domain={[0, 100]}
+                      tick={{ fontSize: 11, fill: "#94a3b8" }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: 8,
+                        border: "1px solid #e2e8f0",
+                        fontSize: 12,
+                      }}
+                      formatter={(v) => [`${v}%`, "Score"]}
+                    />
+                    <Bar dataKey="score" fill="#14b8a6" radius={[4, 4, 0, 0]} maxBarSize={45} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
         </div>

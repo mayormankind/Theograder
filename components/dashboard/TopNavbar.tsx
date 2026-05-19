@@ -2,11 +2,8 @@
 
 import { useEffect, useState } from "react";
 import {
-  Search,
   Bell,
   ChevronDown,
-  Upload,
-  Plus,
   LogOut,
   User,
   Settings as SettingsIcon,
@@ -221,37 +218,6 @@ export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNa
 
       {/* Spacer */}
       <div className="flex-1" />
-
-      {/* Search */}
-      <div className="relative hidden lg:block">
-        <Search
-          size={14}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-        />
-        <input
-          type="text"
-          placeholder="Search scripts, exams…"
-          className="h-9 w-48 xl:w-64 rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
-        />
-      </div>
-
-      {/* Quick Actions */}
-      <div className="hidden md:flex items-center gap-2">
-        <button
-          onClick={() => onNavigate("upload")}
-          className="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-200 transition-colors"
-        >
-          <Upload size={13} />
-          Upload
-        </button>
-        <button
-          onClick={() => onNavigate("rubrics")}
-          className="flex items-center gap-1.5 rounded-lg bg-[#0f1f3d] px-3 py-2 text-xs font-medium text-white hover:bg-[#162b52] transition-colors"
-        >
-          <Plus size={13} />
-          New Exam
-        </button>
-      </div>
 
       {/* Notifications */}
       <div className="relative">

@@ -5,7 +5,6 @@ import { requireAuth } from "@/lib/session";
 import { downloadFileFromSupabase, getSignedUrl } from "@/lib/supabase";
 import { notificationService } from "@/lib/services/notification-service";
 
-
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
 export async function POST(
   request: NextRequest,
@@ -62,7 +61,7 @@ export async function POST(
     // Fetch user preferences for auto-flagging and confidence threshold
     const userSettings = await prisma.user.findUnique({
       where: { id: session.userId },
-      select: { confidenceThreshold: true, autoFlag: true }
+      select: { confidenceThreshold: true, autoFlag: true },
     });
     const threshold = userSettings?.confidenceThreshold ?? 70;
     const shouldAutoFlag = userSettings?.autoFlag ?? true;
@@ -108,35 +107,46 @@ export async function POST(
 
     // Fallback Identity Extraction from the OCR'd text
     const nameMatch = extractedText.match(/Name:\s*([^\n]+)/i);
-    const matricMatch = extractedText.match(/(?:Matric|ID)\s*(?:No|Number|\.)?\s*[:\-]?\s*([^\n]+)/i);
-    
+    const matricMatch = extractedText.match(
+      /(?:Matric|ID)\s*(?:No|Number|\.)?\s*[:\-]?\s*([^\n]+)/i,
+    );
+
     let fallbackName = nameMatch ? nameMatch[1].trim() : undefined;
     let fallbackMatric = matricMatch ? matricMatch[1].trim() : undefined;
 
     // Try to correct common OCR errors in matric numbers (e.g. 1FS/2014986 -> IFS/20/4986)
     if (fallbackMatric) {
       // Strip out spaces and any trailing punctuation
-      fallbackMatric = fallbackMatric.toUpperCase().replace(/[^A-Z0-9/]/g, '');
-      fallbackMatric = fallbackMatric.replace(/^1([A-Z])/i, 'I$1'); // Replace leading 1 with I if followed by letter
-      
+      fallbackMatric = fallbackMatric.toUpperCase().replace(/[^A-Z0-9/]/g, "");
+      fallbackMatric = fallbackMatric.replace(/^1([A-Z])/i, "I$1"); // Replace leading 1 with I if followed by letter
+
       // If it has only one slash, e.g., IFS/2014986, inject a slash after the 2-digit year
       if ((fallbackMatric.match(/\//g) || []).length === 1) {
-         // Often OCR reads the second slash as a '1', e.g. /2014986 instead of /20/4986
-         if (/\/(\d{2})1(\d{3,4})$/.test(fallbackMatric)) {
-             fallbackMatric = fallbackMatric.replace(/\/(\d{2})1(\d{3,4})$/, '/$1/$2');
-         } else {
-             fallbackMatric = fallbackMatric.replace(/\/(\d{2})(\d{3,5})$/, '/$1/$2');
-         }
+        // Often OCR reads the second slash as a '1', e.g. /2014986 instead of /20/4986
+        if (/\/(\d{2})1(\d{3,4})$/.test(fallbackMatric)) {
+          fallbackMatric = fallbackMatric.replace(
+            /\/(\d{2})1(\d{3,4})$/,
+            "/$1/$2",
+          );
+        } else {
+          fallbackMatric = fallbackMatric.replace(
+            /\/(\d{2})(\d{3,5})$/,
+            "/$1/$2",
+          );
+        }
       }
-      
+
       // Ensure the final format somewhat matches expected (allow some leniency but prevent extreme garbage)
       if (!/^[A-Z]{2,5}\/\d{2}\/\d{3,5}$/.test(fallbackMatric)) {
-         fallbackMatric = undefined; // Discard if it still doesn't look like a matric number
+        fallbackMatric = undefined; // Discard if it still doesn't look like a matric number
       }
     }
 
     // Check if we already have a valid student ID from the upload phase
-    const hasValidIdentity = script.studentId && script.studentId !== "Not extracted" && script.studentId !== "Unknown";
+    const hasValidIdentity =
+      script.studentId &&
+      script.studentId !== "Not extracted" &&
+      script.studentId !== "Unknown";
 
     const dataToUpdate: any = {
       extractedText: extractedText,
@@ -218,7 +228,7 @@ export async function POST(
             ) / gradeData.questions.length
           : 0.5;
       const avgConfidencePct = Math.round(avgConfidence * 100);
-      const isFlagged = shouldAutoFlag && (avgConfidencePct < threshold);
+      const isFlagged = shouldAutoFlag && avgConfidencePct < threshold;
       const resultStatus = isFlagged ? "PENDING" : "APPROVED";
 
       // Create main result
@@ -303,21 +313,25 @@ export async function POST(
           ) / gradeData.questions.length
         : 0.5;
     const finalAvgConfidencePct = Math.round(finalAvgConfidence * 100);
-    const wasFlagged = shouldAutoFlag && (finalAvgConfidencePct < threshold);
+    const wasFlagged = shouldAutoFlag && finalAvgConfidencePct < threshold;
 
     if (wasFlagged) {
-      notificationService.notify({
-        userId: session.userId,
-        type: "SCRIPT_FLAGGED",
-        title: "Script Flagged for Manual Review",
-        message: `Student matric number "${script.studentId || 'Unknown'}" graded with ${finalAvgConfidencePct}% confidence (threshold: ${threshold}%).`,
-        link: `/dashboard/grading?scriptId=${script.id}&examId=${script.examId}`,
-        metadata: {
-          scriptId: script.id,
-          studentId: script.studentId,
-          confidence: finalAvgConfidencePct,
-        }
-      }).catch(err => console.error("Failed to dispatch flagged notification:", err));
+      notificationService
+        .notify({
+          userId: session.userId!,
+          type: "SCRIPT_FLAGGED",
+          title: "Script Flagged for Manual Review",
+          message: `Student matric number "${script.studentId || "Unknown"}" graded with ${finalAvgConfidencePct}% confidence (threshold: ${threshold}%).`,
+          link: `/dashboard/grading?scriptId=${script.id}&examId=${script.examId}`,
+          metadata: {
+            scriptId: script.id,
+            studentId: script.studentId,
+            confidence: finalAvgConfidencePct,
+          },
+        })
+        .catch((err) =>
+          console.error("Failed to dispatch flagged notification:", err),
+        );
     }
 
     return NextResponse.json({

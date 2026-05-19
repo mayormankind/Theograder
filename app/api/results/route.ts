@@ -29,6 +29,19 @@ export async function GET(request: NextRequest) {
       const result = await prisma.result.findFirst({
         where: { scriptId, gradedById: session.userId },
         include: {
+          script: {
+            select: {
+              studentId: true,
+              studentName: true,
+            },
+          },
+          exam: {
+            select: {
+              title: true,
+              courseCode: true,
+              courseName: true,
+            },
+          },
           questions: {
             include: {
               rubricQuestion: {
@@ -78,6 +91,10 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         resultId: result.id,
+        studentId: result.script?.studentId || "Unknown Student",
+        studentName: result.script?.studentName || "Unknown",
+        courseCode: result.exam?.courseCode || "",
+        courseName: result.exam?.courseName || result.exam?.title || "",
         results: mappedResults,
       });
     }

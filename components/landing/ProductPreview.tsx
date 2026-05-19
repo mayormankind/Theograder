@@ -1,3 +1,4 @@
+// components/landing/ProductPreview.tsx
 export default function ProductPreview() {
   return (
     <section className="preview" id="preview">

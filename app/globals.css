@@ -35,6 +35,10 @@ input[type="range"] {
   cursor: pointer;
 }
 
+button {
+  cursor: pointer;
+}
+
 /* Number input arrows (used in ResultsPage) */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {

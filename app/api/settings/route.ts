@@ -16,6 +16,15 @@ export async function GET(request: NextRequest) {
         name: true,
         role: true,
         avatar: true,
+        title: true,
+        staffId: true,
+        department: true,
+        faculty: true,
+        confidenceThreshold: true,
+        batchSize: true,
+        autoFlag: true,
+        emailNotif: true,
+        systemNotif: true,
       },
     });
 
@@ -28,21 +37,21 @@ export async function GET(request: NextRequest) {
     const firstName = nameParts[0] || "";
     const lastName = nameParts.slice(1).join(" ") || "";
 
-    // Aggregate settings (using defaults for missing schema fields)
+    // Aggregate settings using database fields
     const settings = {
       firstName,
       lastName,
-      title: "Dr.", // Default
+      title: user.title || "Dr.",
       email: user.email,
-      staffId: "STAFF-" + user.id.slice(-4).toUpperCase(), // Placeholder
-      department: "Computer Science", // Default
-      faculty: "Science", // Default
+      staffId: user.staffId || "STAFF-" + user.id.slice(-4).toUpperCase(),
+      department: user.department || "Computer Science",
+      faculty: user.faculty || "Science",
       avatar: user.avatar,
-      confidenceThreshold: 70,
-      batchSize: 20,
-      autoFlag: true,
-      emailNotif: true,
-      systemNotif: true,
+      confidenceThreshold: user.confidenceThreshold,
+      batchSize: user.batchSize,
+      autoFlag: user.autoFlag,
+      emailNotif: user.emailNotif,
+      systemNotif: user.systemNotif,
     };
 
     return NextResponse.json({ settings });
@@ -62,19 +71,36 @@ export async function POST(request: NextRequest) {
     if (session instanceof NextResponse) return session;
 
     const body = await request.json();
-    const { firstName, lastName, email } = body;
+    const { 
+      firstName, 
+      lastName, 
+      email,
+      title,
+      department,
+      faculty,
+      confidenceThreshold,
+      batchSize,
+      autoFlag,
+      emailNotif,
+      systemNotif
+    } = body;
 
-    // Update user profile
+    // Update user profile and configuration settings in the database
     await prisma.user.update({
       where: { id: session.userId },
       data: {
         name: `${firstName} ${lastName}`.trim(),
         email: email,
+        title: title || "Dr.",
+        department: department || "Computer Science",
+        faculty: faculty || "Science",
+        confidenceThreshold: parseInt(confidenceThreshold) || 70,
+        batchSize: parseInt(batchSize) || 20,
+        autoFlag: autoFlag ?? true,
+        emailNotif: emailNotif ?? true,
+        systemNotif: systemNotif ?? true,
       },
     });
-
-    // In a real app, we'd also save the AI/Notification settings to a per-user settings table
-    // For now, we'll just acknowledge the update
 
     return NextResponse.json({ message: "Settings updated successfully" });
   } catch (error) {
@@ -85,3 +111,4 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+

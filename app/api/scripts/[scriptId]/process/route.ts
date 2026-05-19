@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { downloadFileFromSupabase, getSignedUrl } from "@/lib/supabase";
+import { notificationService } from "@/lib/services/notification-service";
+
 
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
 export async function POST(
@@ -56,6 +58,14 @@ export async function POST(
     }
 
     const rubric = script.exam.rubrics[0];
+
+    // Fetch user preferences for auto-flagging and confidence threshold
+    const userSettings = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { confidenceThreshold: true, autoFlag: true }
+    });
+    const threshold = userSettings?.confidenceThreshold ?? 70;
+    const shouldAutoFlag = userSettings?.autoFlag ?? true;
 
     // Update status to PROCESSING
     await prisma.script.update({
@@ -207,6 +217,9 @@ export async function POST(
               0,
             ) / gradeData.questions.length
           : 0.5;
+      const avgConfidencePct = Math.round(avgConfidence * 100);
+      const isFlagged = shouldAutoFlag && (avgConfidencePct < threshold);
+      const resultStatus = isFlagged ? "PENDING" : "APPROVED";
 
       // Create main result
       const newResult = await tx.result.create({
@@ -217,7 +230,7 @@ export async function POST(
           totalScore: totalScore,
           maxScore: script.exam.totalMarks,
           confidence: avgConfidence,
-          status: "PENDING",
+          status: resultStatus,
         },
       });
 
@@ -280,6 +293,32 @@ export async function POST(
         0,
       ) || 0;
     const totalPossible = script.exam.totalMarks;
+
+    // Fire & Forget: Dispatch script flagged notification if grading confidence fell below threshold
+    const finalAvgConfidence =
+      gradeData.questions?.length > 0
+        ? gradeData.questions.reduce(
+            (sum: number, q: any) => sum + (q.confidence || 0),
+            0,
+          ) / gradeData.questions.length
+        : 0.5;
+    const finalAvgConfidencePct = Math.round(finalAvgConfidence * 100);
+    const wasFlagged = shouldAutoFlag && (finalAvgConfidencePct < threshold);
+
+    if (wasFlagged) {
+      notificationService.notify({
+        userId: session.userId,
+        type: "SCRIPT_FLAGGED",
+        title: "Script Flagged for Manual Review",
+        message: `Student matric number "${script.studentId || 'Unknown'}" graded with ${finalAvgConfidencePct}% confidence (threshold: ${threshold}%).`,
+        link: `/dashboard/grading?scriptId=${script.id}&examId=${script.examId}`,
+        metadata: {
+          scriptId: script.id,
+          studentId: script.studentId,
+          confidence: finalAvgConfidencePct,
+        }
+      }).catch(err => console.error("Failed to dispatch flagged notification:", err));
+    }
 
     return NextResponse.json({
       success: true,

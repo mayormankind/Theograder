@@ -434,7 +434,8 @@ export default function ExamDetailPage() {
                       {script.status === 'error' && (
                         <button
                           onClick={() => retryScript(script.id)}
-                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                          disabled={isGrading}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           <RefreshCw size={12} />
                           Retry

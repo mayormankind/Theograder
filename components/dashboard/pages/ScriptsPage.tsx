@@ -565,7 +565,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           {selectedScriptIds.length > 0 && (
             <button
               onClick={handleBulkDelete}
-              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-100 hover:text-red-700 transition-colors"
+              disabled={batchGrading}
+              className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-100 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Trash2 size={14} /> Delete Selected ({selectedScriptIds.length})
             </button>
@@ -634,7 +635,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           {selectedExamId !== "all" && (
             <button
               onClick={handleDownloadAllReports}
-              disabled={downloadingAll || scripts.filter(s => s.status === "GRADED" || s.status === "PENDING_REVIEW").length === 0}
+              disabled={batchGrading || downloadingAll || scripts.filter(s => s.status === "GRADED" || s.status === "PENDING_REVIEW").length === 0}
               className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {downloadingAll ? (
@@ -648,7 +649,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           {selectedExamId !== "all" && (
             <button
               onClick={handleExportPDF}
-              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+              disabled={batchGrading}
+              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Download size={14} /> Export Summary
             </button>
@@ -717,6 +719,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                       filtered.length > 0 &&
                       filtered.every((s) => selectedScriptIds.includes(s.id))
                     }
+                    disabled={batchGrading}
                     onChange={(e) => {
                       if (e.target.checked) {
                         setSelectedScriptIds((prev) => [
@@ -730,7 +733,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                         );
                       }
                     }}
-                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5 cursor-pointer"
+                    className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   />
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
@@ -775,6 +778,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                       <input
                         type="checkbox"
                         checked={selectedScriptIds.includes(script.id)}
+                        disabled={batchGrading}
                         onChange={(e) => {
                           if (e.target.checked) {
                             setSelectedScriptIds((prev) => [
@@ -787,7 +791,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                             );
                           }
                         }}
-                        className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5 cursor-pointer"
+                        className="rounded border-slate-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                       />
                     </td>
                     <td className="px-5 py-4">
@@ -887,7 +891,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                         {canGrade && (
                           <button
                             onClick={() => handleGradeScript(script.id)}
-                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 transition-colors whitespace-nowrap"
+                            disabled={batchGrading}
+                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                             title="Grade this script"
                           >
                             <Zap size={12} /> Grade
@@ -899,7 +904,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                             onClick={() =>
                               onNavigate("results", { scriptId: script.id })
                             }
-                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 transition-colors whitespace-nowrap"
+                            disabled={batchGrading}
+                            className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                             title="Review grading"
                           >
                             <Eye size={12} /> Review
@@ -907,7 +913,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                         )}
                         <button
                           onClick={() => handleDelete(script.id)}
-                          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 transition-colors whitespace-nowrap"
+                          disabled={batchGrading}
+                          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                           title="Delete script"
                         >
                           <Trash2 size={12} /> Delete

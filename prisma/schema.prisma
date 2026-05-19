@@ -40,6 +40,18 @@ model User {
   rubrics   Rubric[]
   results   Result[]
   verificationTokens VerificationToken[]
+  notifications Notification[]
+
+  // User profile and system settings (stored in DB instead of stubbed defaults)
+  title               String?  @default("Dr.")
+  staffId             String?
+  department          String?  @default("Computer Science")
+  faculty             String?  @default("Science")
+  confidenceThreshold Int      @default(70)
+  batchSize           Int      @default(20)
+  autoFlag            Boolean  @default(true)
+  emailNotif          Boolean  @default(true)
+  systemNotif         Boolean  @default(true)
 
   @@map("users")
 }
@@ -257,3 +269,28 @@ model VerificationToken {
   @@unique([identifier, token])
   @@map("verification_tokens")
 }
+
+// Notification Model
+model Notification {
+  id          String           @id @default(cuid())
+  userId      String
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        NotificationType
+  title       String
+  message     String
+  read        Boolean          @default(false)
+  link        String?          // URL route to navigate to (e.g. /dashboard/results?examId=...)
+  metadata    Json?            // Extra parameters (e.g. { examId: "...", successCount: 12 })
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("notifications")
+}
+
+enum NotificationType {
+  GRADING_COMPLETE
+  SCRIPT_FLAGGED
+  SYSTEM_ERROR
+  RUBRIC_EXTRACTED
+}
+

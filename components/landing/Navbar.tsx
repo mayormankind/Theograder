@@ -3,12 +3,14 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useUser } from "@/hooks/useUser";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTheme, setActiveTheme] = useState<"dark" | "light">("dark");
   const [mounted, setMounted] = useState(false);
+  const { user, loading } = useUser();
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
@@ -108,12 +110,20 @@ export default function Navbar() {
                 <div className="theme-toggle-thumb"></div>
               </div>
             </button>
-            <Link href="/auth/login" className="btn-ghost">
-              Log in
-            </Link>
-            <Link href="/auth/signup" className="btn-primary-sm">
-              Get Started <i className="fas fa-arrow-right"></i>
-            </Link>
+            {!loading && user ? (
+              <Link href="/dashboard" className="btn-primary-sm">
+                Dashboard <i className="fas fa-arrow-right"></i>
+              </Link>
+            ) : (
+              <>
+                <Link href="/auth/login" className="btn-ghost">
+                  Log in
+                </Link>
+                <Link href="/auth/signup" className="btn-primary-sm">
+                  Get Started <i className="fas fa-arrow-right"></i>
+                </Link>
+              </>
+            )}
           </div>
           <button
             className={`mobile-toggle ${isMobileMenuOpen ? "active" : ""}`}
@@ -162,20 +172,32 @@ export default function Navbar() {
             </button>
           </div>
           <div className="mobile-actions">
-            <Link
-              href="/auth/login"
-              className="btn-ghost-full"
-              onClick={closeMobileMenu}
-            >
-              Log in
-            </Link>
-            <Link
-              href="/auth/signup"
-              className="btn-primary-full"
-              onClick={closeMobileMenu}
-            >
-              Get Started
-            </Link>
+            {!loading && user ? (
+              <Link
+                href="/dashboard"
+                className="btn-primary-full"
+                onClick={closeMobileMenu}
+              >
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/auth/login"
+                  className="btn-ghost-full"
+                  onClick={closeMobileMenu}
+                >
+                  Log in
+                </Link>
+                <Link
+                  href="/auth/signup"
+                  className="btn-primary-full"
+                  onClick={closeMobileMenu}
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>

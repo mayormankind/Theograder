@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { useUser } from "@/hooks/useUser";
 
 export default function Hero() {
   const rootRef = useRef<HTMLDivElement>(null);
+  const { user, loading } = useUser();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -85,10 +87,17 @@ export default function Hero() {
             confidence, not fatigue.
           </p>
           <div className="hero-cta" data-animate="fade-up" data-delay="300">
-            <Link href="/auth/signup" className="btn-primary-lg">
-              Start Grading Smarter
-              <div className="btn-shimmer"></div>
-            </Link>
+            {!loading && user ? (
+              <Link href="/dashboard" className="btn-primary-lg">
+                Go to Dashboard
+                <div className="btn-shimmer"></div>
+              </Link>
+            ) : (
+              <Link href="/auth/signup" className="btn-primary-lg">
+                Start Grading Smarter
+                <div className="btn-shimmer"></div>
+              </Link>
+            )}
             <a href="#how-it-works" className="btn-outline-lg">
               <i className="fas fa-play-circle"></i>
               See How It Works

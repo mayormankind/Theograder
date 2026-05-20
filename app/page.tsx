@@ -13,26 +13,30 @@ import CTASection from "@/components/landing/CTASection";
 import Footer from "@/components/landing/Footer";
 import CursorGlow from "@/components/landing/CursorGlow";
 import { useAnimations } from "@/hooks/useAnimations";
+import { UserProvider } from "@/hooks/useUser";
 
 export default function LandingPage() {
   useAnimations();
 
   return (
-    <div className="landing-root">
-      <CursorGlow />
-      <Navbar />
-      <main>
-        <Hero />
-        <LogosStrip />
-        <Features />
-        <HowItWorks />
-        <ProductPreview />
-        <StatsSection />
-        <Testimonials />
-        <FAQ />
-        <CTASection />
-      </main>
-      <Footer />
-    </div>
+    <UserProvider>
+      <div className="landing-root">
+        <CursorGlow />
+        <Navbar />
+        <main>
+          <Hero />
+          <LogosStrip />
+          <Features />
+          <HowItWorks />
+          <ProductPreview />
+          <StatsSection />
+          <Testimonials />
+          <FAQ />
+          <CTASection />
+        </main>
+        <Footer />
+      </div>
+    </UserProvider>
   );
 }
+

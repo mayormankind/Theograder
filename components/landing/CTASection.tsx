@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useUser } from "@/hooks/useUser";
 
 export default function CTASection() {
+  const { user, loading } = useUser();
+
   return (
     <section className="cta-section">
       <div className="container">
@@ -13,10 +18,17 @@ export default function CTASection() {
               more consistently with TheoGrader.
             </p>
             <div className="cta-actions">
-              <Link href="/auth/signup" className="btn-primary-lg btn-white">
-                Create Your Free Account
-                <i className="fas fa-arrow-right"></i>
-              </Link>
+              {!loading && user ? (
+                <Link href="/dashboard" className="btn-primary-lg btn-white">
+                  Go to Dashboard
+                  <i className="fas fa-arrow-right"></i>
+                </Link>
+              ) : (
+                <Link href="/auth/signup" className="btn-primary-lg btn-white">
+                  Create Your Free Account
+                  <i className="fas fa-arrow-right"></i>
+                </Link>
+              )}
             </div>
             <span className="cta-note"
               >One account per lecturer • No credit card required • Full feature

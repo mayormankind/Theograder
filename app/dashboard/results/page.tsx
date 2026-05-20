@@ -5,13 +5,14 @@ import { Suspense } from "react";
 import ResultsPage from "@/components/dashboard/pages/ResultsPage";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
+import ResultsPageTwo from "@/components/dashboard/pages/ResultsPageTwo";
 
 function ResultsPageWrapper({
   onNavigate,
 }: {
   onNavigate: (page: Page, params?: Record<string, string>) => void;
 }) {
-  return <ResultsPage onNavigate={onNavigate} />;
+  return <ResultsPageTwo onNavigate={onNavigate} />;
 }
 
 export default function Page() {

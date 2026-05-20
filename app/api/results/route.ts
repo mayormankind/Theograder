@@ -79,6 +79,7 @@ export async function GET(request: NextRequest) {
           studentAnswer: q.answer || "",
           expectedAnswer:
             q.rubricQuestion?.points?.map((p) => p.point).join("; ") ?? "",
+          questionText: q.question || "",
           score: q.score,
           maxScore: q.maxScore,
           similarityScore: Math.round(avgSimilarity * 100),

@@ -63,6 +63,7 @@ export interface GradingResult {
   missingConcepts: string[];
   overrideScore?: number;
   answer?: string;
+  questionText?: string;
 }
 
 export interface ActivityItem {

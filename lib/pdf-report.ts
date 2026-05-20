@@ -33,7 +33,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
   const examTitle = gradingResult.exam?.title || gradingResult.examTitle || "Examination";
   const courseCode = gradingResult.exam?.courseCode || gradingResult.courseCode || "N/A";
   const courseName = gradingResult.exam?.courseName || "N/A";
-  
+
   const gradedDate = gradingResult.gradedAt
     ? new Date(gradingResult.gradedAt).toLocaleDateString()
     : new Date().toLocaleDateString();
@@ -65,7 +65,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
   // Grade Box border & fill
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 3, 3, "F");
-  
+
   // Grade Letter
   doc.setTextColor(gradeColor[0], gradeColor[1], gradeColor[2]);
   doc.setFont("helvetica", "bold");
@@ -81,7 +81,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
   // 2. Student & Evaluation Info Section
   doc.setFillColor(248, 250, 252); // Very light gray background
   doc.roundedRect(margin, currentY, pageWidth - margin * 2, 28, 2, 2, "F");
-  
+
   // Small light gray inner border
   doc.setDrawColor(226, 232, 240);
   doc.setLineWidth(0.3);
@@ -115,7 +115,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
 
   // 3. Score Summary Blocks
   const blockWidth = (pageWidth - margin * 2 - 8) / 3;
-  
+
   // Block 1: Total Score
   doc.setFillColor(240, 253, 250); // Teal-50
   doc.roundedRect(margin, currentY, blockWidth, 18, 2, 2, "F");
@@ -159,26 +159,16 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.text("Per-Question Breakdown", margin, currentY);
-  
+
   currentY += 4;
 
-  const tableColumns = ["Part", "Score", "Similarity Score", "Confidence", "Status"];
+  const tableColumns = ["Part", "Score", "Similarity Score", "Confidence"];
   const tableRows = (gradingResult.questions || []).map((q: any, i: number) => {
-    const qPct = Math.round((q.score / (q.maxScore || 1)) * 100);
-    const hasMissing = q.missingConcepts && q.missingConcepts.length > 0;
-    
-    // Status text
-    let statusText = "Complete";
-    if (hasMissing) {
-      statusText = `${q.missingConcepts.length} missing concept(s)`;
-    }
-
     return [
       q.questionId || q.questionNumber || `Q${i + 1}`,
       `${q.score} / ${q.maxScore}`,
       q.similarityScore !== undefined ? `${q.similarityScore}%` : "—",
-      q.confidence !== undefined ? `${q.confidence}%` : "—",
-      statusText
+      q.confidence !== undefined ? `${q.confidence}%` : "—"
     ];
   });
 
@@ -207,7 +197,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.text("Detailed Question Evaluation", margin, currentY);
-  
+
   // Draw thick slate accent line under the header
   doc.setDrawColor(15, 31, 61);
   doc.setLineWidth(0.5);
@@ -217,21 +207,13 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
 
   (gradingResult.questions || []).forEach((q: any, i: number) => {
     const qLabel = q.questionId || q.questionNumber || `Q${i + 1}`;
-    
+
     // Height estimation of this block to handle page break
-    // Answer text height estimate + concepts height estimate
+    // Answer text height estimate
     let blockHeight = 15; // padding/titles
     const answerText = q.answer || q.studentAnswer || "No answer provided";
     const answerLines = doc.splitTextToSize(answerText, pageWidth - margin * 2 - 6);
     blockHeight += answerLines.length * 4.5;
-    
-    const matched = q.matchedConcepts || [];
-    const partial = q.partialConcepts || [];
-    const missing = q.missingConcepts || [];
-    
-    if (matched.length > 0) blockHeight += 6;
-    if (partial.length > 0) blockHeight += 6;
-    if (missing.length > 0) blockHeight += 6;
 
     if (currentY + blockHeight > pageHeight - margin - 10) {
       doc.addPage();
@@ -267,52 +249,15 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7.5);
     doc.text("STUDENT ANSWER", margin + 5, localY);
-    
+
     localY += 4.5;
-    
+
     doc.setTextColor(51, 65, 85);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
-    
+
     doc.text(answerLines, margin + 5, localY);
     localY += answerLines.length * 4.5;
-
-    // Concept tags
-    const renderConceptRow = (label: string, items: string[], tagBg: number[], tagText: number[], bullet: string) => {
-      doc.setTextColor(tagText[0], tagText[1], tagText[2]);
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.5);
-      doc.text(`${label}:`, margin + 5, localY + 3);
-
-      let currentX = margin + 30;
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
-
-      items.forEach((item, index) => {
-        const itemText = `${bullet} ${item}${index < items.length - 1 ? ",  " : ""}`;
-        const textWidth = doc.getTextWidth(itemText);
-        
-        if (currentX + textWidth > pageWidth - margin - 5) {
-          localY += 4;
-          currentX = margin + 30;
-        }
-        
-        doc.text(itemText, currentX, localY + 3);
-        currentX += textWidth;
-      });
-
-      localY += 5.5;
-    };
-
-    if (matched.length > 0) {
-      renderConceptRow("MATCHED CONCEPTS", matched, [240, 253, 250], [13, 148, 136], "✓");
-    }
-    if (partial.length > 0) {
-      renderConceptRow("PARTIAL CONCEPTS", partial, [254, 243, 199], [217, 119, 6], "~");
-    }
-    if (missing.length > 0) {
-      renderConceptRow("MISSING CONCEPTS", missing, [254, 242, 242], [220, 38, 38], "✗");
-    }
 
     currentY += blockHeight + 6;
   });
@@ -321,7 +266,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
   const totalPagesCount = (doc as any).internal.getNumberOfPages();
   for (let pageNum = 1; pageNum <= totalPagesCount; pageNum++) {
     doc.setPage(pageNum);
-    
+
     // Thin horizontal divider line
     doc.setDrawColor(241, 245, 249);
     doc.setLineWidth(0.5);
@@ -332,7 +277,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
     doc.setFontSize(7.5);
     doc.setTextColor(148, 163, 184);
     doc.text("Generated by TheoGrader — AI Academic Evaluation", margin, pageHeight - 10);
-    
+
     // Right Footer
     doc.text(`Page ${pageNum} of ${totalPagesCount}`, pageWidth - margin, pageHeight - 10, { align: "right" });
   }

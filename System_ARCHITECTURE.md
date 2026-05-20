@@ -44,9 +44,8 @@ Backend (Auth):
 
 Backend (AI Service):
   - Python FastAPI
-  - Tesseract OCR
-  - GPT-4 Vision
-  - Sentence-BERT
+  - GPT-4o-mini Vision OCR
+  - OpenAI text-embedding-3-small (with local caching)
   - NLTK
 
 Database:

@@ -118,6 +118,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Log recent activity
+    await prisma.activityLog.create({
+      data: {
+        userId: session.userId,
+        action: 'UPLOAD',
+        resource: 'SCRIPT',
+        resourceId: validatedData.examId,
+        metadata: { examId: validatedData.examId, count: files.length },
+      },
+    }).catch(err => console.error('Failed to log upload activity:', err));
+
     return NextResponse.json({
       message: 'Files uploaded successfully',
       scripts: uploadedScripts,

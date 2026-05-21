@@ -166,6 +166,17 @@ export async function PUT(
       return result;
     });
 
+    // Log recent activity
+    await prisma.activityLog.create({
+      data: {
+        userId: session.userId,
+        action: 'REVIEWED',
+        resource: 'RESULT',
+        resourceId: id,
+        metadata: { status: validatedData.status || existingResult.status },
+      },
+    }).catch(err => console.error('Failed to log script reviewed activity:', err));
+
     return NextResponse.json(updatedResult);
   } catch (error) {
     console.error('Error updating result:', error);

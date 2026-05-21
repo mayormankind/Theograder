@@ -33,6 +33,35 @@ interface Exam {
   };
 }
 
+const formatDate = (dateStr?: string) => {
+  if (!dateStr) return 'Not set';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const pad = (n: number) => String(n).padStart(2, '0');
+    const year = d.getFullYear();
+    const month = pad(d.getMonth() + 1);
+    const day = pad(d.getDate());
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
+  } catch (e) {
+    return dateStr;
+  }
+};
+
+const formatInputDate = (dateStr?: string) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  } catch (e) {
+    return '';
+  }
+};
+
 const statusStyles = {
   DRAFT: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200',
   ACTIVE: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
@@ -56,6 +85,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -122,8 +152,10 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     
     try {
+      setSubmitting(true);
       const url = editingExam ? `/api/exams/${editingExam.id}` : '/api/exams';
       const method = editingExam ? 'PUT' : 'POST';
       
@@ -147,7 +179,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
         toast.success('Exam updated successfully');
       } else {
         const newExam = await response.json();
-        setExams([...exams, newExam.exam]);
+        setExams([...exams, { ...newExam, _count: { scripts: 0, graded: 0 } }]);
         toast.success('Exam created successfully');
       }
 
@@ -167,6 +199,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
     } catch (err) {
       console.error('Error saving exam:', err);
       toast.error(err instanceof Error ? err.message : 'Failed to save exam');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -179,7 +213,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
       courseName: exam.courseName || '',
       totalMarks: exam.totalMarks,
       duration: exam.duration || 120,
-      examDate: exam.examDate || '',
+      examDate: formatInputDate(exam.examDate),
       status: exam.status as 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED',
     });
     setShowEditModal(true);
@@ -322,7 +356,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                     <Calendar size={11} className="text-slate-400" />
                     <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wide">Date</p>
                   </div>
-                  <p className="text-xs font-semibold text-slate-700">{exam.examDate || 'Not set'}</p>
+                  <p className="text-xs font-semibold text-slate-700">{formatDate(exam.examDate)}</p>
                 </div>
                 <div className="rounded-lg bg-slate-50 px-3 py-2">
                   <div className="flex items-center gap-1 mb-0.5">
@@ -516,23 +550,48 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  Status
+                </label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
+                >
+                  <option value="DRAFT">Draft</option>
+                  <option value="ACTIVE">Active</option>
+                  <option value="COMPLETED">Completed</option>
+                  <option value="ARCHIVED">Archived</option>
+                </select>
+              </div>
+
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
                 <button
                   type="button"
+                  disabled={submitting}
                   onClick={() => {
                     setShowCreateModal(false);
                     setShowEditModal(false);
                     setEditingExam(null);
                   }}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+                  disabled={submitting}
+                  className="inline-flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {editingExam ? 'Update Exam' : 'Create Exam'}
+                  {submitting && (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  )}
+                  <span>
+                    {submitting 
+                      ? (editingExam ? 'Updating...' : 'Creating...') 
+                      : (editingExam ? 'Update Exam' : 'Create Exam')}
+                  </span>
                 </button>
               </div>
             </form>

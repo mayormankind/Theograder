@@ -127,6 +127,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Log recent activity
+    await prisma.activityLog.create({
+      data: {
+        userId: session.userId,
+        action: 'EXAM_CREATED',
+        resource: 'EXAM',
+        resourceId: exam.id,
+        metadata: { examTitle: exam.title },
+      },
+    }).catch(err => console.error('Failed to log exam creation activity:', err));
+
     return NextResponse.json(exam, { status: 201 });
   } catch (error) {
     console.error('Error creating exam:', error);

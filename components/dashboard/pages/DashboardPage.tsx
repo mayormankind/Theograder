@@ -310,11 +310,11 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
             <div className="flex items-center gap-3 text-[11px]">
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-[#0f1f3d]" />
-                Graded
+                <p className="text-black">Graded</p>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-2 w-2 rounded-full bg-teal-500" />
-                Confidence
+                <p className="text-black">Confidence</p>
               </span>
             </div>
           </div>

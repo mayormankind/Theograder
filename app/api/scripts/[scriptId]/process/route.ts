@@ -296,6 +296,17 @@ export async function POST(
       });
     });
 
+    // Log recent activity
+    await prisma.activityLog.create({
+      data: {
+        userId: session.userId,
+        action: 'PROCESSED',
+        resource: 'SCRIPT',
+        resourceId: scriptId,
+        metadata: { examId: script.examId },
+      },
+    }).catch(err => console.error('Failed to log script processed activity:', err));
+
     // Compute total score to return to frontend
     const totalScore =
       gradeData.questions?.reduce(

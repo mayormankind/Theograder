@@ -143,16 +143,64 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, { title: string; totalMarks: number }>);
 
-    // Format score distribution
-    const scoreStats = scoreDistribution.map(stat => {
+    // Format score distribution into standard buckets
+    const bucketCounts = {
+      '0–40': 0,
+      '41–50': 0,
+      '51–60': 0,
+      '61–70': 0,
+      '71–100': 0,
+    };
+    
+    scoreDistribution.forEach(stat => {
       const exam = examMap[stat.examId];
-      return {
-        examId: stat.examId,
-        examTitle: exam?.title || 'Unknown',
-        avgScore: stat._avg.totalScore || 0,
-        maxScore: exam?.totalMarks || 0,
-        percentage: exam?.totalMarks ? ((stat._avg.totalScore || 0) / exam.totalMarks) * 100 : 0,
-      };
+      if (exam && exam.totalMarks > 0) {
+        const percentage = ((stat._avg.totalScore || 0) / exam.totalMarks) * 100;
+        if (percentage <= 40) bucketCounts['0–40']++;
+        else if (percentage <= 50) bucketCounts['41–50']++;
+        else if (percentage <= 60) bucketCounts['51–60']++;
+        else if (percentage <= 70) bucketCounts['61–70']++;
+        else bucketCounts['71–100']++;
+      }
+    });
+
+    const scoreStats = [
+      { examTitle: '0–40', percentage: bucketCounts['0–40'] },
+      { examTitle: '41–50', percentage: bucketCounts['41–50'] },
+      { examTitle: '51–60', percentage: bucketCounts['51–60'] },
+      { examTitle: '61–70', percentage: bucketCounts['61–70'] },
+      { examTitle: '71–100', percentage: bucketCounts['71–100'] },
+    ];
+
+    // Build the last 7 days
+    const last7Days: { date: string; count: number; avgConfidence: number; uploaded: number; processed: number }[] = [];
+    const today = new Date();
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('en-US', { weekday: 'short' }); // e.g. "Mon"
+      last7Days.push({
+        date: dateStr,
+        count: 0,
+        avgConfidence: 0,
+        uploaded: 0,
+        processed: 0,
+      });
+    }
+
+    // Map trending data into the 7 days
+    trends.forEach(trend => {
+      const d = new Date(trend.date);
+      const dateStr = d.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayData = last7Days.find(d => d.date === dateStr);
+      if (dayData) {
+        dayData.count += trend.count;
+        dayData.processed += trend.count;
+        // Basic moving average for confidence
+        dayData.avgConfidence = dayData.avgConfidence === 0 
+          ? trend.avgConfidence 
+          : (dayData.avgConfidence + trend.avgConfidence) / 2;
+      }
     });
 
     return NextResponse.json({
@@ -163,10 +211,11 @@ export async function GET(request: NextRequest) {
         avgConfidence: avgConfidence._avg.confidence || 0,
       },
       recentActivity,
-      gradingTrends: trends,
+      gradingTrends: last7Days,
       examStatusCounts,
       scoreDistribution: scoreStats,
     });
+
 
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);

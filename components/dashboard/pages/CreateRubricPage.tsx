@@ -14,9 +14,16 @@ import {
   X,
   FileWarning,
   ChevronDown,
+  Plus,
+  Trash2,
+  GripVertical,
+  BookOpen,
+  Tag,
+  HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
+import { ConfirmDialog } from '@/components/ui/confirm-dialog';
 import { aiClient, type ExtractedRubric, type ExtractionResult } from '@/lib/services/ai-client';
 import { rubricsApi } from '@/lib/api/rubrics';
 
@@ -48,6 +55,127 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
   const [exams, setExams] = useState<Exam[]>([]);
   const [examsLoading, setExamsLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [expandedQuestions, setExpandedQuestions] = useState<number[]>([0]);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    type: 'back' | 'startOver' | null;
+  }>({ isOpen: false, type: null });
+
+  const toggleQuestion = (qIndex: number) => {
+    setExpandedQuestions(prev =>
+      prev.includes(qIndex)
+        ? prev.filter(i => i !== qIndex)
+        : [...prev, qIndex]
+    );
+  };
+
+  const addQuestion = () => {
+    if (!extractedRubric) return;
+    const nextQIndex = extractedRubric.questions.length + 1;
+    const newQuestion = {
+      questionNumber: `Q${nextQIndex}`,
+      questionText: '',
+      maxScore: 5,
+      parts: [
+        { label: 'a', marks: 5, expectedAnswer: '', keyPoints: [] }
+      ]
+    };
+    const updatedQuestions = [...extractedRubric.questions, newQuestion];
+
+    // Recalculate total marks
+    const totalMarks = updatedQuestions.reduce((acc, q) => acc + q.maxScore, 0);
+
+    setExtractedRubric({
+      ...extractedRubric,
+      questions: updatedQuestions,
+      totalMarks
+    });
+
+    // Expand the newly added question
+    setExpandedQuestions(prev => [...prev, updatedQuestions.length - 1]);
+  };
+
+  const removeQuestion = (qIndex: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!extractedRubric) return;
+
+    const updatedQuestions = extractedRubric.questions.filter((_, idx) => idx !== qIndex);
+
+    // Recalculate total marks
+    const totalMarks = updatedQuestions.reduce((acc, q) => acc + q.maxScore, 0);
+
+    setExtractedRubric({
+      ...extractedRubric,
+      questions: updatedQuestions,
+      totalMarks
+    });
+
+    // Adjust expandedQuestions indices
+    setExpandedQuestions(prev =>
+      prev
+        .filter(i => i !== qIndex)
+        .map(i => i > qIndex ? i - 1 : i)
+    );
+  };
+
+  const addPart = (qIndex: number) => {
+    if (!extractedRubric) return;
+    const question = extractedRubric.questions[qIndex];
+    const labels = 'abcdefghijklmnopqrstuvwxyz';
+    const nextLabel = labels[question.parts.length] || String(question.parts.length + 1);
+
+    const newPart = {
+      label: nextLabel,
+      marks: 5,
+      expectedAnswer: '',
+      keyPoints: []
+    };
+
+    const updatedParts = [...question.parts, newPart];
+    const updatedQuestions = [...extractedRubric.questions];
+
+    const qMaxScore = updatedParts.reduce((acc, p) => acc + p.marks, 0);
+    updatedQuestions[qIndex] = {
+      ...question,
+      parts: updatedParts,
+      maxScore: qMaxScore
+    };
+
+    const totalMarks = updatedQuestions.reduce((acc, q) => acc + q.maxScore, 0);
+    setExtractedRubric({
+      ...extractedRubric,
+      questions: updatedQuestions,
+      totalMarks
+    });
+  };
+
+  const removePart = (qIndex: number, pIndex: number) => {
+    if (!extractedRubric) return;
+    const question = extractedRubric.questions[qIndex];
+    const updatedParts = question.parts.filter((_, idx) => idx !== pIndex);
+
+    // Re-label remaining parts in alphabetical order
+    const labels = 'abcdefghijklmnopqrstuvwxyz';
+    const reLabeledParts = updatedParts.map((part, idx) => ({
+      ...part,
+      label: labels[idx] || String(idx + 1)
+    }));
+
+    const qMaxScore = reLabeledParts.reduce((acc, p) => acc + p.marks, 0);
+    const updatedQuestions = [...extractedRubric.questions];
+    updatedQuestions[qIndex] = {
+      ...question,
+      parts: reLabeledParts,
+      maxScore: qMaxScore
+    };
+
+    const totalMarks = updatedQuestions.reduce((acc, q) => acc + q.maxScore, 0);
+    setExtractedRubric({
+      ...extractedRubric,
+      questions: updatedQuestions,
+      totalMarks
+    });
+  };
 
   useEffect(() => {
     fetchExams();
@@ -64,7 +192,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
       if (result.success && result.data) {
         const rubric = result.data;
         setSelectedExamId(rubric.examId || '');
-        
+
         // Map to ExtractedRubric format
         const mappedQuestions = rubric.questions.map((q) => ({
           questionNumber: q.questionId,
@@ -88,7 +216,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
           totalMarks: rubric.totalMarks,
           questions: mappedQuestions,
         });
-        
+
         setIsEditing(true);
       } else {
         setError(result.error || 'Failed to load rubric for editing');
@@ -125,7 +253,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
     try {
       const result = await aiClient.extractRubricFromDocument(file);
       setExtractionResult(result);
-      
+
       if (result.success && result.rubric) {
         setExtractedRubric(result.rubric);
         setIsEditing(true);
@@ -151,7 +279,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
     try {
       const result = await aiClient.extractRubricFromText(pastedText);
       setExtractionResult(result);
-      
+
       if (result.success && result.rubric) {
         setExtractedRubric(result.rubric);
         setIsEditing(true);
@@ -223,7 +351,24 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
   };
 
   const handleManualCreate = () => {
-    onNavigate('rubrics');
+    setExtractedRubric({
+      title: 'New Rubric',
+      description: '',
+      courseCode: '',
+      totalMarks: 5,
+      questions: [
+        {
+          questionNumber: 'Q1',
+          questionText: '',
+          maxScore: 5,
+          parts: [
+            { label: 'a', marks: 5, expectedAnswer: '', keyPoints: [] }
+          ]
+        }
+      ]
+    });
+    setExpandedQuestions([0]);
+    setIsEditing(true);
   };
 
   const inputMethods = [
@@ -260,18 +405,29 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
     return (
       <div className="flex flex-col gap-6 p-4 md:p-6 max-w-4xl mx-auto w-full">
         {/* Header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-semibold text-slate-800">Review Extracted Rubric</h2>
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1">
+            <button
+              onClick={() => {
+                setConfirmDialog({ isOpen: true, type: 'back' });
+              }}
+              className="flex w-fit items-center gap-1 text-xs text-slate-500 hover:text-slate-800 mb-2 transition-colors"
+            >
+              <ChevronRight size={14} className="rotate-180" />
+              Back to {selectedMethod === 'upload' ? 'Upload' : selectedMethod === 'paste' ? 'Paste Text' : 'Method Selection'}
+            </button>
+            <h2 className="text-base font-semibold text-slate-800">
+              {selectedMethod === 'manual' ? 'Build Rubric' : 'Review Extracted Rubric'}
+            </h2>
             <p className="text-sm text-slate-500 mt-0.5">
-              Review and edit the automatically extracted rubric before saving
+              {selectedMethod === 'manual' 
+                ? 'Create your marking scheme step-by-step' 
+                : 'Review and edit the automatically extracted rubric before saving'}
             </p>
           </div>
           <button
             onClick={() => {
-              setIsEditing(false);
-              setExtractedRubric(null);
-              setExtractionResult(null);
+              setConfirmDialog({ isOpen: true, type: 'startOver' });
             }}
             className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-800 self-start sm:self-auto"
           >
@@ -279,6 +435,29 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
             Start Over
           </button>
         </div>
+
+        <ConfirmDialog
+          isOpen={confirmDialog.isOpen}
+          title={confirmDialog.type === 'back' ? 'Go Back?' : 'Start Over?'}
+          description={
+            confirmDialog.type === 'back'
+              ? 'Are you sure you want to go back? Unsaved changes will be lost.'
+              : 'Are you sure you want to start over? All progress will be lost.'
+          }
+          isDestructive={true}
+          confirmText="Yes, discard changes"
+          onClose={() => setConfirmDialog({ isOpen: false, type: null })}
+          onConfirm={() => {
+            if (confirmDialog.type === 'back') {
+              setIsEditing(false);
+            } else if (confirmDialog.type === 'startOver') {
+              setIsEditing(false);
+              setExtractedRubric(null);
+              setExtractionResult(null);
+              setSelectedMethod(null);
+            }
+          }}
+        />
 
         {/* Confidence Indicator */}
         {extractionResult?.confidence && (
@@ -373,108 +552,228 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
 
         {/* Questions */}
         <div className="flex flex-col gap-4">
-          {extractedRubric.questions.map((question, qIndex) => (
-            <div key={qIndex} className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-              <div className="px-5 py-4 border-b border-slate-100">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0f1f3d] text-xs font-bold text-white">
-                      {qIndex + 1}
-                    </div>
-                    <input
-                      value={question.questionNumber}
-                      onChange={(e) => {
-                        const updatedQuestions = [...extractedRubric.questions];
-                        updatedQuestions[qIndex] = { ...question, questionNumber: e.target.value };
-                        setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
-                      }}
-                      className="w-full text-sm font-bold text-slate-800 bg-transparent outline-none"
-                    />
+          {extractedRubric.questions.map((question, qIndex) => {
+            const isExpanded = expandedQuestions.includes(qIndex);
+            const qTotal = question.parts.reduce((a, p) => a + p.marks, 0);
+
+            return (
+              <div key={qIndex} className="rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden transition-all duration-200 hover:border-slate-300">
+                {/* Question Header */}
+                <div
+                  className="flex items-center gap-3 px-5 py-4 cursor-pointer hover:bg-slate-50/50 transition-colors select-none"
+                  onClick={() => toggleQuestion(qIndex)}
+                >
+                  <GripVertical size={14} className="text-slate-300 shrink-0 cursor-grab" />
+                  <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0f1f3d] text-xs font-bold text-white">
+                    {qIndex + 1}
                   </div>
-                  <div className="flex items-center gap-2 sm:ml-auto">
-                    <input
-                      type="number"
-                      value={question.maxScore}
-                      onChange={(e) => {
-                        const newMaxScore = parseInt(e.target.value) || 0;
-                        const updatedQuestions = [...extractedRubric.questions];
-                        updatedQuestions[qIndex] = { ...question, maxScore: newMaxScore };
-                        setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
-                      }}
-                      className="h-8 w-16 rounded-lg border border-slate-200 bg-slate-50 px-2 text-center text-xs font-bold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
-                    />
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-tight">marks</span>
-                  </div>
-                </div>
-                <textarea
-                  value={question.questionText}
-                  onChange={(e) => {
-                    const updatedQuestions = [...extractedRubric.questions];
-                    updatedQuestions[qIndex] = { ...question, questionText: e.target.value };
-                    setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
-                  }}
-                  rows={2}
-                  className="w-full mt-2 text-sm text-slate-700 bg-transparent outline-none resize-none"
-                />
-              </div>
-              <div className="divide-y divide-slate-50">
-                {question.parts.map((part, pIndex) => (
-                  <div key={pIndex} className="px-5 py-4">
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-teal-50 ring-1 ring-teal-200 text-[11px] font-bold text-teal-600">
-                          {part.label || String.fromCharCode(97 + pIndex)}
-                        </div>
-                        <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                          Part {(part.label || String.fromCharCode(97 + pIndex)).toUpperCase()}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-tight">Weight:</label>
+                  <div className="flex-1 min-w-0">
+                    {isExpanded ? (
+                      <div className="flex gap-2 items-center" onClick={(e) => e.stopPropagation()}>
                         <input
-                          type="number"
-                          value={part.marks}
+                          value={question.questionNumber}
                           onChange={(e) => {
-                            const newMarks = parseInt(e.target.value) || 0;
                             const updatedQuestions = [...extractedRubric.questions];
-                            updatedQuestions[qIndex].parts[pIndex] = { ...part, marks: newMarks };
+                            updatedQuestions[qIndex] = { ...question, questionNumber: e.target.value };
                             setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
                           }}
-                          className="h-7 w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 text-center text-xs font-bold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
+                          placeholder="Q1"
+                          className="w-16 font-bold text-slate-800 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 text-sm outline-none focus:border-teal-400 focus:bg-white"
+                        />
+                        <input
+                          value={question.questionText}
+                          onChange={(e) => {
+                            const updatedQuestions = [...extractedRubric.questions];
+                            updatedQuestions[qIndex] = { ...question, questionText: e.target.value };
+                            setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
+                          }}
+                          placeholder="Enter question text…"
+                          className="flex-1 text-sm font-medium text-slate-800 bg-slate-50 border border-slate-200 rounded px-2 py-0.5 outline-none focus:border-teal-400 focus:bg-white"
                         />
                       </div>
-                    </div>
-                    <textarea
-                      value={part.expectedAnswer}
-                      onChange={(e) => {
-                        const updatedQuestions = [...extractedRubric.questions];
-                        updatedQuestions[qIndex].parts[pIndex] = { ...part, expectedAnswer: e.target.value };
-                        setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
-                      }}
-                      placeholder="Expected answer..."
-                      rows={2}
-                      className="w-full text-xs text-slate-700 bg-slate-50 rounded-lg border border-slate-200 px-3 py-2 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all resize-none"
-                    />
-                    <div className="mt-2">
-                      <label className="text-[11px] font-semibold text-slate-500">Key Points:</label>
-                      <textarea
-                        value={part.keyPoints.join(', ')}
-                        onChange={(e) => {
-                          const keyPoints = e.target.value.split(',').map(k => k.trim()).filter(Boolean);
-                          const updatedQuestions = [...extractedRubric.questions];
-                          updatedQuestions[qIndex].parts[pIndex] = { ...part, keyPoints };
-                          setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
-                        }}
-                        placeholder="e.g. atomicity, consistency, isolation, durability"
-                        rows={1}
-                        className="w-full mt-1 text-xs text-slate-700 bg-slate-50 rounded-lg border border-slate-200 px-3 py-1.5 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all resize-none"
-                      />
+                    ) : (
+                      <div className="flex gap-2 items-center">
+                        <span className="text-sm font-bold text-slate-800 shrink-0">{question.questionNumber || `Q${qIndex + 1}`}:</span>
+                        <p className="text-sm font-medium text-slate-800 truncate">
+                          {question.questionText || <span className="text-slate-400 italic">No question text yet</span>}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-3 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <span className="rounded-full bg-teal-50 px-2.5 py-1 text-[11px] font-semibold text-teal-700 ring-1 ring-teal-200">
+                      {qTotal} marks
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {question.parts.length} part{question.parts.length !== 1 ? 's' : ''}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => removeQuestion(qIndex, e)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-450 transition-colors"
+                      title="Delete Question"
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => toggleQuestion(qIndex)}
+                      className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
+                    >
+                      {isExpanded ? <ChevronDown size={15} /> : <ChevronRight size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Parts */}
+                {isExpanded && (
+                  <div className="border-t border-slate-100 divide-y divide-slate-50">
+                    {question.parts.map((part, pIndex) => (
+                      <div key={pIndex} className="px-5 py-4">
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-teal-50 ring-1 ring-teal-200 text-[11px] font-bold text-teal-600">
+                            {part.label || String.fromCharCode(97 + pIndex)}
+                          </div>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                            Part {(part.label || String.fromCharCode(97 + pIndex)).toUpperCase()}
+                          </p>
+                          <div className="ml-auto flex items-center gap-3">
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-[11px] text-slate-500 font-medium">Label:</label>
+                              <input
+                                type="text"
+                                value={part.label}
+                                onChange={(e) => {
+                                  const updatedQuestions = [...extractedRubric.questions];
+                                  updatedQuestions[qIndex].parts[pIndex] = { ...part, label: e.target.value };
+                                  setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
+                                }}
+                                className="h-7 w-10 rounded-lg border border-slate-200 bg-slate-50 px-1 text-center text-xs font-semibold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <label className="text-[11px] text-slate-500 font-medium">Marks:</label>
+                              <input
+                                type="number"
+                                value={part.marks}
+                                onChange={(e) => {
+                                  const newMarks = parseInt(e.target.value) || 0;
+                                  const updatedQuestions = [...extractedRubric.questions];
+                                  const q = updatedQuestions[qIndex];
+                                  const parts = [...q.parts];
+                                  parts[pIndex] = { ...part, marks: newMarks };
+
+                                  const qMaxScore = parts.reduce((acc, p) => acc + p.marks, 0);
+                                  updatedQuestions[qIndex] = {
+                                    ...q,
+                                    parts,
+                                    maxScore: qMaxScore
+                                  };
+
+                                  const totalMarks = updatedQuestions.reduce((acc, q) => acc + q.maxScore, 0);
+                                  setExtractedRubric({
+                                    ...extractedRubric,
+                                    questions: updatedQuestions,
+                                    totalMarks
+                                  });
+                                }}
+                                className="h-7 w-14 rounded-lg border border-slate-200 bg-slate-50 px-2 text-center text-xs font-semibold text-slate-700 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-100"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => removePart(qIndex, pIndex)}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-300 hover:bg-red-50 hover:text-red-400 transition-colors"
+                              title="Delete Part"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                          <div>
+                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 mb-1.5">
+                              <BookOpen size={11} className="text-slate-400" /> Expected Answer / Model Answer
+                            </label>
+                            <textarea
+                              value={part.expectedAnswer}
+                              onChange={(e) => {
+                                const updatedQuestions = [...extractedRubric.questions];
+                                updatedQuestions[qIndex].parts[pIndex] = { ...part, expectedAnswer: e.target.value };
+                                setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
+                              }}
+                              placeholder="Enter the model answer or key explanation…"
+                              rows={3}
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all resize-none placeholder:text-slate-400"
+                            />
+                          </div>
+                          <div>
+                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 mb-1.5">
+                              <Tag size={11} className="text-slate-400" /> Key Concepts / Points (comma-separated)
+                            </label>
+                            <textarea
+                              value={part.keyPoints.join(', ')}
+                              onChange={(e) => {
+                                const keyPoints = e.target.value.split(',').map(k => k.trim()).filter(Boolean);
+                                const updatedQuestions = [...extractedRubric.questions];
+                                updatedQuestions[qIndex].parts[pIndex] = { ...part, keyPoints };
+                                setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
+                              }}
+                              placeholder="e.g. atomicity, rollback, commit, bank example…"
+                              rows={3}
+                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all resize-none placeholder:text-slate-400"
+                            />
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {part.keyPoints.map((kp, i) => (
+                                <span key={i} className="rounded-full bg-[#0f1f3d]/5 px-2 py-0.5 text-[10px] font-medium text-[#0f1f3d]/70">
+                                  {kp}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+
+                    {/* Add Part */}
+                    <div className="px-5 py-3.5 bg-slate-50/50">
+                      <button
+                        type="button"
+                        onClick={() => addPart(qIndex)}
+                        className="flex items-center gap-1.5 text-xs font-medium text-teal-600 hover:text-teal-700 transition-colors"
+                      >
+                        <Plus size={13} />
+                        Add Sub-Part
+                      </button>
                     </div>
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
+        </div>
+
+        {/* Add Question */}
+        <button
+          type="button"
+          onClick={addQuestion}
+          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-200 bg-white py-4 text-sm font-medium text-slate-500 hover:border-teal-300 hover:text-teal-600 hover:bg-teal-50/30 transition-all w-full animate-fadeIn"
+        >
+          <Plus size={15} />
+          Add Question
+        </button>
+
+        {/* Info Banner */}
+        <div className="flex items-start gap-3 rounded-xl border border-blue-100 bg-blue-50 p-4">
+          <HelpCircle size={15} className="mt-0.5 shrink-0 text-blue-500" />
+          <div>
+            <p className="text-xs font-semibold text-blue-800">How the rubric is used</p>
+            <p className="text-xs text-blue-600 mt-0.5 leading-relaxed">
+              The expected answers and key concepts are fed into the Sentence-BERT model for semantic similarity analysis.
+              Similarity scores are computed per sub-part, weighted by the mark allocation defined here.
+            </p>
+          </div>
         </div>
 
         {/* Action Buttons */}

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
+import { Brain, Check, PlayCircle } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 
 export default function Hero() {
@@ -30,7 +31,7 @@ export default function Hero() {
         <div className="hero-gradient-orb orb-1"></div>
         <div className="hero-gradient-orb orb-2"></div>
         <div className="floating-card card-1" id="floatCard1">
-          <div className="fc-icon fc-green"><i className="fas fa-check"></i></div>
+          <div className="fc-icon fc-green"><Check size={12} /></div>
           <div className="fc-content">
             <span className="fc-label">Script #247</span>
             <span className="fc-value">Graded — 67/100</span>
@@ -43,7 +44,7 @@ export default function Hero() {
           <span className="fc-stat">94% Confidence</span>
         </div>
         <div className="floating-card card-3" id="floatCard3">
-          <div className="fc-icon fc-blue"><i className="fas fa-brain"></i></div>
+          <div className="fc-icon fc-blue"><Brain size={12} /></div>
           <span className="fc-label">SBERT Analysis</span>
           <span className="fc-value fc-active">Processing...</span>
         </div>
@@ -99,7 +100,7 @@ export default function Hero() {
               </Link>
             )}
             <a href="#how-it-works" className="btn-outline-lg">
-              <i className="fas fa-play-circle"></i>
+              <PlayCircle size={16} />
               See How It Works
             </a>
           </div>

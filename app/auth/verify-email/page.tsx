@@ -4,6 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { Check, CheckCircle2, Link2, Loader2, Mail, MailOpen, Rocket, RotateCcw } from "lucide-react";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -91,7 +92,7 @@ function VerifyEmailContent() {
   const illustration = [
     {
       type: "card" as const,
-      icon: "fa-check-circle",
+      icon: CheckCircle2,
       content: "Almost there!",
     },
   ];
@@ -102,21 +103,21 @@ function VerifyEmailContent() {
         {isVerified ? (
           <div className="verify-animation">
             <div className="verify-envelope verified">
-              <i className="fas fa-check-circle"></i>
+              <CheckCircle2 size={24} />
             </div>
           </div>
         ) : loading ? (
           <div className="verify-animation">
             <div className="verify-envelope loading">
-              <i className="fas fa-spinner fa-spin"></i>
+              <Loader2 size={24} className="animate-spin" />
             </div>
           </div>
         ) : (
           <div className="verify-animation">
             <div className="verify-envelope">
-              <i className="fas fa-envelope"></i>
+              <Mail size={24} />
               <div className="verify-badge">
-                <i className="fas fa-check"></i>
+                <Check size={12} />
               </div>
             </div>
           </div>
@@ -152,7 +153,7 @@ function VerifyEmailContent() {
           <div className="verify-steps">
             <div className="verify-step">
               <div className="vs-icon">
-                <i className="fas fa-envelope-open"></i>
+                <MailOpen size={20} />
               </div>
               <div className="vs-text">
                 <strong>Open your email</strong>
@@ -161,7 +162,7 @@ function VerifyEmailContent() {
             </div>
             <div className="verify-step">
               <div className="vs-icon">
-                <i className="fas fa-link"></i>
+                <Link2 size={20} />
               </div>
               <div className="vs-text">
                 <strong>Click the verification link</strong>
@@ -170,7 +171,7 @@ function VerifyEmailContent() {
             </div>
             <div className="verify-step">
               <div className="vs-icon">
-                <i className="fas fa-rocket"></i>
+                <Rocket size={20} />
               </div>
               <div className="vs-text">
                 <strong>Start grading!</strong>
@@ -185,7 +186,7 @@ function VerifyEmailContent() {
               onClick={resendVerification}
               disabled={loading}
             >
-              <i className="fas fa-redo"></i>{" "}
+              <RotateCcw size={14} />{" "}
               {loading ? "Sending..." : "Resend Verification Email"}
             </button>
           </div>

@@ -13,9 +13,19 @@ import {
   Save,
   Flag,
   ArrowRight,
+  ArrowLeft,
+  ChevronLeft,
+  FileText,
+  MinusCircle,
+  Pen,
+  RefreshCw,
+  RotateCcw,
+  ShieldCheck,
+  Check,
   Sparkles,
   Loader2,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import type { Page, GradingResult } from "@/types";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -177,7 +187,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
       <div className="flex items-center justify-center min-h-[500px] w-full px-4">
         <div className="flex flex-col items-center justify-center max-w-md w-full gap-5 px-6 py-10 text-center bg-white rounded-2xl border border-slate-100 shadow-sm animate-in fade-in zoom-in duration-300">
           <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100/50 shadow-inner">
-            <i className="fas fa-file-invoice text-xl text-emerald-600"></i>
+            <FileText size={22} className="text-emerald-600" />
           </div>
           <div className="space-y-1.5">
             <h3 className="text-base font-bold text-slate-800 tracking-tight">No Script Selected</h3>
@@ -185,13 +195,12 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
               Please choose a student script from the submissions panel to view its grading breakdown.
             </p>
           </div>
-          <button
+          <Button
             onClick={() => onNavigate("scripts")}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] hover:bg-[#162b52] px-5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all cursor-pointer"
           >
-            <i className="fas fa-arrow-left text-[10px] opacity-75"></i>
+            <ArrowLeft size={13} className="opacity-75" />
             Go to Submissions
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -210,13 +219,12 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
       <div className="flex flex-col items-center justify-center min-h-[500px] gap-4 bg-slate-50 border border-slate-200 rounded-xl p-8">
         <AlertTriangle className="text-amber-500" size={48} />
         <p className="text-slate-700 font-semibold">{error}</p>
-        <button
+        <Button
           onClick={() => window.location.reload()}
-          className="rounded-lg bg-[#0f1f3d] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] shadow-sm transition-all"
         >
-          <i className="fas fa-arrows-rotate mr-2"></i>
+          <RotateCcw size={14} />
           Retry Loading
-        </button>
+        </Button>
       </div>
     );
   }
@@ -225,13 +233,12 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[500px] gap-4 bg-slate-50 border border-slate-200 rounded-xl p-8">
         <p className="text-slate-600 font-medium">No results to display</p>
-        <button
+        <Button
           onClick={() => onNavigate("scripts")}
-          className="rounded-lg bg-[#0f1f3d] px-5 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
         >
-          <i className="fas fa-chevron-left mr-2"></i>
+          <ChevronLeft size={14} />
           Go to Scripts
-        </button>
+        </Button>
       </div>
     );
   }
@@ -335,7 +342,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                     "bg-amber-50 border-amber-100 text-amber-700": activePart.confidence >= 55 && activePart.confidence < 70,
                     "bg-red-50 border-red-100 text-red-700": activePart.confidence < 55,
                   })}>
-                    <i className="fas fa-shield-halved text-[10px]"></i>
+                    <ShieldCheck size={10} />
                     {activePart.confidence}% Confident
                   </div>
                 </div>
@@ -352,7 +359,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                       Student's Written Answer
                     </h4>
                     <span className="rounded-full bg-slate-100 text-slate-600 border border-slate-200/50 px-3 py-0.5 text-xs font-semibold flex items-center gap-1.5 font-mono">
-                      <i className="fas fa-arrows-spin text-[10px] text-slate-400"></i>
+                      <RefreshCw size={10} className="text-slate-400" />
                       {activePart.similarityScore}% match
                     </span>
                   </div>
@@ -389,7 +396,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                         className="concept-item matched flex items-start justify-between gap-4 px-6 py-4 transition-colors hover:bg-slate-50/30"
                       >
                         <div className="concept-status text-emerald-500 text-base shrink-0 mt-0.5">
-                          <i className="fas fa-check-circle"></i>
+                          <CheckCircle2 size={16} />
                         </div>
                         <div className="concept-detail flex-1 min-w-0">
                           <span className="concept-name block text-sm font-bold text-slate-700 mb-1">
@@ -420,7 +427,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                         className="concept-item partial flex items-start justify-between gap-4 px-6 py-4 transition-colors hover:bg-slate-50/30"
                       >
                         <div className="concept-status text-amber-500 text-base shrink-0 mt-0.5">
-                          <i className="fas fa-minus-circle"></i>
+                          <MinusCircle size={16} />
                         </div>
                         <div className="concept-detail flex-1 min-w-0">
                           <span className="concept-name block text-sm font-bold text-slate-700 mb-1">
@@ -451,7 +458,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                         className="concept-item missed flex items-start justify-between gap-4 px-6 py-4 transition-colors hover:bg-slate-50/30"
                       >
                         <div className="concept-status text-red-500 text-base shrink-0 mt-0.5">
-                          <i className="fas fa-times-circle"></i>
+                          <XCircle size={16} />
                         </div>
                         <div className="concept-detail flex-1 min-w-0">
                           <span className="concept-name block text-sm font-bold text-slate-700 mb-1">
@@ -490,7 +497,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                   {showOverride[activeKey] && (
                     <div className="mx-6 mt-4 p-4 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-between gap-4 animate-in fade-in duration-200">
                       <div className="flex items-center gap-2 text-amber-800 select-none">
-                        <i className="fas fa-pen text-[10px]"></i>
+                        <Pen size={10} />
                         <span className="text-xs font-bold uppercase tracking-wider">Override Marks:</span>
                       </div>
                       <div className="flex items-center gap-2">
@@ -522,7 +529,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                       {finalizing ? (
                         <Loader2 size={12} className="animate-spin" />
                       ) : (
-                        <i className="fas fa-check text-[10px]"></i>
+                        <Check size={10} />
                       )}
                       Accept Score
                     </button>
@@ -540,7 +547,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                           : "bg-amber-50/50 text-amber-700 hover:bg-amber-50"
                       )}
                     >
-                      <i className="fas fa-pen text-[10px]"></i>
+                      <Pen size={10} />
                       Override
                     </button>
 

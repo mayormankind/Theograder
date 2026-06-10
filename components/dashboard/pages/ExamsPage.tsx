@@ -1,11 +1,18 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { BookOpen, Plus, Search, ChevronRight, Calendar, Users, CheckCircle2, Clock, FileEdit, X, Edit2, Trash2 } from 'lucide-react';
+import { BookOpen, Plus, Search, Calendar, Users, CheckCircle2, FileEdit, Edit2, Trash2, AlertCircle } from 'lucide-react';
 import type { Page } from '@/types';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { StatusBadge } from '@/components/ui/status-badge';
+import { Button } from '@/components/ui/button';
+import { PageLoader } from '@/components/ui/page-loader';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ExamsPageProps {
   onNavigate: (page: Page) => void;
@@ -60,20 +67,6 @@ const formatInputDate = (dateStr?: string) => {
   } catch (e) {
     return '';
   }
-};
-
-const statusStyles = {
-  DRAFT: 'bg-slate-50 text-slate-600 ring-1 ring-slate-200',
-  ACTIVE: 'bg-teal-50 text-teal-700 ring-1 ring-teal-200',
-  COMPLETED: 'bg-blue-50 text-blue-700 ring-1 ring-blue-200',
-  ARCHIVED: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',
-};
-
-const statusLabels = {
-  DRAFT: 'Draft',
-  ACTIVE: 'Active',
-  COMPLETED: 'Completed',
-  ARCHIVED: 'Archived',
 };
 
 export default function ExamsPage({ onNavigate }: ExamsPageProps) {
@@ -246,23 +239,15 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600 border-t-transparent"></div>
-      </div>
-    );
+    return <PageLoader />;
   }
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
-        <p className="text-slate-600">Failed to load exams</p>
-        <button
-          onClick={fetchExams}
-          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
-        >
-          Retry
-        </button>
+      <div className="flex flex-col items-center justify-center min-h-[400px] gap-3">
+        <AlertCircle size={28} className="text-slate-300" />
+        <p className="text-sm text-slate-600">Failed to load exams</p>
+        <Button variant="outline" size="sm" onClick={fetchExams}>Retry</Button>
       </div>
     );
   }
@@ -275,13 +260,10 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
           <h2 className="text-base font-semibold text-slate-800">Examinations</h2>
           <p className="text-sm text-slate-500 mt-0.5">Manage your examination sessions and rubrics.</p>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
-        >
+        <Button onClick={() => setShowCreateModal(true)} className="gap-2">
           <Plus size={15} />
-          <span>New Exam</span>
-        </button>
+          New Exam
+        </Button>
       </div>
 
       {/* Filters */}
@@ -344,9 +326,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                     <p className="text-xs text-teal-600 font-medium mt-0.5">{exam.courseCode}</p>
                   </div>
                 </div>
-                <span className={cn('shrink-0 rounded-full px-2.5 py-1 text-[10px] font-semibold', statusStyles[exam.status])}>
-                  {statusLabels[exam.status]}
-                </span>
+                <StatusBadge status={exam.status} className="shrink-0" />
               </div>
 
               {/* Stats */}
@@ -428,176 +408,72 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
       )}
 
       {/* Create/Edit Modal */}
-      {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md shadow-xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-slate-800">
-                {editingExam ? 'Edit Exam' : 'Create New Exam'}
-              </h3>
-              <button
-                onClick={() => {
-                  setShowCreateModal(false);
-                  setShowEditModal(false);
-                  setEditingExam(null);
-                }}
-                className="text-slate-400 hover:text-slate-600"
-              >
-                <X size={20} />
-              </button>
+      <Dialog
+        open={showCreateModal || showEditModal}
+        onOpenChange={(open) => {
+          if (!open) {
+            setShowCreateModal(false);
+            setShowEditModal(false);
+            setEditingExam(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{editingExam ? 'Edit Exam' : 'Create New Exam'}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-1">
+            <div className="flex flex-col gap-1.5">
+              <Label>Title *</Label>
+              <Input type="text" required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g., Database Systems Final Exam" />
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-                  placeholder="e.g., Database Systems Final Exam"
-                />
+            <div className="flex flex-col gap-1.5">
+              <Label>Description</Label>
+              <Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={3} placeholder="Optional description of the exam" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Course Code</Label>
+                <Input type="text" value={formData.courseCode} onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })} placeholder="e.g., CS301" />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Description
-                </label>
-                <textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all resize-none"
-                  placeholder="Optional description of the exam"
-                />
+              <div className="flex flex-col gap-1.5">
+                <Label>Course Name</Label>
+                <Input type="text" value={formData.courseName} onChange={(e) => setFormData({ ...formData, courseName: e.target.value })} placeholder="e.g., Database Systems" />
               </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Course Code
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.courseCode}
-                    onChange={(e) => setFormData({ ...formData, courseCode: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-                    placeholder="e.g., CS301"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Course Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.courseName}
-                    onChange={(e) => setFormData({ ...formData, courseName: e.target.value })}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-                    placeholder="e.g., Database Systems"
-                  />
-                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-1.5">
+                <Label>Total Marks *</Label>
+                <Input type="number" required min="1" value={formData.totalMarks || ''} onChange={(e) => { const v = e.target.value; setFormData({ ...formData, totalMarks: v === '' ? 0 : parseInt(v, 10) || 0 }); }} placeholder="100" />
               </div>
-
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Total Marks *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="1"
-                    value={formData.totalMarks || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFormData({ ...formData, totalMarks: value === '' ? 0 : parseInt(value, 10) || 0 });
-                    }}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-                    placeholder="100"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
-                    Duration (minutes)
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    value={formData.duration || ''}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      setFormData({ ...formData, duration: value === '' ? 0 : parseInt(value, 10) || 0 });
-                    }}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-                    placeholder="120"
-                  />
-                </div>
+              <div className="flex flex-col gap-1.5">
+                <Label>Duration (min)</Label>
+                <Input type="number" min="1" value={formData.duration || ''} onChange={(e) => { const v = e.target.value; setFormData({ ...formData, duration: v === '' ? 0 : parseInt(v, 10) || 0 }); }} placeholder="120" />
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Exam Date
-                </label>
-                <input
-                  type="datetime-local"
-                  value={formData.examDate}
-                  onChange={(e) => setFormData({ ...formData, examDate: e.target.value })}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 placeholder:text-slate-400 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">
-                  Status
-                </label>
-                <select
-                  value={formData.status}
-                  onChange={(e) => setFormData({ ...formData, status: e.target.value as any })}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 focus:border-teal-400 focus:ring-2 focus:ring-teal-100 transition-all"
-                >
-                  <option value="DRAFT">Draft</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="COMPLETED">Completed</option>
-                  <option value="ARCHIVED">Archived</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setShowEditModal(false);
-                    setEditingExam(null);
-                  }}
-                  className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {submitting && (
-                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  )}
-                  <span>
-                    {submitting 
-                      ? (editingExam ? 'Updating...' : 'Creating...') 
-                      : (editingExam ? 'Update Exam' : 'Create Exam')}
-                  </span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Exam Date</Label>
+              <Input type="datetime-local" value={formData.examDate} onChange={(e) => setFormData({ ...formData, examDate: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Status</Label>
+              <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as any })} className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring">
+                <option value="DRAFT">Draft</option>
+                <option value="ACTIVE">Active</option>
+                <option value="COMPLETED">Completed</option>
+                <option value="ARCHIVED">Archived</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-3 border-t border-border">
+              <Button type="button" variant="outline" size="sm" disabled={submitting} onClick={() => { setShowCreateModal(false); setShowEditModal(false); setEditingExam(null); }}>Cancel</Button>
+              <Button type="submit" size="sm" disabled={submitting} className="gap-2">
+                {submitting && <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />}
+                {submitting ? (editingExam ? 'Updating...' : 'Creating...') : (editingExam ? 'Update Exam' : 'Create Exam')}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         isOpen={confirmState.isOpen}

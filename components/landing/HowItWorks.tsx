@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BarChart2, ClipboardCheck, CloudUpload, Cpu, ScanText } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 export default function HowItWorks() {
   const [activeStep, setActiveStep] = useState(0);
@@ -32,30 +34,30 @@ export default function HowItWorks() {
     return () => observer.disconnect();
   }, []);
 
-  const steps = [
+  const steps: { title: string; icon: LucideIcon; desc: string }[] = [
     {
       title: "Upload Scripts",
-      icon: "fa-cloud-arrow-up",
+      icon: CloudUpload,
       desc: "Scan or photograph exam scripts. Upload individually or in bulk — we accept PDF, PNG, JPG.",
     },
     {
       title: "OCR Extraction",
-      icon: "fa-expand",
+      icon: ScanText,
       desc: "Our engine reads each student's handwriting, extracting text answer-by-answer with region detection.",
     },
     {
       title: "SBERT Analysis",
-      icon: "fa-microchip",
+      icon: Cpu,
       desc: "Sentence-BERT compares each answer semantically against your model answers and rubric criteria.",
     },
     {
       title: "Intelligent Scoring",
-      icon: "fa-chart-simple",
+      icon: BarChart2,
       desc: "Scores are generated per question with concept matches, confidence levels, and detailed breakdowns.",
     },
     {
       title: "Review & Finalize",
-      icon: "fa-clipboard-check",
+      icon: ClipboardCheck,
       desc: "Review each graded script, override where needed, add comments, and export final results.",
     },
   ];
@@ -80,10 +82,12 @@ export default function HowItWorks() {
               style={{ height: `${(activeStep / steps.length) * 100}%` }}
             ></div>
           </div>
-          {steps.map((step, index) => (
+          {steps.map((step, index) => {
+            const Icon = step.icon;
+            return (
             <div key={index} className={`process-step ${activeStep >= index + 1 ? "active" : ""}`} data-step={index + 1}>
               <div className="step-node">
-                <div className="step-icon"><i className={`fas ${step.icon}`}></i></div>
+                <div className="step-icon"><Icon size={24} /></div>
                 <div className="step-pulse"></div>
               </div>
               <div className="step-content">
@@ -91,7 +95,8 @@ export default function HowItWorks() {
                 <p>{step.desc}</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>

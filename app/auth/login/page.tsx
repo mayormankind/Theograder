@@ -1,55 +1,45 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import * as z from "zod";
+import { Brain, Eye, EyeOff, Key, Lock, Mail } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
 import {
   loginPasswordSchema,
   loginOTPRequestSchema,
   loginOTPVerifySchema,
   type LoginPasswordFormData,
+  type LoginOTPRequestFormData,
+  type LoginOTPVerifyFormData,
 } from "@/lib/validations/auth-schemas";
-
-// ─── Types ────────────────────────────────────────────────────────────────────
-type LoginFormData = LoginPasswordFormData & { otp: string };
-type LoginFieldErrors = Partial<Record<keyof LoginFormData, string>>;
-type LoginTouched = Partial<Record<keyof LoginFormData, boolean>>;
-
-// ─── Single-field validator ──────────────────────────────────────────────────
-
-function validateField(
-  name: keyof LoginFormData,
-  formData: LoginFormData,
-  schema: z.ZodObject<any>,
-): string | undefined {
-  if (!(name in schema.shape)) return undefined;
-
-  const result = schema.shape[name].safeParse(formData[name]);
-  if (result.success) return undefined;
-  return result.error.issues[0]?.message;
-}
 
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LoginPage() {
   const router = useRouter();
 
-  const [formData, setFormData] = useState<LoginFormData>({
-    email: "",
-    password: "",
-    otp: "",
-  });
-
-  const [fieldErrors, setFieldErrors] = useState<LoginFieldErrors>({});
-  const [touched, setTouched] = useState<LoginTouched>({});
-
-  const [loading, setLoading] = useState(false);
   const [useOTP, setUseOTP] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+
+  const passwordForm = useForm<LoginPasswordFormData>({
+    resolver: zodResolver(loginPasswordSchema),
+    mode: "onBlur",
+  });
+
+  const otpRequestForm = useForm<LoginOTPRequestFormData>({
+    resolver: zodResolver(loginOTPRequestSchema),
+    mode: "onBlur",
+  });
+
+  const otpVerifyForm = useForm<LoginOTPVerifyFormData>({
+    resolver: zodResolver(loginOTPVerifySchema),
+    mode: "onBlur",
+  });
 
   // Check if user is already logged in
   useEffect(() => {
@@ -66,203 +56,77 @@ export default function LoginPage() {
     checkAuth();
   }, [router]);
 
-  // ── Derive which schema is active based on current login mode ─────────────
+  // ── Submit handlers ────────────────────────────────────────────────────────
 
-  const activeSchema = useOTP
-    ? otpSent
-      ? loginOTPVerifySchema
-      : loginOTPRequestSchema
-    : loginPasswordSchema;
-
-  // ── onChange: update state, re-validate only if field already touched ──────
-
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target as {
-        name: keyof LoginFormData;
-        value: string;
-      };
-
-      setFormData((prev) => {
-        const next = { ...prev, [name]: value };
-
-        if (touched[name]) {
-          setFieldErrors((errs) => ({
-            ...errs,
-            [name]: validateField(name, next, activeSchema),
-          }));
-        }
-
-        return next;
-      });
-    },
-    [touched, activeSchema],
-  );
-
-  // ── onBlur: mark field as touched, validate for the first time ─────────────
-
-  const handleBlur = useCallback(
-    (e: React.FocusEvent<HTMLInputElement>) => {
-      const { name } = e.target as { name: keyof LoginFormData };
-
-      setTouched((prev) => ({ ...prev, [name]: true }));
-      setFieldErrors((prev) => ({
-        ...prev,
-        [name]: validateField(name, formData, activeSchema),
-      }));
-    },
-    [formData, activeSchema],
-  );
-
-  // ── Shared: validate all fields in the active schema before submitting ──────
-
-  function validateAll(): LoginFieldErrors {
-    const errors: LoginFieldErrors = {};
-    for (const key of Object.keys(
-      activeSchema.shape,
-    ) as (keyof LoginFormData)[]) {
-      const error = validateField(key, formData, activeSchema);
-      if (error) errors[key] = error;
-    }
-    return errors;
-  }
-
-  // ── Password login ─────────────────────────────────────────────────────────
-
-  const handlePasswordLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    setTouched({ email: true, password: true });
-    const errors = validateAll();
-    setFieldErrors(errors);
-
-    if (Object.values(errors).some(Boolean)) {
-      setLoading(false);
-      return;
-    }
-
+  const onPasswordSubmit = passwordForm.handleSubmit(async (data) => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-          useOTP: false,
-        }),
+        body: JSON.stringify({ email: data.email, password: data.password, useOTP: false }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || "Login failed");
-        return;
-      }
-
-      toast.success(data.message || "Welcome back!", {
+      const res = await response.json();
+      if (!response.ok) { toast.error(res.error || "Login failed"); return; }
+      toast.success(res.message || "Welcome back!", {
         duration: 2000,
         onDismiss: () => router.push("/dashboard"),
         onAutoClose: () => router.push("/dashboard"),
       });
     } catch (err) {
-      console.error("[login:password] unexpected error:", err);
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  // ── OTP request ────────────────────────────────────────────────────────────
-
-  const handleOTPRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    setTouched({ email: true });
-    const errors = validateAll();
-    setFieldErrors(errors);
-
-    if (Object.values(errors).some(Boolean)) {
-      setLoading(false);
-      return;
-    }
-
+  const onOTPRequest = otpRequestForm.handleSubmit(async (data) => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email, useOTP: true }),
+        body: JSON.stringify({ email: data.email, useOTP: true }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || "Failed to send OTP");
-        return;
-      }
-
-      toast.success(data.message || "OTP sent! Check your email.");
+      const res = await response.json();
+      if (!response.ok) { toast.error(res.error || "Failed to send OTP"); return; }
+      toast.success(res.message || "OTP sent! Check your email.");
+      otpVerifyForm.setValue("email", data.email);
       setOtpSent(true);
     } catch (err) {
-      console.error("[login:otp-request] unexpected error:", err);
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  // ── OTP verify ─────────────────────────────────────────────────────────────
-
-  const handleOTPVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    setTouched({ email: true, otp: true });
-    const errors = validateAll();
-    setFieldErrors(errors);
-
-    if (Object.values(errors).some(Boolean)) {
-      setLoading(false);
-      return;
-    }
-
+  const onOTPVerify = otpVerifyForm.handleSubmit(async (data) => {
     try {
       const response = await fetch("/api/auth/login", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: formData.email, otp: formData.otp }),
+        body: JSON.stringify({ email: data.email, otp: data.otp }),
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        toast.error(data.error || "OTP verification failed");
-        return;
-      }
-
-      toast.success(data.message || "Verified! Redirecting…", {
+      const res = await response.json();
+      if (!response.ok) { toast.error(res.error || "OTP verification failed"); return; }
+      toast.success(res.message || "Verified! Redirecting…", {
         duration: 2000,
         onDismiss: () => router.push("/dashboard"),
         onAutoClose: () => router.push("/dashboard"),
       });
     } catch (err) {
-      console.error("[login:otp-verify] unexpected error:", err);
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
-  };
+  });
 
-  // ── Switch login mode — reset state cleanly ───────────────────────
+  // ── Switch login mode — reset state cleanly ───────────────────────────────
 
   const handleSwitchMode = () => {
+    const currentEmail = useOTP
+      ? (otpSent ? otpVerifyForm.getValues("email") : otpRequestForm.getValues("email"))
+      : passwordForm.getValues("email");
     setUseOTP((v) => !v);
     setOtpSent(false);
-    setFieldErrors({});
-    setTouched({});
-    // Keep email pre-filled — user shouldn't have to retype it
-    setFormData((prev) => ({ ...prev, password: "", otp: "" }));
+    if (!useOTP) {
+      otpRequestForm.reset({ email: currentEmail });
+      otpVerifyForm.reset({ email: currentEmail, otp: "" });
+    } else {
+      passwordForm.reset({ email: currentEmail, password: "" });
+    }
   };
 
   // ── Illustration 
@@ -273,7 +137,7 @@ export default function LoginPage() {
       content: "Script #142 — Graded",
       score: "73/100",
     },
-    { type: "card" as const, icon: "fa-brain", content: "SBERT Score: 0.89" },
+    { type: "card" as const, icon: Brain, content: "SBERT Score: 0.89" },
     { type: "progress" as const, progress: 47, progressTotal: 200 },
   ];
 
@@ -294,29 +158,24 @@ export default function LoginPage() {
 
       {!useOTP ? (
         /* ── Password login form ── */
-        <form className="auth-form" onSubmit={handlePasswordLogin} noValidate>
+        <form className="auth-form" onSubmit={onPasswordSubmit} noValidate>
           <div className="form-group">
             <label htmlFor="email">Email Address</label>
-            <div
-              className={`input-wrapper ${fieldErrors.email ? "input-error" : ""}`}
-            >
-              <i className="fas fa-envelope" />
+            <div className={`input-wrapper ${passwordForm.formState.errors.email ? "input-error" : ""}`}>
+              <Mail size={14} />
               <input
                 type="email"
                 id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                onBlur={handleBlur}
                 placeholder="lecturer@university.edu.ng"
                 autoComplete="email"
-                disabled={loading}
-                aria-invalid={!!fieldErrors.email}
+                disabled={passwordForm.formState.isSubmitting}
+                aria-invalid={!!passwordForm.formState.errors.email}
+                {...passwordForm.register("email")}
               />
             </div>
-            {fieldErrors.email && (
+            {passwordForm.formState.errors.email && (
               <span className="form-error" role="alert">
-                {fieldErrors.email}
+                {passwordForm.formState.errors.email.message}
               </span>
             )}
           </div>
@@ -328,21 +187,16 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <div
-              className={`input-wrapper ${fieldErrors.password ? "input-error" : ""}`}
-            >
-              <i className="fas fa-lock" />
+            <div className={`input-wrapper ${passwordForm.formState.errors.password ? "input-error" : ""}`}>
+              <Lock size={14} />
               <input
                 type={showPassword ? "text" : "password"}
                 id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                onBlur={handleBlur}
                 placeholder="Enter your password"
                 autoComplete="current-password"
-                disabled={loading}
-                aria-invalid={!!fieldErrors.password}
+                disabled={passwordForm.formState.isSubmitting}
+                aria-invalid={!!passwordForm.formState.errors.password}
+                {...passwordForm.register("password")}
               />
               <button
                 type="button"
@@ -351,96 +205,97 @@ export default function LoginPage() {
                 onClick={() => setShowPassword((v) => !v)}
                 tabIndex={-1}
               >
-                <i
-                  className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`}
-                />
+                {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
               </button>
             </div>
-            {fieldErrors.password && (
+            {passwordForm.formState.errors.password && (
               <span className="form-error" role="alert">
-                {fieldErrors.password}
+                {passwordForm.formState.errors.password.message}
               </span>
             )}
           </div>
 
-          <button type="submit" className="btn-submit" disabled={loading}>
+          <button type="submit" className="btn-submit" disabled={passwordForm.formState.isSubmitting}>
             <span className="btn-text">
-              {loading ? "Logging in…" : "Log in"}
+              {passwordForm.formState.isSubmitting ? "Logging in…" : "Log in"}
+            </span>
+          </button>
+        </form>
+      ) : !otpSent ? (
+        /* ── OTP request form ── */
+        <form className="auth-form" onSubmit={onOTPRequest} noValidate>
+          <div className="form-group">
+            <label htmlFor="otp-email">Email Address</label>
+            <div className={`input-wrapper ${otpRequestForm.formState.errors.email ? "input-error" : ""}`}>
+              <Mail size={14} />
+              <input
+                type="email"
+                id="otp-email"
+                placeholder="lecturer@university.edu.ng"
+                autoComplete="email"
+                disabled={otpRequestForm.formState.isSubmitting}
+                aria-invalid={!!otpRequestForm.formState.errors.email}
+                {...otpRequestForm.register("email")}
+              />
+            </div>
+            {otpRequestForm.formState.errors.email && (
+              <span className="form-error" role="alert">
+                {otpRequestForm.formState.errors.email.message}
+              </span>
+            )}
+          </div>
+          <button type="submit" className="btn-submit" disabled={otpRequestForm.formState.isSubmitting}>
+            <span className="btn-text">
+              {otpRequestForm.formState.isSubmitting ? "Processing…" : "Send OTP"}
             </span>
           </button>
         </form>
       ) : (
-        /* ── OTP login form ── */
-        <form
-          className="auth-form"
-          onSubmit={otpSent ? handleOTPVerify : handleOTPRequest}
-          noValidate
-        >
+        /* ── OTP verify form ── */
+        <form className="auth-form" onSubmit={onOTPVerify} noValidate>
           <div className="form-group">
-            <label htmlFor="otp-email">Email Address</label>
-            <div
-              className={`input-wrapper ${fieldErrors.email ? "input-error" : ""}`}
-            >
-              <i className="fas fa-envelope" />
+            <label htmlFor="otp-email-locked">Email Address</label>
+            <div className="input-wrapper">
+              <Mail size={14} />
               <input
                 type="email"
-                id="otp-email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                placeholder="lecturer@university.edu.ng"
+                id="otp-email-locked"
                 autoComplete="email"
-                // Lock email field once OTP has been sent
-                disabled={loading || otpSent}
-                aria-invalid={!!fieldErrors.email}
+                disabled
+                {...otpVerifyForm.register("email")}
               />
             </div>
-            {fieldErrors.email && (
+          </div>
+          <div className="form-group">
+            <label htmlFor="otp">One-Time Password</label>
+            <div className={`input-wrapper ${otpVerifyForm.formState.errors.otp ? "input-error" : ""}`}>
+              <Key size={14} />
+              <input
+                type="text"
+                id="otp"
+                placeholder="Enter 6-digit code"
+                maxLength={6}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                disabled={otpVerifyForm.formState.isSubmitting}
+                aria-describedby="otp-hint"
+                aria-invalid={!!otpVerifyForm.formState.errors.otp}
+                {...otpVerifyForm.register("otp")}
+              />
+            </div>
+            {otpVerifyForm.formState.errors.otp ? (
               <span className="form-error" role="alert">
-                {fieldErrors.email}
+                {otpVerifyForm.formState.errors.otp.message}
+              </span>
+            ) : (
+              <span id="otp-hint" className="form-hint">
+                Check your email for the 6-digit verification code
               </span>
             )}
           </div>
-
-          {otpSent && (
-            <div className="form-group">
-              <label htmlFor="otp">One-Time Password</label>
-              <div
-                className={`input-wrapper ${fieldErrors.otp ? "input-error" : ""}`}
-              >
-                <i className="fas fa-key" />
-                <input
-                  type="text"
-                  id="otp"
-                  name="otp"
-                  value={formData.otp}
-                  onChange={handleChange}
-                  onBlur={handleBlur}
-                  placeholder="Enter 6-digit code"
-                  maxLength={6}
-                  inputMode="numeric"
-                  autoComplete="one-time-code"
-                  disabled={loading}
-                  aria-describedby="otp-hint"
-                  aria-invalid={!!fieldErrors.otp}
-                />
-              </div>
-              {fieldErrors.otp ? (
-                <span className="form-error" role="alert">
-                  {fieldErrors.otp}
-                </span>
-              ) : (
-                <span id="otp-hint" className="form-hint">
-                  Check your email for the 6-digit verification code
-                </span>
-              )}
-            </div>
-          )}
-
-          <button type="submit" className="btn-submit" disabled={loading}>
+          <button type="submit" className="btn-submit" disabled={otpVerifyForm.formState.isSubmitting}>
             <span className="btn-text">
-              {loading ? "Processing…" : otpSent ? "Verify OTP" : "Send OTP"}
+              {otpVerifyForm.formState.isSubmitting ? "Processing…" : "Verify OTP"}
             </span>
           </button>
         </form>

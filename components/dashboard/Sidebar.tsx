@@ -22,6 +22,16 @@ import { cn } from "@/lib/utils";
 import { useUser } from "@/hooks/useUser";
 import { toast } from "sonner";
 import Image from "next/image";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface SidebarProps {
   activePage: Page;
@@ -56,6 +66,7 @@ export default function Sidebar({
   const [isMobile, setIsMobile] = useState(false);
   const [examsCount, setExamsCount] = useState(0);
   const [scriptsCount, setScriptsCount] = useState(0);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const { user } = useUser();
   const router = useRouter();
 
@@ -70,6 +81,11 @@ export default function Sidebar({
       console.error("Logout failed:", error);
       toast.error("Logout failed");
     }
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutDialog(false);
+    handleLogout();
   };
 
   const userInitials = user?.name
@@ -136,7 +152,7 @@ export default function Sidebar({
 
       <aside
         className={cn(
-          "fixed lg:relative flex flex-col bg-[#0f1f3d] text-white transition-all duration-300 ease-in-out z-50 lg:z-0",
+          "fixed lg:relative flex flex-col bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out z-50 lg:z-0",
           collapsed ? "lg:w-17 w-60" : "w-60",
           isMobile
             ? mobileOpen
@@ -276,7 +292,7 @@ export default function Sidebar({
           </div>
           {!collapsed && (
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutDialog(true)}
               className="mt-4 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white/60 hover:bg-red-500/10 hover:text-red-400 transition-all duration-150"
             >
               <LogOut size={17} />
@@ -285,7 +301,7 @@ export default function Sidebar({
           )}
           {collapsed && (
             <button
-              onClick={handleLogout}
+              onClick={() => setShowLogoutDialog(true)}
               className="mt-4 flex w-full justify-center rounded-lg py-2 text-white/60 hover:bg-red-500/10 hover:text-red-400 transition-all duration-150"
               title="Logout"
             >
@@ -297,11 +313,27 @@ export default function Sidebar({
         {/* Collapse Toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex absolute -right-3 top-18 h-6 w-6 items-center justify-center rounded-full bg-[#0f1f3d] ring-1 ring-white/20 text-white/60 hover:text-white transition-colors z-10"
+          className="hidden lg:flex absolute -right-3 top-18 h-6 w-6 items-center justify-center rounded-full bg-sidebar ring-1 ring-sidebar-border text-sidebar-foreground/60 hover:text-sidebar-foreground transition-colors z-10"
         >
           {collapsed ? <ChevronRight size={12} /> : <ChevronLeft size={12} />}
         </button>
       </aside>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be redirected to the login page. Any unsaved changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogoutConfirm}>Logout</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 }

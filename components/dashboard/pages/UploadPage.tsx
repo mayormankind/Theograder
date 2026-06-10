@@ -106,12 +106,12 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
     // Basic file validation
     const validFiles = newFiles.filter(file => {
       const isValidType = file.type.startsWith('image/') || file.type === 'application/pdf';
-      const isValidSize = file.size <= 10 * 1024 * 1024; // 10MB
+      const isValidSize = file.size <= 20 * 1024 * 1024; // 20MB
       return isValidType && isValidSize;
     });
 
     if (validFiles.length === 0) {
-      setError('Invalid file type or size. Please upload images or PDFs under 10MB.');
+      setError('Invalid file type or size. Please upload images or PDFs under 20MB.');
       return;
     }
 
@@ -302,7 +302,7 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
             <ImageIcon size={11} /> JPG / PNG
           </span>
           <span className="rounded-full bg-slate-100 px-3 py-1.5 text-[10px] sm:text-[11px] font-medium text-slate-600">
-            Max 20 MB
+            Max 20MB
           </span>
         </div>
         {isDragging && (

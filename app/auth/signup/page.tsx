@@ -1,10 +1,13 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { Eye, EyeOff, GraduationCap, Lock, Mail, ShieldCheck, User } from "lucide-react";
 import {
   signupSchema,
   type SignupFormData,
@@ -52,124 +55,39 @@ function validateField(
 export default function SignupPage() {
   const router = useRouter();
 
-  const [formData, setFormData] = useState<SignupFormData>({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
-
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof SignupFormData, string>>
-  >({});
-
-  // touched tracks which fields the user has left at least once.
-  // Errors are only shown on touched fields — except on submit, which forces all.
-  const [touched, setTouched] = useState<
-    Partial<Record<keyof SignupFormData, boolean>>
-  >({});
-
-  const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // ── onChange: update state, re-validate only if field already touched ──────
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    mode: "onBlur",
+  });
 
-  const handleChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      const { name, value } = e.target as {
-        name: keyof SignupFormData;
-        value: string;
-      };
-
-      setFormData((prev) => {
-        const next = { ...prev, [name]: value };
-
-        if (touched[name]) {
-          setFieldErrors((errs) => ({
-            ...errs,
-            [name]: validateField(name, next),
-          }));
-        }
-
-        // Always keep confirmPassword in sync once it's been touched,
-        // so fixing the password field clears the mismatch error immediately.
-        if (name === "password" && touched.confirmPassword) {
-          setFieldErrors((errs) => ({
-            ...errs,
-            confirmPassword: validateField("confirmPassword", next),
-          }));
-        }
-
-        return next;
-      });
-    },
-    [touched],
-  );
-
-  // ── onBlur: mark field as touched and validate for the first time ──────────
-
-  const handleBlur = useCallback(
-    (e: React.FocusEvent<HTMLInputElement>) => {
-      const { name } = e.target as { name: keyof SignupFormData };
-
-      setTouched((prev) => ({ ...prev, [name]: true }));
-      setFieldErrors((prev) => ({
-        ...prev,
-        [name]: validateField(name, formData),
-      }));
-    },
-    [formData],
-  );
-
-  // ── onSubmit: touch all fields, run full validation, then submit ───────────
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    // Force-touch every field so errors become visible everywhere.
-    setTouched({
-      name: true,
-      email: true,
-      password: true,
-      confirmPassword: true,
-    });
-
-    const errors: Partial<Record<keyof SignupFormData, string>> = {
-      name: validateField("name", formData),
-      email: validateField("email", formData),
-      password: validateField("password", formData),
-      confirmPassword: validateField("confirmPassword", formData),
-    };
-
-    setFieldErrors(errors);
-
-    if (Object.values(errors).some(Boolean)) {
-      setLoading(false);
-      return;
-    }
-
+  const onSubmit = async (data: SignupFormData) => {
     try {
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: formData.name.trim(),
-          email: formData.email,
-          password: formData.password,
+          name: data.name.trim(),
+          email: data.email,
+          password: data.password,
         }),
       });
 
-      const data = await response.json();
+      const res = await response.json();
 
       if (!response.ok) {
-        toast.error(data.error || "Failed to create account");
+        toast.error(res.error || "Failed to create account");
         return;
       }
 
-      // Redirect happens when the toast closes — no fragile setTimeout.
-      toast.success(data.message || "Account created! Check your email.", {
+      toast.success(res.message || "Account created! Check your email.", {
         duration: 4000,
         onDismiss: () => router.push("/auth/verify-email"),
         onAutoClose: () => router.push("/auth/verify-email"),
@@ -177,14 +95,13 @@ export default function SignupPage() {
     } catch (err) {
       console.error("[signup] unexpected error:", err);
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
   // ── Derived UI state ───────────────────────────────────────────────────────
 
-  const passwordStrength = getPasswordStrength(formData.password);
+  const passwordValue = watch("password") ?? "";
+  const passwordStrength = getPasswordStrength(passwordValue);
   const strengthMeta = {
     0: { label: "", cls: "" },
     1: { label: "Weak", cls: "strength-weak" },
@@ -203,12 +120,12 @@ export default function SignupPage() {
     },
     {
       type: "card" as const,
-      icon: "fa-graduation-cap",
+      icon: GraduationCap,
       content: "Upload your first rubric",
     },
     {
       type: "card" as const,
-      icon: "fa-shield-halved",
+      icon: ShieldCheck,
       content: "NDPR Compliant",
     },
   ];
@@ -228,31 +145,28 @@ export default function SignupPage() {
         <span>register with email</span>
       </div>
 
-      <form className="auth-form" onSubmit={handleSubmit} noValidate>
+      <form className="auth-form" onSubmit={handleSubmit(onSubmit)} noValidate>
         {/* ── Full Name ── */}
         <div className="form-group">
           <label htmlFor="name">Full Name</label>
           <div
-            className={`input-wrapper ${fieldErrors.name ? "input-error" : ""}`}
+            className={`input-wrapper ${errors.name ? "input-error" : ""}`}
           >
-            <i className="fas fa-user" />
+            <User size={14} />
             <input
               type="text"
               id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              onBlur={handleBlur}
               placeholder="Dr. Oluwaseun Adeyemi"
               autoComplete="name"
-              disabled={loading}
-              aria-describedby={fieldErrors.name ? "name-error" : undefined}
-              aria-invalid={!!fieldErrors.name}
+              disabled={isSubmitting}
+              aria-describedby={errors.name ? "name-error" : undefined}
+              aria-invalid={!!errors.name}
+              {...register("name")}
             />
           </div>
-          {fieldErrors.name && (
+          {errors.name && (
             <span id="name-error" className="form-error" role="alert">
-              {fieldErrors.name}
+              {errors.name.message}
             </span>
           )}
         </div>
@@ -261,28 +175,23 @@ export default function SignupPage() {
         <div className="form-group">
           <label htmlFor="email">Email Address</label>
           <div
-            className={`input-wrapper ${fieldErrors.email ? "input-error" : ""}`}
+            className={`input-wrapper ${errors.email ? "input-error" : ""}`}
           >
-            <i className="fas fa-envelope" />
+            <Mail size={14} />
             <input
               type="email"
               id="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              onBlur={handleBlur}
               placeholder="lecturer@university.edu.ng"
               autoComplete="email"
-              disabled={loading}
-              aria-describedby={
-                fieldErrors.email ? "email-error" : "email-hint"
-              }
-              aria-invalid={!!fieldErrors.email}
+              disabled={isSubmitting}
+              aria-describedby={errors.email ? "email-error" : "email-hint"}
+              aria-invalid={!!errors.email}
+              {...register("email")}
             />
           </div>
-          {fieldErrors.email ? (
+          {errors.email ? (
             <span id="email-error" className="form-error" role="alert">
-              {fieldErrors.email}
+              {errors.email.message}
             </span>
           ) : (
             <span id="email-hint" className="form-hint">
@@ -295,21 +204,18 @@ export default function SignupPage() {
         <div className="form-group">
           <label htmlFor="password">Password</label>
           <div
-            className={`input-wrapper ${fieldErrors.password ? "input-error" : ""}`}
+            className={`input-wrapper ${errors.password ? "input-error" : ""}`}
           >
-            <i className="fas fa-lock" />
+            <Lock size={14} />
             <input
               type={showPassword ? "text" : "password"}
               id="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              onBlur={handleBlur}
               placeholder="Min. 8 chars, 1 uppercase, 1 number"
               autoComplete="new-password"
-              disabled={loading}
+              disabled={isSubmitting}
               aria-describedby="password-strength"
-              aria-invalid={!!fieldErrors.password}
+              aria-invalid={!!errors.password}
+              {...register("password")}
             />
             <button
               type="button"
@@ -318,14 +224,12 @@ export default function SignupPage() {
               onClick={() => setShowPassword((v) => !v)}
               tabIndex={-1}
             >
-              <i
-                className={`fas ${showPassword ? "fa-eye-slash" : "fa-eye"}`}
-              />
+              {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
 
           {/* Strength meter — proactive feedback, shown while typing */}
-          {formData.password && (
+          {passwordValue && (
             <div
               id="password-strength"
               className="password-strength-wrapper"
@@ -348,9 +252,9 @@ export default function SignupPage() {
             </div>
           )}
 
-          {fieldErrors.password && (
+          {errors.password && (
             <span className="form-error" role="alert">
-              {fieldErrors.password}
+              {errors.password.message}
             </span>
           )}
         </div>
@@ -359,20 +263,17 @@ export default function SignupPage() {
         <div className="form-group">
           <label htmlFor="confirmPassword">Confirm Password</label>
           <div
-            className={`input-wrapper ${fieldErrors.confirmPassword ? "input-error" : ""}`}
+            className={`input-wrapper ${errors.confirmPassword ? "input-error" : ""}`}
           >
-            <i className="fas fa-lock" />
+            <Lock size={14} />
             <input
               type={showConfirmPassword ? "text" : "password"}
               id="confirmPassword"
-              name="confirmPassword"
-              value={formData.confirmPassword}
-              onChange={handleChange}
-              onBlur={handleBlur}
               placeholder="Confirm your password"
               autoComplete="new-password"
-              disabled={loading}
-              aria-invalid={!!fieldErrors.confirmPassword}
+              disabled={isSubmitting}
+              aria-invalid={!!errors.confirmPassword}
+              {...register("confirmPassword")}
             />
             <button
               type="button"
@@ -383,14 +284,12 @@ export default function SignupPage() {
               onClick={() => setShowConfirmPassword((v) => !v)}
               tabIndex={-1}
             >
-              <i
-                className={`fas ${showConfirmPassword ? "fa-eye-slash" : "fa-eye"}`}
-              />
+              {showConfirmPassword ? <EyeOff size={15} /> : <Eye size={15} />}
             </button>
           </div>
-          {fieldErrors.confirmPassword && (
+          {errors.confirmPassword && (
             <span className="form-error" role="alert">
-              {fieldErrors.confirmPassword}
+              {errors.confirmPassword.message}
             </span>
           )}
         </div>
@@ -398,7 +297,7 @@ export default function SignupPage() {
         {/* ── Terms ── */}
         <div className="form-group checkbox-group">
           <label className="checkbox-label">
-            <input type="checkbox" required disabled={loading} />
+            <input type="checkbox" required disabled={isSubmitting} />
             <span className="checkmark" />I agree to the{" "}
             <Link href="/terms" className="form-link">
               Terms of Service
@@ -410,9 +309,9 @@ export default function SignupPage() {
           </label>
         </div>
 
-        <button type="submit" className="btn-submit" disabled={loading}>
+        <button type="submit" className="btn-submit" disabled={isSubmitting}>
           <span className="btn-text">
-            {loading ? "Creating Account…" : "Create Account"}
+            {isSubmitting ? "Creating Account…" : "Create Account"}
           </span>
         </button>
       </form>

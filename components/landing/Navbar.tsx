@@ -3,51 +3,39 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { ArrowRight } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTheme, setActiveTheme] = useState<"dark" | "light">("dark");
-  const [mounted, setMounted] = useState(false);
+  const [activeSection, setActiveSection] = useState<string>("");
   const { user, loading } = useUser();
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setMounted(true);
-      const savedTheme = localStorage.getItem("theograder-theme") as
-        | "dark"
-        | "light"
-        | null;
-      const initialTheme =
-        savedTheme ||
-        (window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light");
-
-      if (initialTheme !== activeTheme) {
-        setActiveTheme(initialTheme);
-      }
-      document.documentElement.setAttribute("data-theme", initialTheme);
-    });
-
+    const sectionIds = ["features", "how-it-works", "preview", "faq"];
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 50);
+      if (window.scrollY < 100) setActiveSection("");
     };
-
     window.addEventListener("scroll", handleScroll);
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) setActiveSection(entry.target.id);
+        });
+      },
+      { rootMargin: "0px 0px -70% 0px", threshold: 0 }
+    );
+    sectionIds.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
     return () => {
-      cancelAnimationFrame(frame);
       window.removeEventListener("scroll", handleScroll);
+      observer.disconnect();
     };
-  }, [activeTheme]);
-
-  const toggleTheme = () => {
-    const newTheme = activeTheme === "dark" ? "light" : "dark";
-    setActiveTheme(newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
-    localStorage.setItem("theograder-theme", newTheme);
-  };
+  }, []);
 
   const toggleMobileMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -79,40 +67,23 @@ export default function Navbar() {
             </span>
           </Link>
           <div className="nav-links" id="navLinks">
-            <a href="#features" className="nav-link">
+            <a href="#features" className={`nav-link ${activeSection === "features" ? "active" : ""}`}>
               Features
             </a>
-            <a href="#how-it-works" className="nav-link">
+            <a href="#how-it-works" className={`nav-link ${activeSection === "how-it-works" ? "active" : ""}`}>
               How It Works
             </a>
-            <a href="#preview" className="nav-link">
+            <a href="#preview" className={`nav-link ${activeSection === "preview" ? "active" : ""}`}>
               Preview
             </a>
-            <a href="#faq" className="nav-link">
+            <a href="#faq" className={`nav-link ${activeSection === "faq" ? "active" : ""}`}>
               FAQ
             </a>
           </div>
           <div className="nav-actions">
-            <button
-              className="theme-toggle"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              <div className="theme-toggle-track">
-                {mounted ? (
-                  <>
-                    <i className="fas fa-sun theme-icon-light"></i>
-                    <i className="fas fa-moon theme-icon-dark"></i>
-                  </>
-                ) : (
-                  <div className="theme-toggle-loader"></div>
-                )}
-                <div className="theme-toggle-thumb"></div>
-              </div>
-            </button>
             {!loading && user ? (
               <Link href="/dashboard" className="btn-primary-sm">
-                Dashboard <i className="fas fa-arrow-right"></i>
+                Dashboard <ArrowRight size={14} />
               </Link>
             ) : (
               <>
@@ -120,7 +91,7 @@ export default function Navbar() {
                   Log in
                 </Link>
                 <Link href="/auth/signup" className="btn-primary-sm">
-                  Get Started <i className="fas fa-arrow-right"></i>
+                  Get Started <ArrowRight size={14} />
                 </Link>
               </>
             )}
@@ -158,19 +129,6 @@ export default function Navbar() {
           <a href="#faq" className="mobile-link" onClick={closeMobileMenu}>
             FAQ
           </a>
-          <div className="mobile-theme-toggle">
-            <button
-              className="theme-toggle-mobile"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              {mounted && (
-                <i
-                  className={`fas ${activeTheme === "dark" ? "fa-moon" : "fa-sun"} theme-icon-${activeTheme}`}
-                ></i>
-              )}
-            </button>
-          </div>
           <div className="mobile-actions">
             {!loading && user ? (
               <Link

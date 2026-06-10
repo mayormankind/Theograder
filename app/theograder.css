@@ -128,7 +128,6 @@
   --purple-primary: #7c3aed;
   --amber-primary: #f59e0b;
   --red-primary: #ef4444;
-  --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "JetBrains Mono", monospace;
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -389,8 +388,13 @@ img {
   border-radius: 2px;
 }
 
-.nav-link:hover::after {
+.nav-link:hover::after,
+.nav-link.active::after {
   width: 100%;
+}
+
+.nav-link.active {
+  color: var(--text-primary);
 }
 
 .nav-actions {
@@ -2578,10 +2582,12 @@ img {
   display: flex;
   align-items: center;
 }
-.input-wrapper i:first-child {
+.input-wrapper i:first-child,
+.input-wrapper svg:first-child {
   position: absolute;
   left: 14px;
-  font-size: 14px;
+  width: 14px;
+  height: 14px;
   color: var(--text-muted);
   pointer-events: none;
 }

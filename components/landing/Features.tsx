@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Brain, Check, FileText, ListChecks, Pen, ShieldCheck, UserPen } from "lucide-react";
 
 export default function Features() {
   const gridRef = useRef<HTMLDivElement>(null);
@@ -93,7 +94,7 @@ export default function Features() {
               </div>
               <div className="bento-info">
                 <div className="bento-icon-wrap">
-                  <i className="fas fa-file-alt"></i>
+                  <FileText size={18} />
                 </div>
                 <h3>OCR Script Processing</h3>
                 <p>
@@ -144,7 +145,7 @@ export default function Features() {
               </div>
               <div className="bento-info">
                 <div className="bento-icon-wrap icon-blue">
-                  <i className="fas fa-list-check"></i>
+                  <ListChecks size={18} />
                 </div>
                 <h3>Rubric-Based Grading</h3>
                 <p>
@@ -205,7 +206,7 @@ export default function Features() {
               </div>
               <div className="bento-info">
                 <div className="bento-icon-wrap icon-purple">
-                  <i className="fas fa-brain"></i>
+                  <Brain size={18} />
                 </div>
                 <h3>Semantic Similarity</h3>
                 <p>
@@ -265,7 +266,7 @@ export default function Features() {
               </div>
               <div className="bento-info">
                 <div className="bento-icon-wrap icon-amber">
-                  <i className="fas fa-shield-halved"></i>
+                  <ShieldCheck size={18} />
                 </div>
                 <h3>Confidence & Explainability</h3>
                 <p>
@@ -290,13 +291,13 @@ export default function Features() {
                         title="approve button"
                         className="review-btn approve"
                       >
-                        <i className="fas fa-check"></i>
+                        <Check size={12} />
                       </button>
                       <button
                         title="review button"
                         className="review-btn override"
                       >
-                        <i className="fas fa-pen"></i>
+                        <Pen size={12} />
                       </button>
                     </div>
                   </div>
@@ -315,7 +316,7 @@ export default function Features() {
               </div>
               <div className="bento-info">
                 <div className="bento-icon-wrap icon-red">
-                  <i className="fas fa-user-pen"></i>
+                  <UserPen size={18} />
                 </div>
                 <h3>Lecturer Review & Override</h3>
                 <p>

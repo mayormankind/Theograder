@@ -12,6 +12,24 @@ import {
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
 import { useUser } from "@/hooks/useUser";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -61,7 +79,7 @@ export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNa
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifs, setShowNotifs] = useState(false);
-  const [showProfileDropdown, setShowProfileDropdown] = useState(false);
+  const [showLogoutDialog, setShowLogoutDialog] = useState(false);
   const { user } = useUser();
   const router = useRouter();
 
@@ -111,10 +129,10 @@ export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNa
         const examId = urlParams.get("examId") || "";
         onNavigate("results", examId ? { examId } : undefined);
       } else if (link.startsWith("/dashboard/grading")) {
-        // Parse scriptId if present
+        // Redirect grading notifications to results page with scriptId
         const urlParams = new URLSearchParams(link.split("?")[1] || "");
         const scriptId = urlParams.get("scriptId") || "";
-        onNavigate("grading", scriptId ? { scriptId } : undefined);
+        onNavigate("results", scriptId ? { scriptId } : undefined);
       } else {
         router.push(link);
       }
@@ -150,6 +168,11 @@ export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNa
       console.error("Logout failed:", error);
       toast.error("Logout failed");
     }
+  };
+
+  const handleLogoutConfirm = () => {
+    setShowLogoutDialog(false);
+    handleLogout();
   };
 
   const userInitials = user?.name
@@ -285,80 +308,61 @@ export default function TopNavbar({ activePage, onNavigate, onMenuClick }: TopNa
       </div>
 
       {/* Profile */}
-      <div className="relative">
-        <button
-          onClick={() => setShowProfileDropdown(!showProfileDropdown)}
-          className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition-colors"
-        >
-          <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-linear-to-br from-teal-400 to-blue-500 ring-1 ring-slate-200">
-            {user?.avatar ? (
-              <img
-                src={user.avatar}
-                alt={user.name || "User"}
-                className="h-full w-full object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-white uppercase">
-                {userInitials}
-              </div>
-            )}
-          </div>
-          <div className="hidden md:block text-left">
-            <p className="text-xs font-semibold text-slate-800">
-              {user?.name || "Loading..."}
-            </p>
-            <p className="text-[10px] text-slate-400 capitalize">
-              {user?.role?.toLowerCase() || "Lecturer"}
-            </p>
-          </div>
-          <ChevronDown
-            size={12}
-            className={cn(
-              "text-slate-400 transition-transform",
-              showProfileDropdown && "rotate-180",
-            )}
-          />
-        </button>
-
-        {showProfileDropdown && (
-          <>
-            <div
-              className="fixed inset-0 z-40"
-              onClick={() => setShowProfileDropdown(false)}
-            />
-            <div className="absolute right-0 top-12 z-50 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-              <button
-                onClick={() => {
-                  onNavigate("settings", { tab: "profile" });
-                  setShowProfileDropdown(false);
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                <User size={14} />
-                Profile Settings
-              </button>
-              <button
-                onClick={() => {
-                  onNavigate("settings", { tab: "security" });
-                  setShowProfileDropdown(false);
-                }}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-slate-600 hover:bg-slate-50 transition-colors"
-              >
-                <SettingsIcon size={14} />
-                Account Settings
-              </button>
-              <div className="my-1 border-t border-slate-100" />
-              <button
-                onClick={handleLogout}
-                className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-xs font-medium text-red-600 hover:bg-red-50 transition-colors"
-              >
-                <LogOut size={14} />
-                Logout
-              </button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          {/* <button className="flex items-center gap-2.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 hover:bg-slate-100 transition-colors outline-none"> */}
+            <div className="relative h-7 w-7 shrink-0 overflow-hidden rounded-full bg-linear-to-br from-teal-400 to-blue-500 ring-1 ring-slate-200">
+              {user?.avatar ? (
+                <img
+                  src={user.avatar}
+                  alt={user.name || "User"}
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-[10px] font-bold text-white uppercase">
+                  {userInitials}
+                </div>
+              )}
             </div>
-          </>
-        )}
-      </div>
+          {/* </button> */}
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuLabel className="py-2 px-3 text-xs normal-case tracking-normal font-normal">
+            <p className="font-semibold text-foreground">{user?.name || "User"}</p>
+            <p className="text-muted-foreground text-[10px]">{user?.email}</p>
+          </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => onNavigate("settings", { tab: "profile" })}>
+            <User size={14} />
+            Profile Settings
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onNavigate("settings", { tab: "security" })}>
+            <SettingsIcon size={14} />
+            Account Settings
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem variant="destructive" onClick={() => setShowLogoutDialog(true)}>
+            <LogOut size={14} />
+            Logout
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      {/* Logout Confirmation Dialog */}
+      <AlertDialog open={showLogoutDialog} onOpenChange={setShowLogoutDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to logout?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You will be redirected to the login page. Any unsaved changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleLogoutConfirm}>Logout</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 }

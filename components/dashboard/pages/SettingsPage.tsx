@@ -19,6 +19,10 @@ import { cn } from "@/lib/utils";
 import type { Page } from "@/types";
 import { toast } from "sonner";
 import { useUser } from "@/hooks/useUser";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 
 type Tab = "profile" | "ai" | "notifications" | "security";
 
@@ -267,26 +271,23 @@ export default function SettingsPage({}: SettingsPageProps) {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1 border-b border-slate-200 overflow-x-auto no-scrollbar scroll-smooth">
-        {TABS.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={cn(
-                "flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
-                activeTab === tab.id
-                  ? "border-teal-500 text-teal-600"
-                  : "border-transparent text-slate-500 hover:text-slate-700",
-              )}
-            >
-              <Icon size={14} />
-              {tab.label}
-            </button>
-          );
-        })}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)}>
+        <TabsList variant="line" className="overflow-x-auto no-scrollbar scroll-smooth w-full justify-start">
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            return (
+              <TabsTrigger
+                key={tab.id}
+                value={tab.id}
+                className="flex items-center gap-2 data-[state=active]:text-teal-600 data-[state=active]:after:bg-teal-500"
+              >
+                <Icon size={14} />
+                {tab.label}
+              </TabsTrigger>
+            );
+          })}
+        </TabsList>
+      </Tabs>
 
       {/* Tab Content */}
       {activeTab === "profile" && (
@@ -382,29 +383,23 @@ export default function SettingsPage({}: SettingsPageProps) {
                 },
               ].map((field) => (
                 <div key={field.label}>
-                  <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
-                    {field.label}
-                  </label>
-                  <input
+                  <Label className="mb-1.5">{field.label}</Label>
+                  <Input
                     value={settings[field.key]}
                     onChange={(e) =>
                       setSettings({ ...settings, [field.key]: e.target.value })
                     }
-                    className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
                   />
                 </div>
               ))}
               <div className="sm:col-span-2">
-                <label className="block text-[11px] font-semibold uppercase tracking-wide text-slate-400 mb-1.5">
-                  Email Address
-                </label>
-                <input
+                <Label className="mb-1.5">Email Address</Label>
+                <Input
                   value={settings.email}
                   onChange={(e) =>
                     setSettings({ ...settings, email: e.target.value })
                   }
                   disabled
-                  className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
                 />
               </div>
             </div>
@@ -642,14 +637,10 @@ export default function SettingsPage({}: SettingsPageProps) {
               </div>
             ))}
             <div className="flex justify-end pt-2">
-              <button
+              <Button
                 onClick={handlePasswordChange}
                 disabled={passwordSaving}
-                className={cn(
-                  "flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all",
-                  "bg-[#0f1f3d] text-white hover:bg-[#162b52]",
-                  passwordSaving && "opacity-70 cursor-not-allowed",
-                )}
+                className="gap-2"
               >
                 {passwordSaving ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -657,7 +648,7 @@ export default function SettingsPage({}: SettingsPageProps) {
                   <Save size={14} />
                 )}
                 {passwordSaving ? "Changing..." : "Change Password"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -665,16 +656,11 @@ export default function SettingsPage({}: SettingsPageProps) {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <button
+        <Button
           onClick={handleSave}
           disabled={saving}
-          className={cn(
-            "flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium transition-all",
-            saved
-              ? "bg-teal-50 text-teal-700 ring-1 ring-teal-200"
-              : "bg-[#0f1f3d] text-white hover:bg-[#162b52]",
-            saving && "opacity-70 cursor-not-allowed",
-          )}
+          variant={saved ? "outline" : "default"}
+          className={cn("gap-2", saved && "border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-50/80")}
         >
           {saving ? (
             <Loader2 size={14} className="animate-spin" />
@@ -684,7 +670,7 @@ export default function SettingsPage({}: SettingsPageProps) {
             <Save size={14} />
           )}
           {saving ? "Saving..." : saved ? "Changes Saved" : "Save Changes"}
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -1,4 +1,6 @@
 // components/landing/ProductPreview.tsx
+import { Check, CheckCircle2, ExternalLink, Lock, MessageSquare, MinusCircle, Pen, ShieldCheck, XCircle } from "lucide-react";
+
 export default function ProductPreview() {
   return (
     <section className="preview" id="preview">
@@ -23,11 +25,11 @@ export default function ProductPreview() {
               <span className="dot-green"></span>
             </div>
             <div className="preview-url">
-              <i className="fas fa-lock"></i>
+              <Lock size={12} />
               app.theograder.ng/grading/BIO301/scripts/247
             </div>
             <div className="preview-actions-top">
-              <i className="fas fa-arrow-up-right-from-square"></i>
+              <ExternalLink size={14} />
             </div>
           </div>
           <div className="preview-body">
@@ -82,7 +84,7 @@ export default function ProductPreview() {
                 <div className="main-title-row">
                   <h3>Question 3: ATP Synthesis</h3>
                   <div className="confidence-badge high">
-                    <i className="fas fa-shield-halved"></i>
+                    <ShieldCheck size={12} />
                     91% Confident
                   </div>
                 </div>
@@ -103,7 +105,7 @@ export default function ProductPreview() {
                 <div className="concept-matches">
                   <div className="concept-item matched">
                     <div className="concept-status">
-                      <i className="fas fa-check-circle"></i>
+                      <CheckCircle2 size={14} />
                     </div>
                     <div className="concept-detail">
                       <span className="concept-name">
@@ -127,7 +129,7 @@ export default function ProductPreview() {
                   </div>
                   <div className="concept-item matched">
                     <div className="concept-status">
-                      <i className="fas fa-check-circle"></i>
+                      <CheckCircle2 size={14} />
                     </div>
                     <div className="concept-detail">
                       <span className="concept-name">Chemiosmosis</span>
@@ -149,7 +151,7 @@ export default function ProductPreview() {
                   </div>
                   <div className="concept-item matched">
                     <div className="concept-status">
-                      <i className="fas fa-check-circle"></i>
+                      <CheckCircle2 size={14} />
                     </div>
                     <div className="concept-detail">
                       <span className="concept-name">
@@ -172,7 +174,7 @@ export default function ProductPreview() {
                   </div>
                   <div className="concept-item partial">
                     <div className="concept-status">
-                      <i className="fas fa-minus-circle"></i>
+                      <MinusCircle size={14} />
                     </div>
                     <div className="concept-detail">
                       <span className="concept-name">ATP Yield</span>
@@ -194,7 +196,7 @@ export default function ProductPreview() {
                   </div>
                   <div className="concept-item missed">
                     <div className="concept-status">
-                      <i className="fas fa-times-circle"></i>
+                      <XCircle size={14} />
                     </div>
                     <div className="concept-detail">
                       <span className="concept-name">NADH/FADH2 Carriers</span>
@@ -217,13 +219,13 @@ export default function ProductPreview() {
                 </div>
                 <div className="breakdown-actions">
                   <button className="action-approve">
-                    <i className="fas fa-check"></i> Accept Score
+                    <Check size={12} /> Accept Score
                   </button>
                   <button className="action-override">
-                    <i className="fas fa-pen"></i> Override
+                    <Pen size={12} /> Override
                   </button>
                   <button className="action-comment">
-                    <i className="fas fa-comment"></i> Add Comment
+                    <MessageSquare size={12} /> Add Comment
                   </button>
                 </div>
               </div>

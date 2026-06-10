@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+// import { Github, Linkedin, Twitter } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -49,15 +50,9 @@ export default function Footer() {
             © {new Date().getFullYear()} TheoGrader. All rights reserved.
           </span>
           <div className="footer-social">
-            <a href="#">
-              <i className="fab fa-twitter"></i>
-            </a>
-            <a href="#">
-              <i className="fab fa-linkedin"></i>
-            </a>
-            <a href="#">
-              <i className="fab fa-github"></i>
-            </a>
+            {/* <a href="#"><Twitter size={16} /></a>
+            <a href="#"><Linkedin size={16} /></a>
+            <a href="#"><Github size={16} /></a> */}
           </div>
         </div>
       </div>

@@ -1,12 +1,14 @@
 "use client";
 
-import { ReactNode, useState, useEffect } from "react";
+import { ReactNode } from "react";
 import Link from "next/link";
+import Image from "next/image";
+import { useTheme } from "@/components/providers/ThemeProvider";
 
 interface IllustrationItem {
   type: "card" | "score" | "progress";
   content?: string;
-  icon?: string;
+  icon?: React.ComponentType<{ size?: number; className?: string }>;
   dotColor?: "green" | "blue" | "yellow" | "red";
   score?: string;
   progress?: number;
@@ -22,38 +24,7 @@ interface AuthLayoutProps {
 export default function AuthLayout({
   children,
   illustration,
-}: AuthLayoutProps) {
-  const [activeTheme, setActiveTheme] = useState<"dark" | "light">("dark");
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => {
-      setMounted(true);
-      const saved = localStorage.getItem("theograder-theme") as
-        | "dark"
-        | "light"
-        | null;
-      const initial =
-        saved ||
-        (window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light");
-
-      if (initial !== activeTheme) {
-        setActiveTheme(initial);
-      }
-      document.documentElement.setAttribute("data-theme", initial);
-    });
-
-    return () => cancelAnimationFrame(frame);
-  }, [activeTheme]);
-
-  const toggleTheme = () => {
-    const newTheme = activeTheme === "dark" ? "light" : "dark";
-    setActiveTheme(newTheme);
-    document.documentElement.setAttribute("data-theme", newTheme);
-    localStorage.setItem("theograder-theme", newTheme);
-  };
+}: AuthLayoutProps) { 
 
   return (
     <div className="auth-body">
@@ -62,30 +33,12 @@ export default function AuthLayout({
           <div className="auth-left-content">
             <div className="auth-left-top">
               <Link href="/" className="logo">
-                <div className="logo-icon">
-                  <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
-                    <rect width="32" height="32" rx="8" fill="url(#lg_auth)" />
-                    <path
-                      d="M8 16L13 21L24 10"
-                      stroke="white"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                    <defs>
-                      <linearGradient
-                        id="lg_auth"
-                        x1="0"
-                        y1="0"
-                        x2="32"
-                        y2="32"
-                      >
-                        <stop stopColor="#1a6b3c" />
-                        <stop offset="1" stopColor="#2dd4a8" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
+                <Image
+                  src="/logo.png"
+                  alt="TheoGrader Logo"
+                  width={50}
+                  height={50}
+                />
                 <span className="logo-text">
                   Theo<span className="logo-accent">Grader</span>
                 </span>
@@ -93,14 +46,16 @@ export default function AuthLayout({
             </div>
 
             <div className="auth-illustration">
-              {illustration.map((item, index) => (
+              {illustration.map((item, index) => {
+                const ItemIcon = item.icon;
+                return (
                 <div key={index} className={`auth-float-card afc-${index + 1}`}>
                   {item.type === "card" && (
                     <div className="afc-row">
                       {item.dotColor && (
                         <div className={`afc-dot ${item.dotColor}`}></div>
                       )}
-                      {item.icon && <i className={`fas ${item.icon}`}></i>}
+                      {ItemIcon && <ItemIcon size={16} />}
                       {item.content && <span>{item.content}</span>}
                     </div>
                   )}
@@ -128,7 +83,8 @@ export default function AuthLayout({
                     </>
                   )}
                 </div>
-              ))}
+                );
+              })}
               <div className="auth-circle c1"></div>
               <div className="auth-circle c2"></div>
               <div className="auth-circle c3"></div>
@@ -137,26 +93,7 @@ export default function AuthLayout({
         </div>
 
         <div className="auth-right">
-          <div className="auth-right-top">
-            <button
-              type="button"
-              className="theme-toggle"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              <div className="theme-toggle-track">
-                {mounted ? (
-                  <>
-                    <i className="fas fa-sun theme-icon-light"></i>
-                    <i className="fas fa-moon theme-icon-dark"></i>
-                  </>
-                ) : (
-                  <div className="theme-toggle-loader"></div>
-                )}
-                <div className="theme-toggle-thumb"></div>
-              </div>
-            </button>
-          </div>
+          <div className="auth-right-top"></div>
           <div className="auth-form-container">{children}</div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useUser } from "@/hooks/useUser";
 
 export default function CTASection() {
@@ -21,12 +22,12 @@ export default function CTASection() {
               {!loading && user ? (
                 <Link href="/dashboard" className="btn-primary-lg btn-white">
                   Go to Dashboard
-                  <i className="fas fa-arrow-right"></i>
+                  <ArrowRight size={16} />
                 </Link>
               ) : (
                 <Link href="/auth/signup" className="btn-primary-lg btn-white">
                   Create Your Free Account
-                  <i className="fas fa-arrow-right"></i>
+                  <ArrowRight size={16} />
                 </Link>
               )}
             </div>

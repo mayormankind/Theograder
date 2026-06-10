@@ -581,8 +581,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       </div>
 
       {/* Exam Filter & Batch Grade Bar */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full sm:w-auto">
+      <div className="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="relative w-full sm:w-auto">
             <select
               value={selectedExamId}
@@ -605,59 +605,63 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
               className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
             />
           </div>
+          <div className="flex items-center gap-2 ml-auto">
+            {selectedExamId !== "all" && (
+              <button
+                onClick={handleBatchGrade}
+                disabled={batchGrading || ungradedCount === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {batchGrading ? (
+                  <Loader2 className="animate-spin" size={14} />
+                ) : (
+                  <Zap size={14} />
+                )}
+                {batchGrading ? "Grading..." : `Grade All (${ungradedCount})`}
+              </button>
+            )}
+            {selectedExamId !== "all" && (
+              <button
+                onClick={handleDownloadAllReports}
+                disabled={batchGrading || downloadingAll || scripts.filter(s => s.status === "GRADED" || s.status === "PENDING_REVIEW").length === 0}
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                {downloadingAll ? (
+                  <Loader2 className="animate-spin" size={14} />
+                ) : (
+                  <Download size={14} />
+                )}
+                {downloadingAll ? "Downloading..." : "Download All Reports"}
+              </button>
+            )}
+            {selectedExamId !== "all" && (
+              <button
+                onClick={handleExportPDF}
+                disabled={batchGrading}
+                className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Download size={14} /> Export Summary
+              </button>
+            )}
+          </div>
+        </div>
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 text-xs text-slate-500">
           {selectedExamId !== "all" && selectedExam && (
-            <div className="flex items-center gap-2 text-xs">
+            <div>
               {selectedExam.hasRubric ? (
-                <span className="flex items-center gap-1 text-teal-600 bg-teal-50 px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1 text-teal-600">
                   <CheckCircle2 size={11} /> Rubric: {selectedExam.rubricTitle}
                 </span>
               ) : (
-                <span className="flex items-center gap-1 text-amber-600 bg-amber-50 px-2 py-1 rounded-full">
+                <span className="flex items-center gap-1 text-amber-600">
                   <AlertTriangle size={11} /> No rubric - Create one first
                 </span>
               )}
             </div>
           )}
-          {selectedExamId !== "all" && (
-            <button
-              onClick={handleBatchGrade}
-              disabled={batchGrading || ungradedCount === 0}
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {batchGrading ? (
-                <Loader2 className="animate-spin" size={14} />
-              ) : (
-                <Zap size={14} />
-              )}
-              {batchGrading ? "Grading..." : `Grade All (${ungradedCount})`}
-            </button>
-          )}
-          {selectedExamId !== "all" && (
-            <button
-              onClick={handleDownloadAllReports}
-              disabled={batchGrading || downloadingAll || scripts.filter(s => s.status === "GRADED" || s.status === "PENDING_REVIEW").length === 0}
-              className="inline-flex items-center gap-2 rounded-lg bg-teal-600 px-4 py-2 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {downloadingAll ? (
-                <Loader2 className="animate-spin" size={14} />
-              ) : (
-                <Download size={14} />
-              )}
-              {downloadingAll ? "Downloading..." : "Download All Reports"}
-            </button>
-          )}
-          {selectedExamId !== "all" && (
-            <button
-              onClick={handleExportPDF}
-              disabled={batchGrading}
-              className="inline-flex items-center gap-2 rounded-lg bg-white border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Download size={14} /> Export Summary
-            </button>
-          )}
-        </div>
-        <div className="text-xs text-slate-500">
-          Showing {scripts.length} script{scripts.length !== 1 ? "s" : ""}
+          <div className={selectedExamId !== "all" && selectedExam ? "" : "ml-auto"}>
+            Showing {scripts.length} script{scripts.length !== 1 ? "s" : ""}
+          </div>
         </div>
       </div>
 
@@ -976,5 +980,6 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
         onClose={() => setConfirmState((prev) => ({ ...prev, isOpen: false }))}
       />
     </div>
+    // </div>
   );
 }

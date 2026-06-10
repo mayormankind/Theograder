@@ -1,15 +1,11 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono, Geist } from "next/font/google";
+import { JetBrains_Mono, Geist } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toast";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
-
-const inter = Inter({
-  variable: "--font-inter",
-  subsets: ["latin"],
-});
 
 const jetbrainsMono = JetBrains_Mono({
   variable: "--font-jetbrains-mono",
@@ -33,22 +29,19 @@ export default function RootLayout({
       className={cn("font-sans", geist.variable)}
     >
       <head>
-        <link rel="preconnect" href="https://cdnjs.cloudflare.com" />
-        <link
-          rel="stylesheet"
-          href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
-        />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var saved=localStorage.getItem("theograder-theme");var prefersDark=window.matchMedia("(prefers-color-scheme: dark)").matches;var theme=saved||(prefersDark?"dark":"light");document.documentElement.setAttribute("data-theme",theme);}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`,
+            __html: `document.documentElement.setAttribute("data-theme","light");document.documentElement.classList.remove("dark");`,
           }}
         />
       </head>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
+        className={`${jetbrainsMono.variable} antialiased`}
       >
-        {children}
-        <Toaster richColors position="top-right" />
+        <ThemeProvider>
+          {children}
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
       </body>
     </html>
   );

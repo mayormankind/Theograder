@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
 import { toast } from "sonner";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { Key, Mail, MailCheck, MailOpen, ShieldCheck } from "lucide-react";
 import {
   forgotPasswordSchema,
   type ForgotPasswordFormData,
@@ -11,88 +14,46 @@ import {
 
 export default function ForgotPasswordPage() {
   const [isSuccess, setIsSuccess] = useState(false);
-  const [formData, setFormData] = useState<ForgotPasswordFormData>({
-    email: "",
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ForgotPasswordFormData>({
+    resolver: zodResolver(forgotPasswordSchema),
+    mode: "onBlur",
   });
-  const [loading, setLoading] = useState(false);
-  const [fieldErrors, setFieldErrors] = useState<
-    Partial<Record<keyof ForgotPasswordFormData, string>>
-  >({});
 
-  // Validate a single field in real-time
-  const validateField = (name: keyof ForgotPasswordFormData, value: string) => {
-    try {
-      forgotPasswordSchema.shape[name].parse(value);
-      setFieldErrors((prev) => ({ ...prev, [name]: undefined }));
-    } catch (error) {
-      if (error instanceof Error) {
-        setFieldErrors((prev) => ({ ...prev, [name]: error.message }));
-      }
-    }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Real-time validation
-    validateField(name as keyof ForgotPasswordFormData, value);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setFieldErrors({});
-
-    // Validate form
-    const result = forgotPasswordSchema.safeParse(formData);
-    if (!result.success) {
-      const errors: Partial<Record<keyof ForgotPasswordFormData, string>> = {};
-      result.error.issues.forEach((err: any) => {
-        if (err.path[0]) {
-          errors[err.path[0] as keyof ForgotPasswordFormData] = err.message;
-        }
-      });
-      setFieldErrors(errors);
-      setLoading(false);
-      return;
-    }
-
+  const onSubmit = async (data: ForgotPasswordFormData) => {
     try {
       const response = await fetch("/api/auth/forgot-password", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: formData.email,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: data.email }),
       });
 
-      const data = await response.json();
+      const res = await response.json();
 
       if (!response.ok) {
-        toast.error(data.error || "Failed to send reset link");
+        toast.error(res.error || "Failed to send reset link");
         return;
       }
 
-      toast.success(data.message);
+      toast.success(res.message);
       setIsSuccess(true);
     } catch (err) {
       toast.error("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
   const illustration = [
     {
       type: "card" as const,
-      icon: "fa-envelope-open-text",
+      icon: MailOpen,
       content: "Reset link sent!",
     },
     {
       type: "card" as const,
-      icon: "fa-shield-halved",
+      icon: ShieldCheck,
       content: "Secure & Encrypted",
     },
   ];
@@ -103,7 +64,7 @@ export default function ForgotPasswordPage() {
         <div>
           <div className="auth-form-header">
             <div className="auth-icon-circle">
-              <i className="fas fa-key"></i>
+              <Key size={20} />
             </div>
             <h1>Reset your password</h1>
             <p>
@@ -111,30 +72,26 @@ export default function ForgotPasswordPage() {
               you a reset link.
             </p>
           </div>
-          <form className="auth-form" onSubmit={handleSubmit}>
+          <form className="auth-form" onSubmit={handleSubmit(onSubmit)}>
             <div className="form-group">
               <label htmlFor="email">Email address</label>
-              <div className="input-wrapper">
-                <i className="fas fa-envelope"></i>
+              <div className={`input-wrapper ${errors.email ? "input-error" : ""}`}>
+                <Mail size={14} />
                 <input
                   type="email"
                   id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
                   placeholder="lecturer@university.edu.ng"
-                  required
-                  disabled={loading}
-                  className={fieldErrors.email ? "input-error" : ""}
+                  disabled={isSubmitting}
+                  {...register("email")}
                 />
               </div>
-              {fieldErrors.email && (
-                <span className="form-error">{fieldErrors.email}</span>
+              {errors.email && (
+                <span className="form-error">{errors.email.message}</span>
               )}
             </div>
-            <button type="submit" className="btn-submit" disabled={loading}>
+            <button type="submit" className="btn-submit" disabled={isSubmitting}>
               <span className="btn-text">
-                {loading ? "Sending..." : "Send Reset Link"}
+                {isSubmitting ? "Sending..." : "Send Reset Link"}
               </span>
             </button>
           </form>
@@ -143,7 +100,7 @@ export default function ForgotPasswordPage() {
         <div className="auth-success-state">
           <div className="success-icon">
             <div className="success-circle">
-              <i className="fas fa-envelope-circle-check"></i>
+              <MailCheck size={24} />
             </div>
           </div>
           <h2>Check your email</h2>

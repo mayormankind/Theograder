@@ -28,18 +28,12 @@ import {
   Cell,
 } from "recharts";
 import type { Page } from "@/types";
+import { useUser } from "@/hooks/useUser";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 interface DashboardPageProps {
   onNavigate: (page: Page) => void;
-}
-
-interface User {
-  id: string;
-  email: string;
-  name: string;
-  role: string;
-  avatar?: string;
 }
 
 interface DashboardStats {
@@ -73,9 +67,9 @@ interface DashboardStats {
 
 export default function DashboardPage({ onNavigate }: DashboardPageProps) {
   const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { user } = useUser();
 
   useEffect(() => {
     fetchDashboardStats();
@@ -86,25 +80,14 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
       setLoading(true);
       setError(null);
 
-      // Fetch dashboard stats and user data in parallel
-      const [statsResponse, userResponse] = await Promise.all([
-        fetch("/api/dashboard/stats"),
-        fetch("/api/auth/me"),
-      ]);
+      const statsResponse = await fetch("/api/dashboard/stats");
 
       if (!statsResponse.ok) {
         throw new Error("Failed to fetch dashboard stats");
       }
 
-      if (!userResponse.ok) {
-        throw new Error("Failed to fetch user data");
-      }
-
       const statsData = await statsResponse.json();
-      const userData = await userResponse.json();
-
       setStats(statsData);
-      setUser(userData.user);
     } catch (err) {
       console.error("Error fetching dashboard data:", err);
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
@@ -125,12 +108,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <p className="text-slate-600">Failed to load dashboard data</p>
-        <button
-          onClick={fetchDashboardStats}
-          className="rounded-lg bg-[#0f1f3d] px-4 py-2 text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
-        >
-          Retry
-        </button>
+        <Button onClick={fetchDashboardStats}>Retry</Button>
       </div>
     );
   }
@@ -198,18 +176,20 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
     },
   };
 
-  const statusStyles: Record<string, string> = {
-    done: "bg-teal-50 text-teal-700 ring-1 ring-teal-200",
-    processing: "bg-blue-50 text-blue-700 ring-1 ring-blue-200",
-    pending_review: "bg-amber-50 text-amber-700 ring-1 ring-amber-200",
-    uploaded: "bg-slate-50 text-slate-600 ring-1 ring-slate-200",
-  };
-
-  const statusLabels: Record<string, string> = {
-    done: "Graded",
-    processing: "Processing",
-    pending_review: "Review Needed",
-    uploaded: "Queued",
+  const getActionDescription = (action: string, resource: string): string => {
+    const actionLower = action.toLowerCase();
+    switch (actionLower) {
+      case "upload":
+        return `Uploaded script: ${resource}`;
+      case "processed":
+        return `Script processed: ${resource}`;
+      case "reviewed":
+        return `Reviewed script: ${resource}`;
+      case "exam_created":
+        return `Created exam: ${resource}`;
+      default:
+        return `${action}: ${resource}`;
+    }
   };
 
   return (
@@ -233,21 +213,23 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
           </p>
         </div>
         <div className="flex items-center justify-center gap-2">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => onNavigate("upload")}
-            className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs md:text-sm font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            className="flex flex-1 sm:flex-none items-center gap-2"
           >
             <Upload size={14} />
-            <span className="hidden xs:inline">Upload</span>
-            <span className="xs:hidden">Upload</span>
-          </button>
-          <button
+            Upload
+          </Button>
+          <Button
+            size="sm"
             onClick={() => onNavigate("exams")}
-            className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-[#162b52] transition-colors"
+            className="flex flex-1 sm:flex-none items-center gap-2"
           >
             <Plus size={14} />
-            <span>New Exam</span>
-          </button>
+            New Exam
+          </Button>
         </div>
       </div>
 
@@ -446,7 +428,7 @@ export default function DashboardPage({ onNavigate }: DashboardPageProps) {
                 </div>
                 <div className="min-w-0">
                   <p className="text-[12px] font-medium text-slate-700 leading-snug">
-                    {item.action}
+                    {getActionDescription(item.action, item.resource)}
                   </p>
                   <div className="mt-1 flex items-center gap-1.5">
                     <p className="text-[10px] text-slate-400">You</p>

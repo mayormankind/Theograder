@@ -84,6 +84,8 @@ model Exam {
   scripts     Script[]
   results     Result[]
 
+  @@index([createdById])
+  @@index([status])
   @@map("exams")
 }
 
@@ -111,6 +113,8 @@ model Rubric {
   examId      String?
   questions   RubricQuestion[]
 
+  @@index([createdById])
+  @@index([examId])
   @@map("rubrics")
 }
 
@@ -166,6 +170,9 @@ model Script {
   exam        Exam @relation(fields: [examId], references: [id])
   results     Result[]
 
+  @@index([examId])
+  @@index([status])
+  @@index([studentId])
   @@map("scripts")
 }
 
@@ -197,6 +204,10 @@ model Result {
   gradedById  String
   questions   QuestionResult[]
 
+  @@index([examId])
+  @@index([scriptId])
+  @@index([gradedById])
+  @@index([status])
   @@map("results")
 }
 
@@ -227,6 +238,8 @@ model QuestionResult {
   rubricQuestionId String
   rubricQuestion RubricQuestion @relation(fields: [rubricQuestionId], references: [id])
 
+  @@index([resultId])
+  @@index([rubricQuestionId])
   @@map("question_results")
 }
 
@@ -254,6 +267,8 @@ model ActivityLog {
   userAgent   String?
   createdAt   DateTime @default(now())
 
+  @@index([userId])
+  @@index([createdAt])
   @@map("activity_logs")
 }
 
@@ -285,6 +300,8 @@ model Notification {
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
 
+  @@index([userId])
+  @@index([read])
   @@map("notifications")
 }
 

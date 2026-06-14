@@ -49,23 +49,39 @@ class GradingService {
       // Call AI service for grading
       const result = await aiClient.gradeScript(file, rubricStr);
       
-      // Transform AI service response to our format
-      const gradingResult: GradingResult = {
-        studentId: result.student_id,
-        totalScore: result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.score, 0),
-        maxScore: result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.breakdown.reduce((s: number, b: number) => s + b, 0), 0),
-        overallConfidence: result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.confidence, 0) / result.questions.length,
-        questions: result.questions.map((q: AIQuestionResult) => ({
+      // Build a lookup map: normalised question label → maxScore from the rubric
+      const rubricMaxScoreMap = new Map<string, number>();
+      for (const rq of rubric.questions) {
+        rubricMaxScoreMap.set(rq.questionNumber.toLowerCase().trim(), rq.maxScore);
+      }
+
+      const questions = result.questions.map((q: AIQuestionResult) => {
+        // Look up the declared max marks for this question from the rubric
+        const rubricMax = rubricMaxScoreMap.get(q.question.toLowerCase().trim()) ?? 0;
+        return {
           question: q.question,
           score: q.score,
-          maxScore: q.breakdown.reduce((s: number, b: number) => s + b, 0),
+          maxScore: rubricMax,
           confidence: q.confidence,
           breakdown: q.breakdown.map((similarity: number, index: number) => ({
             point: `Point ${index + 1}`,
             similarity,
             weight: 1.0
           }))
-        })),
+        };
+      });
+
+      const totalMax = rubric.questions.reduce((sum, rq) => sum + rq.maxScore, 0);
+
+      // Transform AI service response to our format
+      const gradingResult: GradingResult = {
+        studentId: result.student_id,
+        totalScore: result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.score, 0),
+        maxScore: totalMax,
+        overallConfidence: result.questions.length > 0
+          ? result.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.confidence, 0) / result.questions.length
+          : 0,
+        questions,
         processingTime: Date.now() - startTime,
         extractionMethod: 'ai-service',
         status: 'completed'
@@ -122,26 +138,31 @@ class GradingService {
         totalFiles: 0, // Would need to track this separately
         processedFiles: status.results?.length || 0,
         failedFiles: 0, // Would need to track failed files
-        results: status.results?.map((r: AIGradingResult) => ({
-          studentId: r.student_id,
-          totalScore: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.score, 0),
-          maxScore: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.breakdown.reduce((s: number, b: number) => s + b, 0), 0),
-          overallConfidence: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.confidence, 0) / r.questions.length,
-          questions: r.questions.map((q: AIQuestionResult) => ({
+        results: status.results?.map((r: AIGradingResult) => {
+          const qs = r.questions.map((q: AIQuestionResult) => ({
             question: q.question,
             score: q.score,
-            maxScore: q.breakdown.reduce((s: number, b: number) => s + b, 0),
+            maxScore: 0, // maxScore is unknown without rubric context here; caller should enrich if needed
             confidence: q.confidence,
             breakdown: q.breakdown.map((similarity: number, index: number) => ({
               point: `Point ${index + 1}`,
               similarity,
               weight: 1.0
             }))
-          })),
-          processingTime: 0,
-          extractionMethod: 'ai-service',
-          status: 'completed'
-        })) || [],
+          }));
+          return {
+            studentId: r.student_id,
+            totalScore: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.score, 0),
+            maxScore: 0, // enriched by caller with rubric data
+            overallConfidence: r.questions.length > 0
+              ? r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.confidence, 0) / r.questions.length
+              : 0,
+            questions: qs,
+            processingTime: 0,
+            extractionMethod: 'ai-service',
+            status: 'completed' as const
+          };
+        }) || [],
         createdAt: new Date(),
         completedAt: status.status === 'completed' ? new Date() : undefined
       };
@@ -152,20 +173,33 @@ class GradingService {
     }
   }
 
-  // Poll batch job status until completion
-  async pollBatchJob(jobId: string, onProgress?: (job: BatchJob) => void): Promise<BatchJob> {
+  // Poll batch job status until completion or timeout
+  async pollBatchJob(
+    jobId: string,
+    onProgress?: (job: BatchJob) => void,
+    maxAttempts: number = 60   // ~2 min at 2 s/poll before giving up
+  ): Promise<BatchJob> {
     let job: BatchJob;
-    
+    let attempts = 0;
+
     do {
+      if (attempts >= maxAttempts) {
+        throw new Error(
+          `Batch job ${jobId} did not complete after ${maxAttempts} polling attempts. ` +
+          `Last status: ${job!.status}`
+        );
+      }
+
       job = await this.getBatchJobStatus(jobId);
       onProgress?.(job);
-      
+      attempts++;
+
       if (job.status === 'pending' || job.status === 'processing') {
         // Wait 2 seconds before polling again
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     } while (job.status === 'pending' || job.status === 'processing');
-    
+
     return job;
   }
 

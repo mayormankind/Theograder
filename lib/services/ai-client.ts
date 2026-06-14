@@ -46,7 +46,8 @@ class AIClient {
 
   constructor() {
     // Default to localhost for development, can be overridden by environment
-    this.baseUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:8000';
+    // AI_SERVICE_URL must NOT have the NEXT_PUBLIC_ prefix — it is server-side only
+    this.baseUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     this.defaultTimeout = 60000; // 60 seconds default timeout
     this.maxRetries = 3;
     this.retryDelay = 1000; // 1 second base delay

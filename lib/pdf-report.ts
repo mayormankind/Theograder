@@ -1,6 +1,33 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+interface PDFQuestionResult {
+  questionId?: string;
+  questionNumber?: string;
+  score: number;
+  maxScore: number;
+  similarityScore?: number;
+  confidence?: number;
+  answer?: string;
+  studentAnswer?: string;
+}
+
+interface PDFGradingResult {
+  totalScore?: number;
+  maxScore?: number;
+  overallConfidence?: number;
+  confidence?: number;
+  gradedAt?: string | Date;
+  studentName?: string;
+  studentId?: string;
+  examTitle?: string;
+  courseCode?: string;
+  courseName?: string;
+  script?: { studentName?: string; studentId?: string };
+  exam?: { title?: string; courseCode?: string; courseName?: string };
+  questions?: PDFQuestionResult[];
+}
+
 // Helper to determine letter grade and color from percentage
 const getGradeDetails = (pct: number) => {
   if (pct >= 70) return { grade: "A", color: [13, 148, 136] }; // teal-600
@@ -10,7 +37,7 @@ const getGradeDetails = (pct: number) => {
   return { grade: "F", color: [220, 38, 38] };                 // red-600
 };
 
-export const generateIndividualReportPDF = (gradingResult: any) => {
+export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => {
   const doc = new jsPDF({
     orientation: "portrait",
     unit: "mm",
@@ -109,7 +136,7 @@ export const generateIndividualReportPDF = (gradingResult: any) => {
 
   // Row 2 Values
   doc.text(gradedDate, margin + 6, currentY + 25);
-  doc.text("TheoGrader AI (Sentence-BERT)", margin + (pageWidth - margin * 2) / 2 + 6, currentY + 25);
+  doc.text("TheoGrader AI (OpenAI text-embedding-3-small)", margin + (pageWidth - margin * 2) / 2 + 6, currentY + 25);
 
   currentY += 34;
 

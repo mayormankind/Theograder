@@ -3,6 +3,11 @@ import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { emailService } from '@/lib/services/email-service';
+import { logActivity, getClientMeta } from '@/lib/services/activity-log';
+
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -37,15 +42,14 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    // Generate reset token
+    // Generate reset token — only plain-text goes in the email link, hashed version is stored
     const resetToken = crypto.randomBytes(32).toString('hex');
     const resetExpiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
 
-    // Update user with reset token
     await prisma.user.update({
       where: { id: user.id },
       data: {
-        resetToken,
+        resetToken: hashToken(resetToken),
         resetExpiresAt: resetExpiresAt
       }
     });
@@ -97,10 +101,10 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Find user with valid reset token
+    // Find user by hashed token
     const user = await prisma.user.findFirst({
       where: {
-        resetToken: token,
+        resetToken: hashToken(token),
         resetExpiresAt: {
           gt: new Date()
         }
@@ -117,7 +121,6 @@ export async function PUT(request: NextRequest) {
     // Hash new password
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    // Update user password and clear reset token
     await prisma.user.update({
       where: { id: user.id },
       data: {
@@ -125,6 +128,16 @@ export async function PUT(request: NextRequest) {
         resetToken: null,
         resetExpiresAt: null
       }
+    });
+
+    const { ipAddress, userAgent } = getClientMeta(request);
+    await logActivity({
+      userId: user.id,
+      action: 'PASSWORD_RESET',
+      resource: 'user',
+      resourceId: user.id,
+      ipAddress,
+      userAgent,
     });
 
     return NextResponse.json(

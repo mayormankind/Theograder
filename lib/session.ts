@@ -2,6 +2,7 @@
 
 import { getIronSession, IronSession, SessionOptions } from "iron-session";
 import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
 
 export interface SessionData {
   userId?: string;
@@ -124,6 +125,31 @@ export async function destroySession(
     path: "/",
     maxAge: 0,
   });
+}
+
+// Like requireAuth but re-reads role and isActive from the DB.
+// Use this in any route that makes role-sensitive decisions.
+export async function requireAuthWithFreshRole(
+  request: NextRequest,
+): Promise<(SessionData & { role: string }) | NextResponse> {
+  const session = await getSessionData(request);
+  if (!session || !session.userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { role: true, isActive: true },
+  });
+
+  if (!dbUser || !dbUser.isActive) {
+    return NextResponse.json(
+      { error: "Account is disabled or not found" },
+      { status: 403 },
+    );
+  }
+
+  return { ...session, role: dbUser.role };
 }
 
 // Helper to create authenticated response with session

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { emailService } from '@/lib/services/email-service';
 import { createAuthResponse } from '@/lib/session';
+import { logActivity, getClientMeta } from '@/lib/services/activity-log';
+
+function hashToken(token: string): string {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,11 +46,12 @@ export async function POST(request: NextRequest) {
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
       const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-      // Update user with OTP
+      // Store hashed OTP — plain-text OTP is only sent via email, never persisted
+      const hashedOtp = hashToken(otp);
       await prisma.user.update({
         where: { id: user.id },
         data: {
-          otpCode: otp,
+          otpCode: hashedOtp,
           otpExpiresAt: otpExpiresAt
         }
       });
@@ -81,13 +88,22 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Update last login
       await prisma.user.update({
         where: { id: user.id },
         data: { lastLoginAt: new Date() }
       });
 
-      // Set session cookie and create response
+      const { ipAddress, userAgent } = getClientMeta(request);
+      await logActivity({
+        userId: user.id,
+        action: 'USER_LOGIN',
+        resource: 'user',
+        resourceId: user.id,
+        metadata: { method: 'password' },
+        ipAddress,
+        userAgent,
+      });
+
       const response = await createAuthResponse(
         request,
         {
@@ -156,8 +172,8 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Check OTP
-    if (!user.otpCode || user.otpCode !== otp) {
+    // Compare hashed OTP
+    if (!user.otpCode || user.otpCode !== hashToken(otp)) {
       return NextResponse.json(
         { error: 'Invalid OTP' },
         { status: 401 }
@@ -171,17 +187,22 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    // Clear OTP and update last login
     await prisma.user.update({
       where: { id: user.id },
-      data: {
-        otpCode: null,
-        otpExpiresAt: null,
-        lastLoginAt: new Date()
-      }
+      data: { otpCode: null, otpExpiresAt: null, lastLoginAt: new Date() }
     });
 
-    // Set session cookie and create response
+    const { ipAddress, userAgent } = getClientMeta(request);
+    await logActivity({
+      userId: user.id,
+      action: 'USER_LOGIN',
+      resource: 'user',
+      resourceId: user.id,
+      metadata: { method: 'otp' },
+      ipAddress,
+      userAgent,
+    });
+
     const response = await createAuthResponse(
       request,
       {

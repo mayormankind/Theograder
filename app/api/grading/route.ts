@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma, ResultStatus } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const examId = searchParams.get('examId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const status = searchParams.get('status') as any;
+    const status = searchParams.get('status');
 
     if (!examId) {
       return NextResponse.json({ error: 'Exam ID is required' }, { status: 400 });
@@ -32,20 +33,23 @@ export async function GET(request: NextRequest) {
 
     const skip = (page - 1) * limit;
 
-    // Build where clause for scripts
-    const scriptWhere: any = {
-      examId,
-    };
+    // Build the script-level where clause, pushing status logic into the DB
+    const scriptWhere: Prisma.ScriptWhereInput = { examId };
 
-    // Build where clause for results
-    const resultWhere: any = {
+    if (status === 'PENDING') {
+      // Scripts with no results yet
+      scriptWhere.results = { none: {} };
+    } else if (status && status !== 'ALL') {
+      // Scripts that have at least one result matching the requested status
+      scriptWhere.results = {
+        some: { examId, gradedById: session.userId!, status: status as ResultStatus },
+      };
+    }
+
+    const resultIncludeWhere = {
       examId,
       gradedById: session.userId,
     };
-
-    if (status && status !== 'ALL') {
-      resultWhere.status = status;
-    }
 
     const [scripts, total] = await Promise.all([
       prisma.script.findMany({
@@ -55,7 +59,7 @@ export async function GET(request: NextRequest) {
         orderBy: { createdAt: 'desc' },
         include: {
           results: {
-            where: resultWhere,
+            where: resultIncludeWhere,
             include: {
               _count: {
                 select: {
@@ -69,21 +73,13 @@ export async function GET(request: NextRequest) {
       prisma.script.count({ where: scriptWhere }),
     ]);
 
-    // Filter scripts based on results status
-    const filteredScripts = scripts.filter(script => {
-      if (status === 'PENDING') {
-        return script.results.length === 0;
-      }
-      return script.results.length > 0;
-    });
-
     return NextResponse.json({
-      scripts: filteredScripts,
+      scripts,
       pagination: {
         page,
         limit,
-        total: filteredScripts.length,
-        pages: Math.ceil(filteredScripts.length / limit),
+        total,
+        pages: Math.ceil(total / limit),
       },
     });
 

@@ -140,61 +140,99 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
 
     setUploading(true);
     setError(null);
-    
+
     try {
       const filesToUpload = files.filter(f => f.status === 'uploaded' && f.file);
-      
+
       if (filesToUpload.length === 0) {
         setError('No files to upload');
         return;
       }
 
-      // Upload each file
-      for (const fileItem of filesToUpload) {
+      // Step 1: Get presigned upload URLs for all files (small JSON payload — no Vercel size limit hit)
+      const presignResponse = await fetch('/api/upload/presign', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          examId: selectedExamId,
+          files: filesToUpload.map(f => ({
+            name: f.name,
+            size: f.size,
+            type: f.file!.type,
+          })),
+        }),
+      });
+
+      if (!presignResponse.ok) {
+        const errData = await presignResponse.json();
+        throw new Error(errData.error || 'Failed to initialize upload');
+      }
+
+      const { presignedFiles } = await presignResponse.json();
+
+      // Step 2 & 3: For each file, upload directly to Supabase then confirm the DB record
+      let successCount = 0;
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const fileItem = filesToUpload[i];
+        const presigned = presignedFiles[i];
+
         try {
-          setFiles(prev => prev.map(f => 
-            f.id === fileItem.id 
+          setFiles(prev => prev.map(f =>
+            f.id === fileItem.id
               ? { ...f, status: 'processing' as const, progress: 50 }
               : f
           ));
 
-          const formData = new FormData();
-          formData.append('file', fileItem.file!);
-          formData.append('examId', selectedExamId);
-
-          const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
+          // Upload directly to Supabase Storage — bypasses Vercel entirely, no size limit
+          const storageResponse = await fetch(presigned.signedUrl, {
+            method: 'PUT',
+            headers: { 'Content-Type': fileItem.file!.type },
+            body: fileItem.file!,
           });
 
-          if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Failed to upload file');
+          if (!storageResponse.ok) {
+            throw new Error('Failed to upload file to storage');
           }
 
-          setFiles(prev => prev.map(f => 
-            f.id === fileItem.id 
+          // Confirm: create the DB record (small JSON payload)
+          const confirmResponse = await fetch('/api/upload/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              examId: selectedExamId,
+              originalName: presigned.originalName,
+              fileSize: presigned.fileSize,
+              mimeType: presigned.mimeType,
+              storagePath: presigned.storagePath,
+            }),
+          });
+
+          if (!confirmResponse.ok) {
+            const errData = await confirmResponse.json();
+            throw new Error(errData.error || 'Failed to confirm upload');
+          }
+
+          successCount++;
+          setFiles(prev => prev.map(f =>
+            f.id === fileItem.id
               ? { ...f, status: 'done' as const, progress: 100, file: undefined }
               : f
           ));
         } catch (err) {
-          setFiles(prev => prev.map(f => 
-            f.id === fileItem.id 
-              ? { 
-                  ...f, 
-                  status: 'error' as const, 
+          setFiles(prev => prev.map(f =>
+            f.id === fileItem.id
+              ? {
+                  ...f,
+                  status: 'error' as const,
                   errorMessage: err instanceof Error ? err.message : 'Upload failed',
-                  file: undefined
+                  file: undefined,
                 }
               : f
           ));
         }
       }
 
-      // Navigate to scripts page after successful upload
-      const successfulUploads = files.filter(f => f.status === 'done').length;
-      if (successfulUploads > 0) {
-        // Clear the files list after successful upload to prevent re-uploading
+      if (successCount > 0) {
         setFiles([]);
         onNavigate('scripts');
       }

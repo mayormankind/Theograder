@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 import { v4 as uuidv4 } from 'uuid';
 import { uploadFileToSupabase, deleteFileFromSupabase, getSignedUrl } from '@/lib/supabase';
+import { extractAndSaveIdentity } from '@/lib/upload-utils';
 
 const uploadSchema = z.object({
   examId: z.string().min(1, 'Exam ID is required'),
@@ -341,43 +342,3 @@ export async function DELETE(request: NextRequest) {
   }
 }
 
-async function extractAndSaveIdentity(
-  scriptId: string,
-  fileUrl: string,
-  aiServiceUrl: string
-): Promise<void> {
-  try {
-    const response = await fetch(
-      `${aiServiceUrl}/extract-identity`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: fileUrl })
-      }
-    );
-
-    if (!response.ok) return;
-
-    const data = await response.json();
-
-    // Only update if we got something useful
-    if (data.matric && data.matric !== 'UNKNOWN') {
-      await prisma.script.update({
-        where: { id: scriptId },
-        data: {
-          studentId: data.matric,
-          // Only update name if extracted
-          ...(data.student_name && {
-            studentName: data.student_name
-          })
-        }
-      });
-      console.log(
-        `[Upload] Identity extracted for ${scriptId}:`,
-        data.matric
-      );
-    }
-  } catch (err) {
-    console.error('[Upload] extractAndSaveIdentity:', err);
-  }
-}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import Link from "next/link";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/validations/auth-schemas";
 
 export default function ForgotPasswordPage() {
+  useEffect(() => { document.title = "Forgot Password | TheoGrader"; }, []);
   const [isSuccess, setIsSuccess] = useState(false);
   const {
     register,

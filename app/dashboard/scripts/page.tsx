@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import ScriptsPage from "@/components/dashboard/pages/ScriptsPage";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
 
 export default function Page() {
   const router = useRouter();
+  useEffect(() => { document.title = "Scripts | TheoGrader"; }, []);
   const handleNavigate = (page: Page, params?: Record<string, string>) => {
     let url = `/dashboard/${page}`;
     if (params) {

@@ -50,8 +50,9 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Generate verification token
+    // Generate verification token — plain text goes in the email link, hashed version is stored
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
     // Create user
     const user = await prisma.user.create({
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
         verificationTokens: {
           create: {
             identifier: email.toLowerCase(),
-            token: verificationToken,
+            token: hashedVerificationToken,
             expires: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           }
         }

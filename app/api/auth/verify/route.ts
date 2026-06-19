@@ -15,10 +15,13 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Hash the incoming token — only the hashed value is stored in the DB
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
     // Find verification token
     const verificationToken = await prisma.verificationToken.findFirst({
       where: {
-        token,
+        token: hashedToken,
         expires: {
           gt: new Date()
         }
@@ -109,14 +112,15 @@ export async function POST(request: NextRequest) {
       where: { userId: user.id }
     });
 
-    // Generate new verification token
+    // Generate new verification token — plain text goes in the email link, hashed version is stored
     const verificationToken = crypto.randomBytes(32).toString('hex');
+    const hashedVerificationToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
 
     // Create new verification token
     await prisma.verificationToken.create({
       data: {
         identifier: user.email,
-        token: verificationToken,
+        token: hashedVerificationToken,
         userId: user.id,
         expires: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
       }

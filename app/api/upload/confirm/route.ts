@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
-import { getSignedUrl } from '@/lib/supabase';
+import { getSignedUrl, deleteFileFromSupabase } from '@/lib/supabase';
+import { extractAndSaveIdentity } from '@/lib/upload-utils';
 
 const confirmSchema = z.object({
   examId: z.string().min(1),
@@ -14,6 +15,9 @@ const confirmSchema = z.object({
 
 // POST /api/upload/confirm - Create DB record after a successful direct Supabase upload
 export async function POST(request: NextRequest) {
+  // Track storagePath so we can delete the orphaned Supabase file if DB operations fail
+  let confirmedStoragePath: string | null = null;
+
   try {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
@@ -21,6 +25,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { examId, originalName, fileSize, mimeType, storagePath } =
       confirmSchema.parse(body);
+
+    confirmedStoragePath = storagePath;
 
     // Verify the storagePath was generated for this user and exam (security check)
     if (!storagePath.startsWith(`${session.userId}/${examId}/`)) {
@@ -100,38 +106,16 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Clean up the orphaned Supabase file if it was uploaded but DB record creation failed
+    if (confirmedStoragePath) {
+      deleteFileFromSupabase('uploads', confirmedStoragePath)
+        .then(() => console.log('[Confirm] Cleaned up orphaned file:', confirmedStoragePath))
+        .catch(err => console.error('[Confirm] Failed to clean up orphaned file:', err));
+    }
+
     console.error('Error confirming upload:', error);
     return NextResponse.json({ error: 'Failed to confirm upload' }, { status: 500 });
   }
 }
 
-async function extractAndSaveIdentity(
-  scriptId: string,
-  fileUrl: string,
-  aiServiceUrl: string
-): Promise<void> {
-  try {
-    const response = await fetch(`${aiServiceUrl}/extract-identity`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: fileUrl }),
-    });
-
-    if (!response.ok) return;
-
-    const data = await response.json();
-
-    if (data.matric && data.matric !== 'UNKNOWN') {
-      await prisma.script.update({
-        where: { id: scriptId },
-        data: {
-          studentId: data.matric,
-          ...(data.student_name && { studentName: data.student_name }),
-        },
-      });
-      console.log(`[Confirm] Identity extracted for ${scriptId}:`, data.matric);
-    }
-  } catch (err) {
-    console.error('[Confirm] extractAndSaveIdentity:', err);
-  }
-}

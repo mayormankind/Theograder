@@ -13,7 +13,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TheoGrader",
+  title: {
+    template: "%s | TheoGrader",
+    default: "TheoGrader",
+  },
   description: "Intelligent assessment grading for Nigerian universities.",
 };
 
@@ -25,19 +28,10 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
+      data-theme="light"
       className={cn("font-sans", geist.variable)}
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `document.documentElement.setAttribute("data-theme","light");document.documentElement.classList.remove("dark");`,
-          }}
-        />
-      </head>
-      <body
-        className={`${jetbrainsMono.variable} antialiased`}
-      >
+      <body className={`${jetbrainsMono.variable} antialiased`}>
         <ThemeProvider>
           {children}
           <Toaster richColors position="top-right" />

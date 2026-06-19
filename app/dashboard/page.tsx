@@ -1,11 +1,13 @@
 "use client";
 
+import { useEffect } from "react";
 import DashboardPage from "@/components/dashboard/pages/DashboardPage";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
 
 export default function Page() {
   const router = useRouter();
+  useEffect(() => { document.title = "Dashboard | TheoGrader"; }, []);
   const handleNavigate = (page: Page) => {
     if (page === "dashboard") {
       router.push("/dashboard");

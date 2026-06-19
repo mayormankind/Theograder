@@ -41,6 +41,8 @@ export default function LoginPage() {
     mode: "onBlur",
   });
 
+  useEffect(() => { document.title = "Login | TheoGrader"; }, []);
+
   // Check if user is already logged in
   useEffect(() => {
     const checkAuth = async () => {

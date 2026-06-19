@@ -8,12 +8,6 @@ interface ThemeContextType {
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
-// Apply light theme immediately to prevent flash
-if (typeof window !== "undefined") {
-  document.documentElement.setAttribute("data-theme", "light");
-  document.documentElement.classList.remove("dark");
-}
-
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   return (
     <ThemeContext.Provider value={{ mounted: true }}>

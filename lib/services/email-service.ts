@@ -10,41 +10,21 @@ export interface EmailOptions {
 class EmailService {
   private transporter: nodemailer.Transporter | null = null;
 
-  constructor() {
-    this.initializeTransporter();
-  }
-
-  private initializeTransporter() {
-    try {
-      this.transporter = nodemailer.createTransport({
-        // host: process.env.SMTP_HOST || 'smtp.gmail.com',
-        service: "gmail",
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      // Verify connection
-      this.transporter.verify((error: Error | null, success: boolean) => {
-        if (error) {
-          console.error('Email service configuration error:', error);
-        } else {
-          console.log('Email service is ready to send messages');
-        }
-      });
-    } catch (error) {
-      console.error('Failed to initialize email service:', error);
-    }
+  private getTransporter(): nodemailer.Transporter {
+    if (this.transporter) return this.transporter;
+    this.transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+    return this.transporter;
   }
 
   async sendEmail(options: EmailOptions): Promise<boolean> {
-    if (!this.transporter) {
-      console.error('Email service not initialized');
-      return false;
-    }
-
     try {
+      const transporter = this.getTransporter();
       const mailOptions = {
         from: process.env.SMTP_FROM || `"TheoGrader" <${process.env.SMTP_USER}>`,
         to: options.to,
@@ -53,7 +33,7 @@ class EmailService {
         text: options.text,
       };
 
-      const result = await this.transporter.sendMail(mailOptions);
+      const result = await transporter.sendMail(mailOptions);
       console.log('Email sent successfully:', result.messageId);
       return true;
     } catch (error) {

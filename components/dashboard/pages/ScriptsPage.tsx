@@ -83,6 +83,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [searchQuery, setSearchQuery] = useState(""); // debounced server-side value
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedExamId, setSelectedExamId] = useState<string>("all");
   const [batchGrading, setBatchGrading] = useState(false);
@@ -110,9 +111,22 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     fetchScripts();
   }, []);
 
+  // Debounce search input — update searchQuery after 300 ms of no typing
   useEffect(() => {
-    fetchScripts(currentPage);
-  }, [selectedExamId, currentPage]);
+    const timer = setTimeout(() => {
+      setSearchQuery(search);
+      setCurrentPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [search]);
+
+  useEffect(() => {
+    fetchScripts(1);
+  }, [selectedExamId, searchQuery]);
+
+  useEffect(() => {
+    if (currentPage > 1) fetchScripts(currentPage);
+  }, [currentPage]);
 
   const fetchExams = async () => {
     try {
@@ -158,6 +172,9 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       });
       if (selectedExamId !== "all") {
         urlParams.append("examId", selectedExamId);
+      }
+      if (searchQuery) {
+        urlParams.append("search", searchQuery);
       }
 
       const response = await fetch(`/api/upload?${urlParams.toString()}`);
@@ -519,13 +536,9 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     }
   };
 
+  // Search is handled server-side via ?search= param; only statusFilter is applied client-side
   const filtered = scripts.filter((s: Script) => {
-    const matchSearch =
-      s.studentName.toLowerCase().includes(search.toLowerCase()) ||
-      s.studentId.toLowerCase().includes(search.toLowerCase()) ||
-      (s.examTitle || "").toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "all" || s.status === statusFilter;
-    return matchSearch && matchStatus;
+    return statusFilter === "all" || s.status === statusFilter;
   });
 
   const counts = {

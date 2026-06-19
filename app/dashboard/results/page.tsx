@@ -1,7 +1,7 @@
 // src/app/dashboard/results/page.tsx
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import ResultsPage from "@/components/dashboard/pages/ResultsPage";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
@@ -18,6 +18,7 @@ function ResultsPageWrapper({
 
 export default function Page() {
   const router = useRouter();
+  useEffect(() => { document.title = "Results | TheoGrader"; }, []);
   const handleNavigate = (page: Page, params?: Record<string, string>) => {
     let url = `/dashboard/${page}`;
     if (params) {

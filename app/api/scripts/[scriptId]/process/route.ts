@@ -1,4 +1,8 @@
 // app/api/scripts/[scriptId]/process/route.ts
+// OCR + segmentation + grading is long-running; override Vercel's 10s default.
+// Requires Vercel Pro (max 300s). On Hobby the cap is 60s — adjust accordingly.
+export const maxDuration = 300;
+
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
@@ -213,31 +217,32 @@ export async function POST(
 
     const gradeData = await gradeResponse.json();
 
+    // ── Compute aggregates once (reused in transaction, notification, and response) ──
+    const totalScore =
+      gradeData.questions?.reduce(
+        (sum: number, q: any) => sum + (q.score || 0),
+        0,
+      ) || 0;
+    const avgConfidence =
+      gradeData.questions?.length > 0
+        ? gradeData.questions.reduce(
+            (sum: number, q: any) => sum + (q.confidence || 0),
+            0,
+          ) / gradeData.questions.length
+        : 0.5;
+    const avgConfidencePct = Math.round(avgConfidence * 100);
+    const isFlagged = shouldAutoFlag && avgConfidencePct < threshold;
+    const resultStatus = isFlagged ? "PENDING" : "APPROVED";
+
     // ── SAVE GRADES TO DB ─────────────────────────────────
     await prisma.$transaction(async (tx) => {
-      const totalScore =
-        gradeData.questions?.reduce(
-          (sum: number, q: any) => sum + (q.score || 0),
-          0,
-        ) || 0;
-      const avgConfidence =
-        gradeData.questions?.length > 0
-          ? gradeData.questions.reduce(
-              (sum: number, q: any) => sum + (q.confidence || 0),
-              0,
-            ) / gradeData.questions.length
-          : 0.5;
-      const avgConfidencePct = Math.round(avgConfidence * 100);
-      const isFlagged = shouldAutoFlag && avgConfidencePct < threshold;
-      const resultStatus = isFlagged ? "PENDING" : "APPROVED";
-
       // Create main result
       const newResult = await tx.result.create({
         data: {
           scriptId: script.id,
           examId: script.examId,
           gradedById: session.userId!,
-          totalScore: totalScore,
+          totalScore,
           maxScore: script.exam.totalMarks,
           confidence: avgConfidence,
           status: resultStatus,
@@ -307,37 +312,21 @@ export async function POST(
       },
     }).catch(err => console.error('Failed to log script processed activity:', err));
 
-    // Compute total score to return to frontend
-    const totalScore =
-      gradeData.questions?.reduce(
-        (sum: number, q: any) => sum + (q.score || 0),
-        0,
-      ) || 0;
     const totalPossible = script.exam.totalMarks;
 
-    // Fire & Forget: Dispatch script flagged notification if grading confidence fell below threshold
-    const finalAvgConfidence =
-      gradeData.questions?.length > 0
-        ? gradeData.questions.reduce(
-            (sum: number, q: any) => sum + (q.confidence || 0),
-            0,
-          ) / gradeData.questions.length
-        : 0.5;
-    const finalAvgConfidencePct = Math.round(finalAvgConfidence * 100);
-    const wasFlagged = shouldAutoFlag && finalAvgConfidencePct < threshold;
-
-    if (wasFlagged) {
+    // Fire & Forget: Dispatch script flagged notification if confidence fell below threshold
+    if (isFlagged) {
       notificationService
         .notify({
           userId: session.userId!,
           type: "SCRIPT_FLAGGED",
           title: "Script Flagged for Manual Review",
-          message: `Student matric number "${script.studentId || "Unknown"}" graded with ${finalAvgConfidencePct}% confidence (threshold: ${threshold}%).`,
+          message: `Student matric number "${script.studentId || "Unknown"}" graded with ${avgConfidencePct}% confidence (threshold: ${threshold}%).`,
           link: `/dashboard/grading?scriptId=${script.id}&examId=${script.examId}`,
           metadata: {
             scriptId: script.id,
             studentId: script.studentId,
-            confidence: finalAvgConfidencePct,
+            confidence: avgConfidencePct,
           },
         })
         .catch((err) =>

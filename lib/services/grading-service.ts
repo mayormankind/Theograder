@@ -1,4 +1,5 @@
 import { aiClient, type ExtractedRubric, type AIGradingResult, type AIQuestionResult } from './ai-client';
+import { prisma } from '@/lib/prisma';
 
 export interface GradingQuestion {
   question: string;
@@ -103,7 +104,7 @@ class GradingService {
     }
   }
 
-  async batchGradeScripts(files: File[], rubric: ExtractedRubric): Promise<BatchJob> {
+  async batchGradeScripts(files: File[], rubric: ExtractedRubric, userId?: string): Promise<BatchJob> {
     try {
       // Convert rubric to JSON string
       const rubricStr = JSON.stringify(rubric);
@@ -111,6 +112,23 @@ class GradingService {
       // Start batch grading job
       const batchResult = await aiClient.batchGradeScripts(files, rubricStr);
       
+      // Build rubricData: normalised questionNumber → maxScore
+      const rubricData: Record<string, number> = {};
+      for (const rq of rubric.questions) {
+        rubricData[rq.questionNumber.toLowerCase().trim()] = rq.maxScore;
+      }
+
+      // Persist metadata to DB so any serverless instance can read it during polling
+      await prisma.batchJobMeta.create({
+        data: {
+          jobId: batchResult.job_id,
+          userId: userId ?? null,
+          totalFiles: files.length,
+          rubricData,
+          expiresAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2-hour TTL
+        },
+      }).catch(err => console.error('[BatchJob] Failed to persist metadata:', err));
+
       const batchJob: BatchJob = {
         id: batchResult.job_id,
         status: 'pending',
@@ -131,18 +149,25 @@ class GradingService {
     try {
       const status = await aiClient.getBatchGradingStatus(jobId);
       
+      // Read metadata from DB — works across serverless instances
+      const metaRow = await prisma.batchJobMeta.findUnique({ where: { jobId } }).catch(() => null);
+      const rubricData = metaRow?.rubricData as Record<string, number> | null;
+      const totalRubricMax = rubricData
+        ? Object.values(rubricData).reduce((a, b) => a + b, 0)
+        : 0;
+
       // Transform AI service response to our format
       const batchJob: BatchJob = {
         id: status.job_id,
         status: status.status as BatchJob['status'],
-        totalFiles: 0, // Would need to track this separately
+        totalFiles: metaRow?.totalFiles ?? status.results?.length ?? 0,
         processedFiles: status.results?.length || 0,
-        failedFiles: 0, // Would need to track failed files
+        failedFiles: 0,
         results: status.results?.map((r: AIGradingResult) => {
           const qs = r.questions.map((q: AIQuestionResult) => ({
             question: q.question,
             score: q.score,
-            maxScore: 0, // maxScore is unknown without rubric context here; caller should enrich if needed
+            maxScore: rubricData?.[q.question.toLowerCase().trim()] ?? 0,
             confidence: q.confidence,
             breakdown: q.breakdown.map((similarity: number, index: number) => ({
               point: `Point ${index + 1}`,
@@ -153,12 +178,12 @@ class GradingService {
           return {
             studentId: r.student_id,
             totalScore: r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.score, 0),
-            maxScore: 0, // enriched by caller with rubric data
+            maxScore: totalRubricMax,
             overallConfidence: r.questions.length > 0
               ? r.questions.reduce((sum: number, q: AIQuestionResult) => sum + q.confidence, 0) / r.questions.length
               : 0,
             questions: qs,
-            processingTime: 0,
+            processingTime: metaRow ? Date.now() - metaRow.startedAt.getTime() : 0,
             extractionMethod: 'ai-service',
             status: 'completed' as const
           };
@@ -199,6 +224,9 @@ class GradingService {
         await new Promise(resolve => setTimeout(resolve, 2000));
       }
     } while (job.status === 'pending' || job.status === 'processing');
+
+    // Delete DB metadata once the job has settled
+    await prisma.batchJobMeta.delete({ where: { jobId } }).catch(() => {});
 
     return job;
   }

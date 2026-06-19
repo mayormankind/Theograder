@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useEffect } from "react";
 import SettingsPage from "@/components/dashboard/pages/SettingsPage";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 
 export default function Page() {
   const router = useRouter();
+  useEffect(() => { document.title = "Settings | TheoGrader"; }, []);
   const handleNavigate = (page: Page) => {
     router.push(`/dashboard/${page}`);
   };

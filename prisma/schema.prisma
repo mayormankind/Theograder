@@ -312,3 +312,18 @@ enum NotificationType {
   RUBRIC_EXTRACTED
 }
 
+// Temporary metadata for in-flight batch grading jobs.
+// Replaces the in-memory Map so metadata is shared across serverless instances.
+// Rows are deleted automatically once polling completes.
+model BatchJobMeta {
+  jobId      String   @id
+  userId     String?
+  totalFiles Int
+  startedAt  DateTime @default(now())
+  rubricData Json
+  expiresAt  DateTime
+
+  @@index([expiresAt])
+  @@map("batch_job_meta")
+}
+

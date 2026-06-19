@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 
@@ -8,7 +9,7 @@ export async function GET(request: NextRequest) {
     const session = await requireAuth(request);
     if (session instanceof NextResponse) return session;
 
-    // Get all stats in parallel for better performance
+    // All DB queries in a single parallel batch
     const [
       totalExams,
       totalScriptsGraded,
@@ -16,6 +17,8 @@ export async function GET(request: NextRequest) {
       avgConfidence,
       recentActivity,
       gradingTrends,
+      examsByStatus,
+      scoreDistribution,
     ] = await Promise.all([
       // Total exams created by user
       prisma.exam.count({
@@ -67,33 +70,19 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Grading trends (last 30 days)
-      prisma.result.groupBy({
-        by: ['gradedAt'],
-        where: {
-          gradedById: session.userId,
-          gradedAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
-          },
-        },
-        _count: {
-          id: true,
-        },
-        _avg: {
-          confidence: true,
-        },
-      }),
-    ]);
+      // Grading trends (last 30 days, grouped by calendar day)
+      prisma.$queryRaw<Array<{ date: Date; count: number; avg_confidence: number | null }>>(Prisma.sql`
+        SELECT
+          DATE("gradedAt")   AS date,
+          COUNT(id)::int     AS count,
+          AVG(confidence)    AS avg_confidence
+        FROM results
+        WHERE "gradedById" = ${session.userId}
+          AND "gradedAt" >= ${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)}
+        GROUP BY DATE("gradedAt")
+        ORDER BY date ASC
+      `),
 
-    // Format grading trends for chart display
-    const trends = gradingTrends.map(trend => ({
-      date: trend.gradedAt.toISOString().split('T')[0],
-      count: trend._count.id,
-      avgConfidence: trend._avg.confidence || 0,
-    }));
-
-    // Get additional stats
-    const [examsByStatus, scoreDistribution] = await Promise.all([
       // Exams by status
       prisma.exam.groupBy({
         by: ['status'],
@@ -116,6 +105,16 @@ export async function GET(request: NextRequest) {
         },
       }),
     ]);
+
+    // Format grading trends for chart display
+    const trends = gradingTrends.map(row => ({
+      date: row.date instanceof Date
+        ? row.date.toISOString().split('T')[0]
+        : String(row.date),
+      count: Number(row.count),
+      avgConfidence: row.avg_confidence ?? 0,
+    }));
+
 
     // Format exams by status
     const examStatusCounts = examsByStatus.reduce((acc, item) => {

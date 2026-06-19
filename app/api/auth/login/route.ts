@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     if (useOTP) {
       // Generate and send OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otp = crypto.randomInt(100000, 1000000).toString();
       const otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
       // Store hashed OTP — plain-text OTP is only sent via email, never persisted

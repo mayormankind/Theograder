@@ -1,17 +1,30 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+// Lazy singleton — initialised on first actual use, not at module load time.
+// This prevents a cold-start throw when env vars are absent during the build phase.
+let _client: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables');
+function getClient(): SupabaseClient {
+  if (_client) return _client;
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      'Missing Supabase environment variables: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY'
+    );
+  }
+  _client = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return _client;
 }
 
-export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-  auth: {
-    autoRefreshToken: false,
-    persistSession: false
-  }
+// Backward-compatible named export used by presign/route.ts and any direct callers.
+// The proxy defers env-var access to the first method call, not module load time.
+export const supabase = new Proxy({} as SupabaseClient, {
+  get(_, prop: string) {
+    return (getClient() as unknown as Record<string, unknown>)[prop];
+  },
 });
 
 // Helper function to upload file to Supabase Storage

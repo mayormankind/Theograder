@@ -115,17 +115,29 @@ export default function UploadPage({ onNavigate }: UploadPageProps) {
       return;
     }
 
-    const mapped: FileItem[] = validFiles.map((f, i) => ({
+    // Deduplicate against already-queued files (name + size fingerprint)
+    const existingKeys = new Set(files.map(f => `${f.name}-${f.size}`));
+    const deduped = validFiles.filter(f => !existingKeys.has(`${f.name}-${f.size}`));
+
+    if (deduped.length === 0) {
+      setError('All selected files are already in the queue.');
+      return;
+    }
+
+    const skipped = validFiles.length - deduped.length;
+
+    const mapped: FileItem[] = deduped.map((f, i) => ({
       id: `new-${Date.now()}-${i}`,
       name: f.name,
       size: f.size,
       type: f.name.endsWith('.pdf') ? 'pdf' : 'image',
-      status: 'uploaded',
+      status: 'uploaded' as const,
       progress: 100,
       file: f,
     }));
-    setFiles((prev) => [...prev, ...mapped]);
-    setError(null);
+
+    setFiles(prev => [...prev, ...mapped]);
+    setError(skipped > 0 ? `${skipped} duplicate file${skipped > 1 ? 's' : ''} skipped.` : null);
   };
 
   const removeFile = (id: string) => {

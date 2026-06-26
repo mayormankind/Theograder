@@ -64,6 +64,8 @@ export interface GradingResult {
   overrideScore?: number;
   answer?: string;
   questionText?: string;
+  countedInTotal?: boolean;
+  excludedReason?: string | null;
 }
 
 export interface ActivityItem {

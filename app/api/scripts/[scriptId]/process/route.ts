@@ -8,6 +8,8 @@ import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { downloadFileFromSupabase, getSignedUrl } from "@/lib/supabase";
 import { notificationService } from "@/lib/services/notification-service";
+import { selectAnswers, GradedQuestion } from '@/lib/utils/answer-selector';
+import { ParsedInstruction } from '@/lib/utils/instruction-parser';
 
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
 export async function POST(
@@ -217,19 +219,79 @@ export async function POST(
 
     const gradeData = await gradeResponse.json();
 
-    // ── Compute aggregates once (reused in transaction, notification, and response) ──
-    const totalScore =
-      gradeData.questions?.reduce(
-        (sum: number, q: any) => sum + (q.score || 0),
-        0,
-      ) || 0;
-    const avgConfidence =
-      gradeData.questions?.length > 0
-        ? gradeData.questions.reduce(
+    // ── APPLY ANSWER SELECTION ──────────────────────
+    const instruction = script.exam.parsedInstruction as 
+      ParsedInstruction | null;
+    const strategy = (script.exam.selectionStrategy || 
+      'BEST_SCORE') as 'BEST_SCORE' | 'FIRST_N';
+
+    // Build GradedQuestion array from gradeData
+    const gradedQuestions: GradedQuestion[] = 
+      (gradeData.questions || []).map(
+        (q: any, index: number) => {
+          const rubricQ = rubric.questions.find(rq => {
+            const norm = (s: string) => 
+              s.toLowerCase()
+               .replace(/^question\s*/i, '')
+               .replace(/^q/, '')
+               .trim();
+            return norm(rq.questionId) === norm(q.question);
+          });
+          return {
+            id: q.question,        // temp id for selection
+            questionId: q.question,
+            score: q.score || 0,
+            maxScore: rubricQ?.maxScore || 0,
+            documentOrder: index
+          };
+        }
+      );
+
+    // Run selection
+    const selectionResult = instruction
+      ? selectAnswers(gradedQuestions, instruction, strategy)
+      : {
+          selected: gradedQuestions,
+          excluded: [],
+          totalScore: gradedQuestions.reduce(
+            (s, q) => s + q.score, 0
+          ),
+          totalMaxScore: gradedQuestions.reduce(
+            (s, q) => s + q.maxScore, 0
+          ),
+          selectionApplied: false,
+          strategy: 'BEST_SCORE'
+        };
+
+    // Build a set of selected question IDs for lookup
+    const selectedQuestionIds = new Set(
+      selectionResult.selected.map(q => q.questionId)
+    );
+
+    // Build exclusion reason map
+    const exclusionReasons = new Map<string, string>();
+    selectionResult.excluded.forEach(q => {
+      exclusionReasons.set(
+        q.questionId,
+        strategy === 'BEST_SCORE'
+          ? `Not selected — lower score (${q.score}/${q.maxScore})` 
+          : `Not selected — answered after required limit` 
+      );
+    });
+
+    // ── SAVE RESULT WITH CORRECT TOTALS ─────────────
+    // Use selectionResult totals, NOT raw gradeData totals
+    const totalScore = selectionResult.totalScore;
+    const avgConfidence = gradeData.questions?.length > 0
+      ? gradeData.questions
+          .filter((q: any) => 
+            selectedQuestionIds.has(q.question)
+          )
+          .reduce(
             (sum: number, q: any) => sum + (q.confidence || 0),
-            0,
-          ) / gradeData.questions.length
-        : 0.5;
+            0
+          ) / Math.max(selectionResult.selected.length, 1)
+      : 0.5;
     const avgConfidencePct = Math.round(avgConfidence * 100);
     const isFlagged = shouldAutoFlag && avgConfidencePct < threshold;
     const resultStatus = isFlagged ? "PENDING" : "APPROVED";
@@ -242,8 +304,9 @@ export async function POST(
           scriptId: script.id,
           examId: script.examId,
           gradedById: session.userId!,
-          totalScore,
-          maxScore: script.exam.totalMarks,
+          totalScore: Math.round(totalScore * 10) / 10,
+          maxScore: selectionResult.totalMaxScore || 
+                    script.exam.totalMarks,
           confidence: avgConfidence,
           status: resultStatus,
         },
@@ -266,6 +329,13 @@ export async function POST(
           );
 
           if (rubricQuestion) {
+            const isCounted = selectedQuestionIds.has(
+              question.question
+            );
+            const excludedReason = exclusionReasons.get(
+              question.question
+            ) || null;
+
             // Find the student answer from segments
             const answerFromSegments =
               Object.entries(segments).find(
@@ -287,6 +357,8 @@ export async function POST(
                   partialConcepts: question.partial_concepts || [],
                   missingConcepts: question.missing_concepts || [],
                 },
+                countedInTotal: isCounted,
+                excludedReason: excludedReason,
                 rubricQuestionId: rubricQuestion.id,
               },
             });
@@ -312,7 +384,7 @@ export async function POST(
       },
     }).catch(err => console.error('Failed to log script processed activity:', err));
 
-    const totalPossible = script.exam.totalMarks;
+    const totalPossible = selectionResult.totalMaxScore || script.exam.totalMarks;
 
     // Fire & Forget: Dispatch script flagged notification if confidence fell below threshold
     if (isFlagged) {
@@ -337,8 +409,11 @@ export async function POST(
     return NextResponse.json({
       success: true,
       scriptId,
-      totalScore: Math.round(totalScore * 10) / 10,
+      totalScore: Math.round(selectionResult.totalScore * 10) / 10,
       totalPossible,
+      selectionApplied: selectionResult.selectionApplied,
+      selectedCount: selectionResult.selected.length,
+      excludedCount: selectionResult.excluded.length,
       grades: gradeData.questions,
     });
   } catch (error: any) {

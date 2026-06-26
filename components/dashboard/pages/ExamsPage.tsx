@@ -30,6 +30,8 @@ interface Exam {
   status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
   createdAt: string;
   updatedAt: string;
+  examInstructions?: string;
+  selectionStrategy?: 'BEST_SCORE' | 'FIRST_N';
   rubrics?: Array<{
     id: string;
     title: string;
@@ -100,6 +102,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
     duration: number;
     examDate: string;
     status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+    examInstructions: string;
+    selectionStrategy: 'BEST_SCORE' | 'FIRST_N';
   }>({
     title: '',
     description: '',
@@ -109,6 +113,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
     duration: 120,
     examDate: '',
     status: 'DRAFT',
+    examInstructions: '',
+    selectionStrategy: 'BEST_SCORE',
   });
 
   useEffect(() => {
@@ -188,6 +194,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
         duration: 120,
         examDate: '',
         status: 'DRAFT',
+        examInstructions: '',
+        selectionStrategy: 'BEST_SCORE',
       });
     } catch (err) {
       console.error('Error saving exam:', err);
@@ -208,6 +216,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
       duration: exam.duration || 120,
       examDate: formatInputDate(exam.examDate),
       status: exam.status as 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED',
+      examInstructions: exam.examInstructions || '',
+      selectionStrategy: exam.selectionStrategy || 'BEST_SCORE',
     });
     setShowEditModal(true);
   };
@@ -454,6 +464,33 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
             <div className="flex flex-col gap-1.5">
               <Label>Exam Date</Label>
               <Input type="datetime-local" value={formData.examDate} onChange={(e) => setFormData({ ...formData, examDate: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Examination Instructions</Label>
+              <Input
+                type="text"
+                placeholder='e.g. "Answer any 3 questions" or "Answer Question 1 and any other 2"'
+                value={formData.examInstructions}
+                onChange={(e) => setFormData({ ...formData, examInstructions: e.target.value })}
+              />
+              <p className="text-[11px] text-slate-400">
+                The system will automatically apply best-answer selection when students answer more questions than required.
+              </p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label>Selection Strategy</Label>
+              <select
+                value={formData.selectionStrategy}
+                onChange={(e) => setFormData({ ...formData, selectionStrategy: e.target.value as any })}
+                className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
+              >
+                <option value="BEST_SCORE">
+                  Best Score (count highest-scoring answers)
+                </option>
+                <option value="FIRST_N">
+                  First Answered (count answers in order written)
+                </option>
+              </select>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Status</Label>

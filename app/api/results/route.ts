@@ -87,8 +87,14 @@ export async function GET(request: NextRequest) {
           matchedConcepts: breakdown.matchedConcepts || [],
           partialConcepts: breakdown.partialConcepts || [],
           missingConcepts: breakdown.missingConcepts || [],
+          countedInTotal: q.countedInTotal,
+          excludedReason: q.excludedReason || null,
         };
       });
+
+      const selectionApplied = result.questions.some(
+        q => !q.countedInTotal
+      );
 
       return NextResponse.json({
         resultId: result.id,
@@ -97,6 +103,7 @@ export async function GET(request: NextRequest) {
         courseCode: result.exam?.courseCode || "",
         courseName: result.exam?.courseName || result.exam?.title || "",
         results: mappedResults,
+        selectionApplied,
       });
     }
 

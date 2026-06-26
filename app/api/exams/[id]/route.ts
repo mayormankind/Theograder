@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
+import { parseExamInstruction } from '@/lib/utils/instruction-parser';
 
 const updateExamSchema = z.object({
   title: z.string().min(1, 'Title is required').optional(),
@@ -12,6 +13,8 @@ const updateExamSchema = z.object({
   duration: z.number().optional(),
   examDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
   status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
+  examInstructions: z.string().optional(),
+  selectionStrategy: z.enum(['BEST_SCORE', 'FIRST_N']).optional(),
 });
 
 // GET /api/exams/[id] - Get a single exam
@@ -118,9 +121,21 @@ export async function PUT(
     const body = await request.json();
     const validatedData = updateExamSchema.parse(body);
 
+    const { examInstructions, selectionStrategy, ...rest } = validatedData;
+
+    // Parse instruction if provided
+    const parsedInstruction = examInstructions 
+      ? parseExamInstruction(examInstructions)
+      : null;
+
     const updatedExam = await prisma.exam.update({
       where: { id: id },
-      data: validatedData,
+      data: {
+        ...rest,
+        ...(examInstructions !== undefined && { examInstructions: examInstructions || null }),
+        ...(parsedInstruction !== null && { parsedInstruction: JSON.parse(JSON.stringify(parsedInstruction)) }),
+        ...(selectionStrategy !== undefined && { selectionStrategy }),
+      },
       include: {
         createdBy: {
           select: {
@@ -179,9 +194,21 @@ export async function PATCH(
     const body = await request.json();
     const validatedData = updateExamSchema.parse(body);
 
+    const { examInstructions, selectionStrategy, ...rest } = validatedData;
+
+    // Parse instruction if provided
+    const parsedInstruction = examInstructions 
+      ? parseExamInstruction(examInstructions)
+      : null;
+
     const updatedExam = await prisma.exam.update({
       where: { id: id },
-      data: validatedData,
+      data: {
+        ...rest,
+        ...(examInstructions !== undefined && { examInstructions: examInstructions || null }),
+        ...(parsedInstruction !== null && { parsedInstruction: JSON.parse(JSON.stringify(parsedInstruction)) }),
+        ...(selectionStrategy !== undefined && { selectionStrategy }),
+      },
       include: {
         createdBy: {
           select: {

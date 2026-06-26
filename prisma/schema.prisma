@@ -74,6 +74,9 @@ model Exam {
   duration    Int?     // Duration in minutes
   examDate    DateTime?
   status      ExamStatus @default(DRAFT)
+  examInstructions String?  // raw instruction text e.g. "Answer any 3 questions"
+  parsedInstruction Json?    // structured parsed object
+  selectionStrategy String   @default("BEST_SCORE")  // "BEST_SCORE" or "FIRST_N"
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -231,6 +234,8 @@ model QuestionResult {
   feedback    String?
   overridden  Boolean @default(false)
   originalScore Float?
+  countedInTotal Boolean @default(true)
+  excludedReason String?  // e.g. "Not selected - lower score"
 
   // Relations
   resultId    String

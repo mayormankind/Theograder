@@ -47,6 +47,8 @@ interface Exam {
   examDate?: string;
   status: "DRAFT" | "ACTIVE" | "COMPLETED" | "ARCHIVED";
   createdAt: string;
+  examInstructions?: string;
+  selectionStrategy?: string;
   rubrics?: Array<{
     id: string;
     title: string;
@@ -255,7 +257,15 @@ export default function ExamDetailPage() {
           <ArrowLeft size={20} className="text-slate-600" />
         </button>
         <div className="flex-1">
-          <h1 className="text-xl font-semibold text-slate-800">{exam.title}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-semibold text-slate-800">{exam.title}</h1>
+            {exam.examInstructions && (
+              <span className="text-[11px] text-slate-500 
+                bg-slate-100 px-2 py-1 rounded-full">
+                {exam.examInstructions}
+              </span>
+            )}
+          </div>
           <p className="text-sm text-slate-500 mt-0.5">
             {exam.courseCode} · {exam.courseName}
           </p>

@@ -15,6 +15,7 @@ import {
   ArrowRight,
   Sparkles,
   Loader2,
+  Info,
 } from "lucide-react";
 import type { Page, GradingResult } from "@/types";
 import { cn } from "@/lib/utils";
@@ -117,6 +118,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
   const [courseCode, setCourseCode] = useState<string | null>(null);
   const [courseName, setCourseName] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"breakdown" | "script">("breakdown");
+  const [selectionApplied, setSelectionApplied] = useState(false);
 
   useEffect(() => {
     if (scriptId) {
@@ -142,6 +144,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
       setStudentName(data.studentName || null);
       setCourseCode(data.courseCode || null);
       setCourseName(data.courseName || null);
+      setSelectionApplied(data.selectionApplied || false);
     } catch (err) {
       console.error("Error fetching results:", err);
       setError("Failed to load results");
@@ -420,6 +423,21 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
             </div>
           </div>
 
+          {selectionApplied && (
+            <div className="mx-5 mt-3 flex items-start gap-2 
+              rounded-lg border border-blue-100 bg-blue-50 
+              px-3 py-2">
+              <Info size={12} className="mt-0.5 text-blue-500 
+                shrink-0" />
+              <p className="text-[11px] text-blue-700">
+                Best-answer selection was applied. Only the 
+                highest-scoring questions are counted toward 
+                the total. Excluded answers are still shown 
+                below for reference.
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-col gap-0 divide-y divide-slate-100">
             {Object.entries(groupedByQ).map(([qNum, parts]) => {
               const qTotal = parts.reduce((a, p) => {
@@ -442,6 +460,13 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
                       <span className="text-[11px] text-slate-400 font-normal">
                         {qMax} marks total
                       </span>
+                      {parts.some(p => !p.countedInTotal) && (
+                        <span className="flex items-center gap-1 
+                          text-[10px] text-slate-400 bg-slate-100 
+                          px-2 py-0.5 rounded-full line-through">
+                          Not counted
+                        </span>
+                      )}
                     </div>
                     <span className={cn(
                       "text-sm font-bold",

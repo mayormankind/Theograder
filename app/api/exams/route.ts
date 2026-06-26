@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
+import { parseExamInstruction } from '@/lib/utils/instruction-parser';
 
 // Validation schemas
 const createExamSchema = z.object({
@@ -12,6 +13,8 @@ const createExamSchema = z.object({
   totalMarks: z.number().min(1, 'Total marks must be greater than 0'),
   duration: z.number().optional(),
   examDate: z.string().optional().transform(val => val ? new Date(val) : undefined),
+  examInstructions: z.string().optional(),
+  selectionStrategy: z.enum(['BEST_SCORE', 'FIRST_N']).optional(),
 });
 
 const updateExamSchema = createExamSchema.partial().extend({
@@ -111,9 +114,21 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const validatedData = createExamSchema.parse(body);
 
+    const { examInstructions, selectionStrategy, ...rest } = validatedData;
+
+    // Parse instruction if provided
+    const parsedInstruction = examInstructions 
+      ? parseExamInstruction(examInstructions)
+      : null;
+
     const exam = await prisma.exam.create({
       data: {
-        ...validatedData,
+        ...rest,
+        examInstructions: examInstructions || null,
+        parsedInstruction: parsedInstruction 
+          ? JSON.parse(JSON.stringify(parsedInstruction)) 
+          : null,
+        selectionStrategy: selectionStrategy || 'BEST_SCORE',
         createdById: session.userId!,
       },
       include: {

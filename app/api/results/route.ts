@@ -2,9 +2,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
-import { jsPDF } from "jspdf";
-import "jspdf-autotable";
-
 // GET /api/results - List results with filtering and pagination
 export async function GET(request: NextRequest) {
   try {
@@ -344,7 +341,9 @@ function generateCSVExport(results: any[]) {
 }
 
 // Helper function to generate PDF export
-function generatePDFExport(results: any[]) {
+async function generatePDFExport(results: any[]) {
+  const { jsPDF } = await import('jspdf');
+  await import('jspdf-autotable');
   const doc = new jsPDF();
 
   // Title

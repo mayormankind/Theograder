@@ -10,6 +10,7 @@ import { downloadFileFromSupabase, getSignedUrl } from "@/lib/supabase";
 import { notificationService } from "@/lib/services/notification-service";
 import { selectAnswers, GradedQuestion } from '@/lib/utils/answer-selector';
 import { ParsedInstruction } from '@/lib/utils/instruction-parser';
+import { logActivity } from '@/lib/services/activity-log';
 
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
 export async function POST(
@@ -373,16 +374,13 @@ export async function POST(
       });
     });
 
-    // Log recent activity
-    await prisma.activityLog.create({
-      data: {
-        userId: session.userId,
-        action: 'PROCESSED',
-        resource: 'SCRIPT',
-        resourceId: scriptId,
-        metadata: { examId: script.examId },
-      },
-    }).catch(err => console.error('Failed to log script processed activity:', err));
+    void logActivity({
+      userId: session.userId,
+      action: 'GRADING_COMPLETED',
+      resource: 'SCRIPT',
+      resourceId: scriptId,
+      metadata: { examId: script.examId },
+    });
 
     const totalPossible = selectionResult.totalMaxScore || script.exam.totalMarks;
 

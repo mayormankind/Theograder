@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireAuth } from '@/lib/session';
 
+
 // POST /api/rubrics/extract - Extract rubric from document via AI service
 export async function POST(request: NextRequest) {
   try {
@@ -93,8 +94,11 @@ export async function POST(request: NextRequest) {
 }
 
 // GET /api/rubrics/extract - Health check for AI service
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
     const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     
     const response = await fetch(`${aiServiceUrl}/`, {

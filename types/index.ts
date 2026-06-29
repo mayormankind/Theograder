@@ -13,23 +13,35 @@ export type Page =
 export interface Exam {
   id: string;
   title: string;
-  course: string;
-  date: string;
-  totalScripts: number;
-  graded: number;
-  status: 'active' | 'completed' | 'draft';
+  description?: string;
+  courseCode?: string;
+  courseName?: string;
+  totalMarks: number;
+  duration?: number;
+  examDate?: string;
+  status: 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED';
+  examInstructions?: string;
+  selectionStrategy?: 'BEST_SCORE' | 'FIRST_N';
+  createdAt: string;
+  updatedAt: string;
+  _count?: {
+    scripts: number;
+    graded: number;
+  };
 }
 
 export interface Script {
   id: string;
-  studentId: string;
-  studentName: string;
-  examTitle: string;
-  uploadedAt: string;
-  status: 'uploaded' | 'processing' | 'done' | 'pending_review';
-  score?: number;
-  totalMarks: number;
-  confidence?: number;
+  filename: string;
+  originalName: string;
+  studentId?: string;
+  studentName?: string;
+  fileSize: number;
+  mimeType: string;
+  filePath: string;
+  examId: string;
+  status: 'UPLOADED' | 'PROCESSING' | 'PROCESSED' | 'GRADED';
+  createdAt: string;
 }
 
 export interface RubricQuestion {
@@ -68,16 +80,3 @@ export interface GradingResult {
   excludedReason?: string | null;
 }
 
-export interface ActivityItem {
-  id: string;
-  type: 'upload' | 'processed' | 'reviewed' | 'exam_created';
-  description: string;
-  timestamp: string;
-  user: string;
-}
-
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}

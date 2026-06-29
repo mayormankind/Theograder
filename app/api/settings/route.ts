@@ -74,8 +74,8 @@ export async function POST(request: NextRequest) {
     const { 
       firstName, 
       lastName, 
-      email,
       title,
+      staffId,
       department,
       faculty,
       confidenceThreshold,
@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
       where: { id: session.userId },
       data: {
         name: `${firstName} ${lastName}`.trim(),
-        email: email,
         title: title || "Dr.",
+        staffId: staffId || undefined,
         department: department || "Computer Science",
         faculty: faculty || "Science",
         confidenceThreshold: parseInt(confidenceThreshold) || 70,

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 import { parseExamInstruction } from '@/lib/utils/instruction-parser';
+import { logActivity } from '@/lib/services/activity-log';
 
 // Validation schemas
 const createExamSchema = z.object({
@@ -142,16 +143,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Log recent activity
-    await prisma.activityLog.create({
-      data: {
-        userId: session.userId,
-        action: 'EXAM_CREATED',
-        resource: 'EXAM',
-        resourceId: exam.id,
-        metadata: { examTitle: exam.title },
-      },
-    }).catch(err => console.error('Failed to log exam creation activity:', err));
+    void logActivity({
+      userId: session.userId,
+      action: 'EXAM_CREATED',
+      resource: 'EXAM',
+      resourceId: exam.id,
+      metadata: { examTitle: exam.title },
+    });
 
     return NextResponse.json(exam, { status: 201 });
   } catch (error) {

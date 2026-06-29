@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 import { getSignedUrl, deleteFileFromSupabase } from '@/lib/supabase';
 import { extractAndSaveIdentity } from '@/lib/upload-utils';
+import { logActivity } from '@/lib/services/activity-log';
 
 const confirmSchema = z.object({
   examId: z.string().min(1),
@@ -70,18 +71,13 @@ export async function POST(request: NextRequest) {
         console.error('[Confirm] Failed to get signed URL for identity extraction:', err)
       );
 
-    // Log activity
-    prisma.activityLog
-      .create({
-        data: {
-          userId: session.userId,
-          action: 'UPLOAD',
-          resource: 'SCRIPT',
-          resourceId: examId,
-          metadata: { examId, count: 1 },
-        },
-      })
-      .catch((err) => console.error('Failed to log upload activity:', err));
+    void logActivity({
+      userId: session.userId,
+      action: 'SCRIPT_UPLOADED',
+      resource: 'SCRIPT',
+      resourceId: examId,
+      metadata: { examId, count: 1 },
+    });
 
     return NextResponse.json(
       {

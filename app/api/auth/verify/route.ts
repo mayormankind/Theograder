@@ -93,17 +93,10 @@ export async function POST(request: NextRequest) {
       where: { email: email.toLowerCase() }
     });
 
-    if (!user) {
+    if (!user || user.emailVerified) {
       return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    if (user.emailVerified) {
-      return NextResponse.json(
-        { error: 'Email is already verified' },
-        { status: 400 }
+        { message: 'If your email is registered and unverified, a verification link will be sent.' },
+        { status: 200 }
       );
     }
 

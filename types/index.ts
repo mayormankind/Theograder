@@ -60,6 +60,12 @@ export interface RubricPart {
   marks: number;
 }
 
+export interface ApiResponse<T = unknown> {
+  success: boolean;
+  data?: T;
+  error?: string;
+}
+
 export interface GradingResult {
   questionId: string;
   questionNumber: string;

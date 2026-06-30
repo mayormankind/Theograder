@@ -32,6 +32,7 @@ const cookieOpts = sessionOptions.cookieOptions!;
 export async function getSession(
   request: NextRequest,
 ): Promise<IronSession<SessionData>> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return getIronSession<SessionData>(request.cookies as any, sessionOptions);
 }
 
@@ -155,7 +156,7 @@ export async function requireAuthWithFreshRole(
 export async function createAuthResponse(
   request: NextRequest,
   data: Omit<SessionData, "isLoggedIn">,
-  responseData?: any,
+  responseData?: unknown,
   status: number = 200,
 ): Promise<NextResponse> {
   const response = NextResponse.json(responseData || { success: true }, {

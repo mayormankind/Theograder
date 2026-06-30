@@ -8,7 +8,7 @@ export interface CreateNotificationParams {
   title: string;
   message: string;
   link?: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 class NotificationService {
@@ -69,19 +69,19 @@ class NotificationService {
     type: NotificationType,
     title: string,
     message: string,
-    metadata?: any
+    metadata?: Record<string, unknown>
   ): Promise<boolean> {
     try {
       switch (type) {
         case NotificationType.GRADING_COMPLETE:
           if (metadata?.examId) {
             return await emailService.sendGradingCompleteEmail(email, name, {
-              examTitle: metadata.examTitle || 'Exam',
-              examId: metadata.examId,
-              total: metadata.total || 0,
-              successful: metadata.successful || 0,
-              failed: metadata.failed || 0,
-              flagged: metadata.flagged || []
+              examTitle: String(metadata.examTitle ?? 'Exam'),
+              examId: String(metadata.examId),
+              total: Number(metadata.total ?? 0),
+              successful: Number(metadata.successful ?? 0),
+              failed: Number(metadata.failed ?? 0),
+              flagged: (metadata.flagged as { studentId: string; studentName: string; reason: string }[]) ?? []
             });
           }
           break;

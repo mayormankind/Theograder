@@ -69,7 +69,7 @@ export function selectAnswers(
     };
   }
 
-  let selected: GradedQuestion[] = [];
+  const selected: GradedQuestion[] = [];
   let pool: GradedQuestion[] = [...questions];
 
   // Step 1: Extract compulsory questions first

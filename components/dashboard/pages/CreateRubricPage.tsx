@@ -18,7 +18,6 @@ import {
   Trash2,
   GripVertical,
   BookOpen,
-  Tag,
   HelpCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -691,47 +690,21 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                          <div>
-                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 mb-1.5">
-                              <BookOpen size={11} className="text-slate-400" /> Expected Answer / Model Answer
-                            </label>
-                            <textarea
-                              value={part.expectedAnswer}
-                              onChange={(e) => {
-                                const updatedQuestions = [...extractedRubric.questions];
-                                updatedQuestions[qIndex].parts[pIndex] = { ...part, expectedAnswer: e.target.value };
-                                setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
-                              }}
-                              placeholder="Enter the model answer or key explanation…"
-                              rows={3}
-                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all resize-none placeholder:text-slate-400"
-                            />
-                          </div>
-                          <div>
-                            <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 mb-1.5">
-                              <Tag size={11} className="text-slate-400" /> Key Concepts / Points (comma-separated)
-                            </label>
-                            <textarea
-                              value={part.keyPoints.join(', ')}
-                              onChange={(e) => {
-                                const keyPoints = e.target.value.split(',').map(k => k.trim()).filter(Boolean);
-                                const updatedQuestions = [...extractedRubric.questions];
-                                updatedQuestions[qIndex].parts[pIndex] = { ...part, keyPoints };
-                                setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
-                              }}
-                              placeholder="e.g. atomicity, rollback, commit, bank example…"
-                              rows={3}
-                              className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all resize-none placeholder:text-slate-400"
-                            />
-                            <div className="mt-2 flex flex-wrap gap-1">
-                              {part.keyPoints.map((kp, i) => (
-                                <span key={i} className="rounded-full bg-[#0f1f3d]/5 px-2 py-0.5 text-[10px] font-medium text-[#0f1f3d]/70">
-                                  {kp}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
+                        <div>
+                          <label className="flex items-center gap-1 text-[11px] font-semibold text-slate-500 mb-1.5">
+                            <BookOpen size={11} className="text-slate-400" /> Expected Answer / Model Answer
+                          </label>
+                          <textarea
+                            value={part.expectedAnswer}
+                            onChange={(e) => {
+                              const updatedQuestions = [...extractedRubric.questions];
+                              updatedQuestions[qIndex].parts[pIndex] = { ...part, expectedAnswer: e.target.value };
+                              setExtractedRubric({ ...extractedRubric, questions: updatedQuestions });
+                            }}
+                            placeholder="Enter the model answer or key explanation…"
+                            rows={3}
+                            className="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all resize-none placeholder:text-slate-400"
+                          />
                         </div>
                       </div>
                     ))}
@@ -770,7 +743,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
           <div>
             <p className="text-xs font-semibold text-blue-800">How the rubric is used</p>
             <p className="text-xs text-blue-600 mt-0.5 leading-relaxed">
-              The expected answers and key concepts are fed into the Sentence-BERT model for semantic similarity analysis.
+              The expected answers are fed into the Sentence-BERT model for semantic similarity analysis.
               Similarity scores are computed per sub-part, weighted by the mark allocation defined here.
             </p>
           </div>

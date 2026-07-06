@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     if (session instanceof NextResponse) return session;
 
     // Get AI service URL from environment
-    const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:8000';
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
     
     // Get the form data from the request
     const formData = await request.formData();
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
     aiFormData.append('file', file);
 
     // Call AI service
-    const response = await fetch(`${aiServiceUrl}/rubric/extract/from-document`, {
+    const response = await fetch(`${aiServiceUrl}/extract/from-document`, {
       method: 'POST',
       body: aiFormData,
     });
@@ -88,6 +88,65 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       { error: 'Failed to extract rubric from document' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/rubrics/extract - Extract rubric from pasted text via AI service
+export async function PUT(request: NextRequest) {
+  try {
+    const session = await requireAuth(request);
+    if (session instanceof NextResponse) return session;
+
+    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+
+    const body = await request.json();
+    const text: string = body.text;
+
+    if (!text || !text.trim()) {
+      return NextResponse.json(
+        { error: 'No text provided' },
+        { status: 400 }
+      );
+    }
+
+    // Build form data expected by the FastAPI endpoint
+    const aiFormData = new FormData();
+    aiFormData.append('text', text);
+
+    // Call AI service
+    const response = await fetch(`${aiServiceUrl}/extract/from-text`, {
+      method: 'POST',
+      body: aiFormData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI service error (text extraction):', errorText);
+      return NextResponse.json(
+        { error: 'Failed to extract rubric from text', details: errorText },
+        { status: response.status }
+      );
+    }
+
+    const result = await response.json();
+    return NextResponse.json(result);
+
+  } catch (error) {
+    console.error('Error extracting rubric from text:', error);
+
+    if (error instanceof Error) {
+      if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch')) {
+        return NextResponse.json(
+          { error: 'AI service is unavailable. Please check your connection and try again.' },
+          { status: 503 }
+        );
+      }
+    }
+
+    return NextResponse.json(
+      { error: 'Failed to extract rubric from text' },
       { status: 500 }
     );
   }

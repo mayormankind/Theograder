@@ -23,8 +23,9 @@ import {
 import { cn } from '@/lib/utils';
 import type { Page } from '@/types';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
-import { aiClient, type ExtractedRubric, type ExtractionResult } from '@/lib/services/ai-client';
+import type { ExtractedRubric, ExtractionResult } from '@/lib/services/ai-client';
 import { rubricsApi } from '@/lib/api/rubrics';
+
 
 interface CreateRubricPageProps {
   onNavigate: (page: Page, params?: Record<string, string>) => void;
@@ -250,7 +251,17 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
     setLoading(true);
 
     try {
-      const result = await aiClient.extractRubricFromDocument(file);
+      // Send the file to the Next.js proxy route which forwards it to the AI service
+      // server-side, avoiding CORS and exposing the internal AI service URL to the browser.
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('/api/rubrics/extract', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result: ExtractionResult = await response.json();
       setExtractionResult(result);
 
       if (result.success && result.rubric) {
@@ -276,7 +287,15 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
     setLoading(true);
 
     try {
-      const result = await aiClient.extractRubricFromText(pastedText);
+      // Send the text to the Next.js proxy route (PUT) which forwards it to the AI service
+      // server-side, avoiding CORS and exposing the internal AI service URL to the browser.
+      const response = await fetch('/api/rubrics/extract', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: pastedText }),
+      });
+
+      const result: ExtractionResult = await response.json();
       setExtractionResult(result);
 
       if (result.success && result.rubric) {

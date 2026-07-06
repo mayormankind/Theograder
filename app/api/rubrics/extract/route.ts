@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
     if (session instanceof NextResponse) return session;
 
     // Get AI service URL from environment
-    const aiServiceUrl = process.env.AI_SERVICE_URL || 'http://localhost:8000';
+    const aiServiceUrl = process.env.NEXT_PUBLIC_AI_SERVICE_URL || 'http://localhost:8000';
     
     // Get the form data from the request
     const formData = await request.formData();

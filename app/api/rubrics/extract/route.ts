@@ -55,23 +55,27 @@ export async function POST(request: NextRequest) {
       const errorText = await response.text();
       console.error('AI service error:', errorText);
       return NextResponse.json(
-        { error: 'Failed to extract rubric from document', details: errorText },
+        { success: false, error: 'Failed to extract rubric from document', details: errorText },
         { status: response.status }
       );
     }
 
-    const extractedRubric = await response.json();
+    // The AI service returns { success, rubric, confidence, error }
+    const extractionResult = await response.json();
 
-    // Format the response to match our expected structure
-    const formattedRubric = {
-      title: extractedRubric.title || 'Extracted Rubric',
-      description: extractedRubric.description || 'Rubric extracted from document',
-      questions: extractedRubric.questions || [],
-      totalMarks: extractedRubric.totalMarks || 0,
-      isPreview: true, // Mark as preview so user can review before saving
-    };
+    if (!extractionResult.success || !extractionResult.rubric) {
+      return NextResponse.json(
+        { success: false, error: extractionResult.error || 'Failed to extract rubric from document' },
+        { status: 422 }
+      );
+    }
 
-    return NextResponse.json(formattedRubric);
+    // Forward the full ExtractionResult to the frontend (success, rubric, confidence)
+    return NextResponse.json({
+      success: true,
+      rubric: extractionResult.rubric,
+      confidence: extractionResult.confidence ?? null,
+    });
 
   } catch (error) {
     console.error('Error extracting rubric:', error);
@@ -80,14 +84,14 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error) {
       if (error.message.includes('ECONNREFUSED') || error.message.includes('fetch')) {
         return NextResponse.json(
-          { error: 'AI service is unavailable. Please check your connection and try again.' },
+          { success: false, error: 'AI service is unavailable. Please check your connection and try again.' },
           { status: 503 }
         );
       }
     }
 
     return NextResponse.json(
-      { error: 'Failed to extract rubric from document' },
+      { success: false, error: 'Failed to extract rubric from document' },
       { status: 500 }
     );
   }

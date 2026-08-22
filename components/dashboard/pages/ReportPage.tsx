@@ -200,14 +200,10 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
         </div>
 
         {/* Student Info */}
-        <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 sm:grid-cols-4 border-b border-slate-100 px-5 sm:px-8 py-5">
+        <div className="grid grid-cols-1 xs:grid-cols-2 gap-4 sm:grid-cols-3 border-b border-slate-100 px-5 sm:px-8 py-5">
           {[
             {
-              label: "Student Name",
-              value: gradingResult.script?.studentName || "N/A",
-            },
-            {
-              label: "Student ID",
+              label: "Matric Number",
               value: gradingResult.script?.studentId || "N/A",
             },
             {

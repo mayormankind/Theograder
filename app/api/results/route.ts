@@ -95,8 +95,7 @@ export async function GET(request: NextRequest) {
 
       return NextResponse.json({
         resultId: result.id,
-        studentId: result.script?.studentId || "Unknown Student",
-        studentName: result.script?.studentName || "Unknown",
+        studentId: result.script?.studentId || "Not extracted",
         courseCode: result.exam?.courseCode || "",
         courseName: result.exam?.courseName || result.exam?.title || "",
         results: mappedResults,
@@ -300,8 +299,7 @@ export async function GET(request: NextRequest) {
 // Helper function to generate CSV export
 function generateCSVExport(results: any[]) {
   const headers = [
-    "Student ID",
-    "Student Name",
+    "Matric Number",
     "Exam Title",
     "Course Code",
     "Total Score",
@@ -317,7 +315,6 @@ function generateCSVExport(results: any[]) {
     ...results.map((result) =>
       [
         `"${result.script.studentId || ""}"`,
-        `"${result.script.studentName || ""}"`,
         `"${result.exam.title}"`,
         `"${result.exam.courseCode || ""}"`,
         result.totalScore,
@@ -357,7 +354,6 @@ async function generatePDFExport(results: any[]) {
 
   const tableData = results.map((result) => [
     result.script.studentId || "N/A",
-    result.script.studentName || "Unknown",
     result.exam.title,
     `${result.totalScore}/${result.maxScore}`,
     `${((result.totalScore / result.maxScore) * 100).toFixed(2)}%`,
@@ -368,7 +364,7 @@ async function generatePDFExport(results: any[]) {
   (doc as any).autoTable({
     startY: 36,
     head: [
-      ["Student ID", "Name", "Exam", "Score", "%", "Confidence", "Status"],
+      ["Matric Number", "Exam", "Score", "%", "Confidence", "Status"],
     ],
     body: tableData,
     theme: "grid",

@@ -10,6 +10,7 @@ import { downloadFileFromSupabase, getSignedUrl } from "@/lib/supabase";
 import { notificationService } from "@/lib/services/notification-service";
 import { selectAnswers, GradedQuestion } from '@/lib/utils/answer-selector';
 import { ParsedInstruction } from '@/lib/utils/instruction-parser';
+import { normalizeQuestionLabel } from '@/lib/utils/question-label';
 import { logActivity } from '@/lib/services/activity-log';
 
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
@@ -112,13 +113,11 @@ export async function POST(
       throw new Error("OCR returned no text");
     }
 
-    // Fallback Identity Extraction from the OCR'd text
-    const nameMatch = extractedText.match(/Name:\s*([^\n]+)/i);
+    // Fallback Identity Extraction from the OCR'd text (matric number only)
     const matricMatch = extractedText.match(
       /(?:Matric|ID)\s*(?:No|Number|\.)?\s*[:\-]?\s*([^\n]+)/i,
     );
 
-    let fallbackName = nameMatch ? nameMatch[1].trim() : undefined;
     let fallbackMatric = matricMatch ? matricMatch[1].trim() : undefined;
 
     // Try to correct common OCR errors in matric numbers (e.g. 1FS/2014986 -> IFS/20/4986)
@@ -163,7 +162,6 @@ export async function POST(
 
     if (!hasValidIdentity) {
       if (fallbackMatric) dataToUpdate.studentId = fallbackMatric;
-      if (fallbackName) dataToUpdate.studentName = fallbackName;
     }
 
     // Save extracted text and potentially fallback identity
@@ -215,6 +213,18 @@ export async function POST(
 
     if (!gradeResponse.ok) {
       const errorText = await gradeResponse.text();
+      // A 503 from the AI service means the embedding/OCR provider is
+      // temporarily unavailable. Crucially, the grade transaction below is
+      // never reached, so NO zero-score result is persisted — the script
+      // stays retryable. Surface this as transient so the UI can say
+      // "try again" rather than implying the script itself is bad.
+      if (gradeResponse.status === 503) {
+        const transientErr = new Error(
+          "AI grading service is temporarily unavailable. The script was NOT graded — please retry in a moment.",
+        );
+        (transientErr as any).transient = true;
+        throw transientErr;
+      }
       throw new Error(`Grading failed: ${errorText}`);
     }
 
@@ -230,14 +240,9 @@ export async function POST(
     const gradedQuestions: GradedQuestion[] = 
       (gradeData.questions || []).map(
         (q: any, index: number) => {
-          const rubricQ = rubric.questions.find(rq => {
-            const norm = (s: string) => 
-              s.toLowerCase()
-               .replace(/^question\s*/i, '')
-               .replace(/^q/, '')
-               .trim();
-            return norm(rq.questionId) === norm(q.question);
-          });
+          const rubricQ = rubric.questions.find(rq =>
+            normalizeQuestionLabel(rq.questionId) === normalizeQuestionLabel(q.question)
+          );
           return {
             id: q.question,        // temp id for selection
             questionId: q.question,
@@ -316,17 +321,12 @@ export async function POST(
       // Create question results
       if (gradeData.questions && Array.isArray(gradeData.questions)) {
         for (const question of gradeData.questions) {
-          // Normalize rubric matching logic to match AI service normalization
-          const normalize = (s: string) =>
-            s
-              .toLowerCase()
-              .replace(/\s+/g, "")
-              .replace(/^question/, "")
-              .replace(/^q/, "");
-          const target = normalize(question.question);
+          // Use the shared normaliser (mirrors the AI service) so rubric
+          // matching is consistent across the whole pipeline.
+          const target = normalizeQuestionLabel(question.question);
 
           const rubricQuestion = rubric.questions.find(
-            (rq) => normalize(rq.questionId) === target,
+            (rq) => normalizeQuestionLabel(rq.questionId) === target,
           );
 
           if (rubricQuestion) {
@@ -340,7 +340,7 @@ export async function POST(
             // Find the student answer from segments
             const answerFromSegments =
               Object.entries(segments).find(
-                ([k]) => normalize(k) === target,
+                ([k]) => normalizeQuestionLabel(k) === target,
               )?.[1] || "";
 
             await tx.questionResult.create({
@@ -417,7 +417,9 @@ export async function POST(
   } catch (error: any) {
     console.error(`Processing failed for script ${scriptId}:`, error);
 
-    // Mark script as UPLOADED so it can be retried
+    // Mark script as UPLOADED so it can be retried. We deliberately do NOT
+    // persist a zero-score Result on failure — an ungraded script must never
+    // look like a student who scored 0.
     await prisma.script
       .update({
         where: { id: scriptId },
@@ -425,9 +427,10 @@ export async function POST(
       })
       .catch(() => {});
 
+    const isTransient = error?.transient === true;
     return NextResponse.json(
-      { error: error.message || "Processing failed" },
-      { status: 500 },
+      { error: error.message || "Processing failed", transient: isTransient },
+      { status: isTransient ? 503 : 500 },
     );
   }
 }

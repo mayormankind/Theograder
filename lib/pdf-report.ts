@@ -55,7 +55,6 @@ export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => 
   const avgConf = Math.round((gradingResult.overallConfidence || gradingResult.confidence || 0.8) * 100);
   const { grade, color: gradeColor } = getGradeDetails(pct);
 
-  const studentName = gradingResult.script?.studentName || gradingResult.studentName || "N/A";
   const studentId = gradingResult.script?.studentId || gradingResult.studentId || "N/A";
   const examTitle = gradingResult.exam?.title || gradingResult.examTitle || "Examination";
   const courseCode = gradingResult.exam?.courseCode || gradingResult.courseCode || "N/A";
@@ -119,8 +118,8 @@ export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => 
   doc.setFontSize(8);
 
   // Row 1 Labels
-  doc.text("STUDENT NAME", margin + 6, currentY + 7);
-  doc.text("STUDENT ID (MATRIC NUMBER)", margin + (pageWidth - margin * 2) / 2 + 6, currentY + 7);
+  doc.text("MATRIC NUMBER", margin + 6, currentY + 7);
+  doc.text("COURSE", margin + (pageWidth - margin * 2) / 2 + 6, currentY + 7);
 
   // Row 2 Labels
   doc.text("DATE GRADED", margin + 6, currentY + 20);
@@ -131,8 +130,8 @@ export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => 
   doc.setFontSize(10);
 
   // Row 1 Values
-  doc.text(studentName, margin + 6, currentY + 12);
-  doc.text(studentId, margin + (pageWidth - margin * 2) / 2 + 6, currentY + 12);
+  doc.text(studentId, margin + 6, currentY + 12);
+  doc.text(courseCode, margin + (pageWidth - margin * 2) / 2 + 6, currentY + 12);
 
   // Row 2 Values
   doc.text(gradedDate, margin + 6, currentY + 25);

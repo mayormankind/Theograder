@@ -262,7 +262,6 @@ class EmailService {
       failed: number,
       flagged: { 
         studentId: string, 
-        studentName: string, 
         reason: string 
       }[]
     }
@@ -276,14 +275,11 @@ class EmailService {
             <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
               ${f.studentId || 'Unknown'}
             </td>
-            <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;">
-              ${f.studentName || 'Unknown'}
-            </td>
             <td style="padding:6px 12px;border-bottom:1px solid #f1f5f9;font-size:13px;color:#d97706;">
               ${f.reason}
             </td>
           </tr>`).join('')
-      : `<tr><td colspan="3" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">
+      : `<tr><td colspan="2" style="padding:12px;text-align:center;color:#94a3b8;font-size:13px;">
           No scripts flagged for review
          </td></tr>`;
 
@@ -326,7 +322,6 @@ class EmailService {
             <thead>
               <tr style="background:#f8fafc;">
                 <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Matric No</th>
-                <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Name</th>
                 <th style="padding:8px 12px;text-align:left;font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:0.05em;">Reason</th>
               </tr>
             </thead>

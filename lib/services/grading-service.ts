@@ -1,5 +1,6 @@
 import { aiClient, type ExtractedRubric, type AIGradingResult, type AIQuestionResult } from './ai-client';
 import { prisma } from '@/lib/prisma';
+import { normalizeQuestionLabel } from '@/lib/utils/question-label';
 
 export interface GradingQuestion {
   question: string;
@@ -53,12 +54,12 @@ class GradingService {
       // Build a lookup map: normalised question label → maxScore from the rubric
       const rubricMaxScoreMap = new Map<string, number>();
       for (const rq of rubric.questions) {
-        rubricMaxScoreMap.set(rq.questionNumber.toLowerCase().trim(), rq.maxScore);
+        rubricMaxScoreMap.set(normalizeQuestionLabel(rq.questionNumber), rq.maxScore);
       }
 
       const questions = result.questions.map((q: AIQuestionResult) => {
         // Look up the declared max marks for this question from the rubric
-        const rubricMax = rubricMaxScoreMap.get(q.question.toLowerCase().trim()) ?? 0;
+        const rubricMax = rubricMaxScoreMap.get(normalizeQuestionLabel(q.question)) ?? 0;
         return {
           question: q.question,
           score: q.score,
@@ -115,7 +116,7 @@ class GradingService {
       // Build rubricData: normalised questionNumber → maxScore
       const rubricData: Record<string, number> = {};
       for (const rq of rubric.questions) {
-        rubricData[rq.questionNumber.toLowerCase().trim()] = rq.maxScore;
+        rubricData[normalizeQuestionLabel(rq.questionNumber)] = rq.maxScore;
       }
 
       // Persist metadata to DB so any serverless instance can read it during polling
@@ -167,7 +168,7 @@ class GradingService {
           const qs = r.questions.map((q: AIQuestionResult) => ({
             question: q.question,
             score: q.score,
-            maxScore: rubricData?.[q.question.toLowerCase().trim()] ?? 0,
+            maxScore: rubricData?.[normalizeQuestionLabel(q.question)] ?? 0,
             confidence: q.confidence,
             breakdown: q.breakdown.map((similarity: number, index: number) => ({
               point: `Point ${index + 1}`,

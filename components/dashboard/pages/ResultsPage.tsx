@@ -354,7 +354,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
 
       {/* Mobile Tab Switcher */}
       <div className="flex lg:hidden border-b border-slate-200 bg-slate-50 px-2 pt-2">
-        <button 
+        <button
           onClick={() => setActiveTab('breakdown')}
           className={cn(
             "flex-1 py-2.5 text-sm font-medium rounded-t-lg transition-colors",
@@ -363,7 +363,7 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
         >
           AI Breakdown
         </button>
-        <button 
+        <button
           onClick={() => setActiveTab('script')}
           className={cn(
             "flex-1 py-2.5 text-sm font-medium rounded-t-lg transition-colors",
@@ -430,9 +430,9 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
               <Info size={12} className="mt-0.5 text-blue-500 
                 shrink-0" />
               <p className="text-[11px] text-blue-700">
-                Best-answer selection was applied. Only the 
-                highest-scoring questions are counted toward 
-                the total. Excluded answers are still shown 
+                Best-answer selection was applied. Only the
+                highest-scoring questions are counted toward
+                the total. Excluded answers are still shown
                 below for reference.
               </p>
             </div>

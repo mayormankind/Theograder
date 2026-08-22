@@ -15,6 +15,7 @@ import {
   CheckCircle2,
   AlertTriangle,
   Download,
+  Hash,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -27,7 +28,6 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 interface Script {
   id: string;
   fileName: string;
-  studentName: string;
   studentId: string;
   examId: string;
   examTitle?: string;
@@ -351,7 +351,6 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
             .filter((s) => s.status === "PENDING_REVIEW")
             .map((s) => ({
               studentId: s.studentId || "Unknown",
-              studentName: s.studentName || "Unknown",
               reason: "Flagged for manual review",
             }));
 
@@ -688,7 +687,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by student name, ID, or exam…"
+            placeholder="Search by matric number or exam…"
             className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-4 text-sm text-slate-700 placeholder:text-slate-400 outline-none focus:border-teal-400 focus:bg-white focus:ring-2 focus:ring-teal-100 transition-all"
           />
         </div>
@@ -754,7 +753,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                   />
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400">
-                  Student
+                  Matric Number
                 </th>
                 <th className="px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-400 hidden md:table-cell">
                   Examination
@@ -813,19 +812,22 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                     </td>
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-slate-200 to-slate-300 text-[10px] font-bold text-slate-600">
-                          {script.studentName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .slice(0, 2)}
+                        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-linear-to-br from-slate-200 to-slate-300 text-slate-500">
+                          <Hash size={13} />
                         </div>
-                        <div>
-                          <p className="text-[13px] font-medium text-slate-800">
-                            {script.studentName}
+                        <div className="min-w-0">
+                          <p className="text-[13px] font-semibold font-mono text-slate-800 truncate">
+                            {script.studentId &&
+                            script.studentId !== "Not extracted" ? (
+                              script.studentId
+                            ) : (
+                              <span className="font-sans font-medium italic text-slate-400">
+                                Not extracted
+                              </span>
+                            )}
                           </p>
-                          <p className="text-[11px] text-slate-400">
-                            {script.studentId}
+                          <p className="text-[11px] text-slate-400 truncate max-w-45">
+                            {script.fileName}
                           </p>
                         </div>
                       </div>

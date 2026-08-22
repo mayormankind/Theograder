@@ -2,7 +2,7 @@ import { prisma } from '@/lib/prisma';
 
 /**
  * Fire-and-forget helper: calls the AI service to extract a student's
- * matric number and name from an uploaded script, then persists the result.
+ * matric number from an uploaded script, then persists the result.
  *
  * Extracted here from both /api/upload/route.ts and /api/upload/confirm/route.ts
  * to keep the logic in one place.
@@ -28,7 +28,6 @@ export async function extractAndSaveIdentity(
         where: { id: scriptId },
         data: {
           studentId: data.matric,
-          ...(data.student_name && { studentName: data.student_name }),
         },
       });
       console.log(`[Identity] Extracted for script ${scriptId}:`, data.matric);

@@ -26,7 +26,6 @@ type GradingStatus =
 
 interface ScriptGradingEntry {
   id: string;
-  studentName: string;
   studentId: string;
   fileName: string;
   fileUrl: string;
@@ -394,7 +393,7 @@ export default function ExamDetailPage() {
             <thead>
               <tr className="bg-slate-50 border-b border-slate-100">
                 <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                  Student
+                  Matric Number
                 </th>
                 <th className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                   File Name
@@ -433,14 +432,16 @@ export default function ExamDetailPage() {
                     className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors"
                   >
                     <td className="px-5 py-4">
-                      <div>
-                        <p className="text-sm font-medium text-slate-800">
-                          {script.studentName}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {script.studentId}
-                        </p>
-                      </div>
+                      <p className="text-sm font-semibold font-mono text-slate-800">
+                        {script.studentId &&
+                        script.studentId !== "Not extracted" ? (
+                          script.studentId
+                        ) : (
+                          <span className="font-sans font-medium italic text-slate-400">
+                            Not extracted
+                          </span>
+                        )}
+                      </p>
                     </td>
                     <td className="px-5 py-4">
                       <p className="text-sm text-slate-600 truncate max-w-50">

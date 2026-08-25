@@ -81,7 +81,7 @@ class NotificationService {
               total: Number(metadata.total ?? 0),
               successful: Number(metadata.successful ?? 0),
               failed: Number(metadata.failed ?? 0),
-              flagged: (metadata.flagged as { studentId: string; studentName: string; reason: string }[]) ?? []
+              flagged: (metadata.flagged as { studentId: string; reason: string }[]) ?? []
             });
           }
           break;

@@ -28,6 +28,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import { generateIndividualReportPDF } from "@/lib/pdf-report";
+import { toast } from "sonner";
 
 interface ReportPageProps {
   onNavigate: (page: Page, params?: Record<string, string>) => void;
@@ -76,6 +77,23 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [gradingResult, setGradingResult] = useState<any>(null);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadReport = () => {
+    if (downloading || !gradingResult) return;
+    setDownloading(true);
+    // Defer so the spinner can paint before the synchronous PDF generation blocks the main thread
+    setTimeout(() => {
+      try {
+        generateIndividualReportPDF(gradingResult);
+      } catch (err) {
+        console.error("Error generating report:", err);
+        toast.error("Failed to generate report");
+      } finally {
+        setDownloading(false);
+      }
+    }, 50);
+  };
 
   useEffect(() => {
     if (resultId) {
@@ -152,10 +170,16 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
         </button>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => generateIndividualReportPDF(gradingResult)}
-            className="flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] transition-colors w-full sm:w-auto"
+            onClick={handleDownloadReport}
+            disabled={downloading}
+            className="flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2 text-xs font-medium text-white hover:bg-[#162b52] disabled:opacity-50 disabled:cursor-not-allowed transition-colors w-full sm:w-auto"
           >
-            <Download size={13} /> <span>Download Report (PDF)</span>
+            {downloading ? (
+              <Loader2 size={13} className="animate-spin" />
+            ) : (
+              <Download size={13} />
+            )}
+            <span>{downloading ? "Generating…" : "Download Report (PDF)"}</span>
           </button>
         </div>
       </div>

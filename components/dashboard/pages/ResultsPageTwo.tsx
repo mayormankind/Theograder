@@ -371,6 +371,9 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
                 </div>
               ) : (
                 <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center text-white shrink-0">
+                    <Hash size={16} />
+                  </div>
                   <div className="flex flex-col min-w-0">
                     {studentId && studentId !== "Not extracted" ? (
                       <span className="text-sm font-bold font-mono text-slate-700 truncate">

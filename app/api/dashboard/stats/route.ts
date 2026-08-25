@@ -94,16 +94,18 @@ export async function GET(request: NextRequest) {
         },
       }),
 
-      // Score distribution
-      prisma.result.groupBy({
-        by: ['examId'],
-        where: {
-          gradedById: session.userId,
-        },
-        _avg: {
-          totalScore: true,
-        },
-      }),
+      // Score distribution — joins exams so we avoid a second round-trip
+      prisma.$queryRaw<Array<{ examId: string; examTitle: string; totalMarks: number; avgScore: number | null }>>(Prisma.sql`
+        SELECT
+          r."examId",
+          e.title          AS "examTitle",
+          e."totalMarks",
+          AVG(r."totalScore") AS "avgScore"
+        FROM results r
+        JOIN exams e ON e.id = r."examId"
+        WHERE r."gradedById" = ${session.userId}
+        GROUP BY r."examId", e.title, e."totalMarks"
+      `),
     ]);
 
     // Format grading trends for chart display
@@ -122,26 +124,6 @@ export async function GET(request: NextRequest) {
       return acc;
     }, {} as Record<string, number>);
 
-    // Get exam information for score distribution
-    const examIds = scoreDistribution.map(stat => stat.examId);
-    const exams = await prisma.exam.findMany({
-      where: {
-        id: { in: examIds },
-        createdById: session.userId,
-      },
-      select: {
-        id: true,
-        title: true,
-        totalMarks: true,
-      },
-    });
-
-    // Create a map for quick lookup
-    const examMap = exams.reduce((acc, exam) => {
-      acc[exam.id] = exam;
-      return acc;
-    }, {} as Record<string, { title: string; totalMarks: number }>);
-
     // Format score distribution into standard buckets
     const bucketCounts = {
       '0–40': 0,
@@ -152,9 +134,8 @@ export async function GET(request: NextRequest) {
     };
     
     scoreDistribution.forEach(stat => {
-      const exam = examMap[stat.examId];
-      if (exam && exam.totalMarks > 0) {
-        const percentage = ((stat._avg.totalScore || 0) / exam.totalMarks) * 100;
+      if (stat.totalMarks > 0) {
+        const percentage = ((stat.avgScore || 0) / stat.totalMarks) * 100;
         if (percentage <= 40) bucketCounts['0–40']++;
         else if (percentage <= 50) bucketCounts['41–50']++;
         else if (percentage <= 60) bucketCounts['51–60']++;

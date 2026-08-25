@@ -66,7 +66,6 @@ export async function GET(
 
       return {
         id: s.id,
-        studentName: s.studentName || 'Unknown Student',
         studentId: s.studentId || 'Not extracted',
         fileName: s.originalName,
         fileUrl: s.filePath,

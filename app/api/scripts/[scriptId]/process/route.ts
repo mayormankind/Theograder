@@ -93,24 +93,45 @@ export async function POST(
       type: script.mimeType,
     });
 
-    const ocrFormData = new FormData();
-    ocrFormData.append("file", fileBlob, script.originalName);
+    // Reuse previously extracted text when available. OCR is non-deterministic
+    // and expensive; re-running it on every re-grade was a key source of
+    // score drift between attempts. We only re-OCR when there is no usable
+    // text yet (or the previous extraction was flagged low quality).
+    let extractedText: string = script.extractedText || "";
+    const needsOcr =
+      !extractedText.trim() ||
+      script.confidenceFlag === "low_quality_fallback_used";
 
-    const ocrResponse = await fetch(`${AI_SERVICE_URL}/ocr`, {
-      method: "POST",
-      body: ocrFormData,
-    });
+    let ocrData: { extraction_method?: string; confidence_flag?: string } = {
+      extraction_method: script.extractionMethod || "hybrid",
+      confidence_flag: script.confidenceFlag || "acceptable",
+    };
 
-    if (!ocrResponse.ok) {
-      const errorText = await ocrResponse.text();
-      throw new Error(`OCR failed: ${errorText}`);
-    }
+    if (needsOcr) {
+      const ocrFormData = new FormData();
+      ocrFormData.append("file", fileBlob, script.originalName);
 
-    const ocrData = await ocrResponse.json();
-    const extractedText = ocrData.extracted_text;
+      const ocrResponse = await fetch(`${AI_SERVICE_URL}/ocr`, {
+        method: "POST",
+        body: ocrFormData,
+      });
 
-    if (!extractedText) {
-      throw new Error("OCR returned no text");
+      if (!ocrResponse.ok) {
+        const errorText = await ocrResponse.text();
+        throw new Error(`OCR failed: ${errorText}`);
+      }
+
+      const freshOcr = await ocrResponse.json();
+      extractedText = freshOcr.extracted_text;
+
+      if (!extractedText) {
+        throw new Error("OCR returned no text");
+      }
+
+      ocrData = {
+        extraction_method: freshOcr.extraction_method,
+        confidence_flag: freshOcr.confidence_flag,
+      };
     }
 
     // Fallback Identity Extraction from the OCR'd text (matric number only)
@@ -171,10 +192,19 @@ export async function POST(
     });
 
     // ── STAGE 2: SEGMENTATION ─────────────────────────────
+    // Send the rubric's canonical labels so the AI service performs
+    // rubric-aware (and deterministic) segmentation instead of guessing.
+    const expectedLabels = rubric.questions.map((q) =>
+      normalizeQuestionLabel(q.questionId),
+    );
+
     const segmentResponse = await fetch(`${AI_SERVICE_URL}/segment`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ raw_text: extractedText }),
+      body: JSON.stringify({
+        raw_text: extractedText,
+        expected_labels: expectedLabels,
+      }),
     });
 
     if (!segmentResponse.ok) {
@@ -304,6 +334,13 @@ export async function POST(
 
     // ── SAVE GRADES TO DB ─────────────────────────────────
     await prisma.$transaction(async (tx) => {
+      // Idempotency: a script has exactly ONE current result. Re-grading used
+      // to append a new Result each time, leaving duplicates that the results
+      // API (findFirst) could pick between arbitrarily — so the same script
+      // appeared to score differently on refresh. Delete prior results first;
+      // QuestionResult rows cascade on the Result delete.
+      await tx.result.deleteMany({ where: { scriptId: script.id } });
+
       // Create main result
       const newResult = await tx.result.create({
         data: {

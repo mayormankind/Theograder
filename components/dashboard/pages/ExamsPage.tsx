@@ -81,6 +81,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingExam, setEditingExam] = useState<Exam | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [deletingExamId, setDeletingExamId] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
     title: string;
@@ -230,6 +231,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
       isDestructive: true,
       onConfirm: async () => {
         try {
+          setDeletingExamId(examId);
           const response = await fetch(`/api/exams/${examId}`, {
             method: 'DELETE',
           });
@@ -243,6 +245,8 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
         } catch (err) {
           console.error('Error deleting exam:', err);
           toast.error(err instanceof Error ? err.message : 'Failed to delete exam');
+        } finally {
+          setDeletingExamId(null);
         }
       },
     });
@@ -405,10 +409,15 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
                 </button>
                 <button
                   onClick={() => handleDelete(exam.id)}
-                  className="sm:ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 transition-colors"
+                  disabled={deletingExamId === exam.id}
+                  className="sm:ml-auto flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
-                  <Trash2 size={12} />
-                  Delete
+                  {deletingExamId === exam.id ? (
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-red-600 border-t-transparent" />
+                  ) : (
+                    <Trash2 size={12} />
+                  )}
+                  {deletingExamId === exam.id ? 'Deleting…' : 'Delete'}
                 </button>
               </div>
             </div>

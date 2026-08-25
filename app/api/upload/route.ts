@@ -241,7 +241,6 @@ export async function GET(request: NextRequest) {
       return {
         id: s.id,
         fileName: s.originalName,
-        studentName: s.studentName || 'Unknown Student',
         studentId: s.studentId || 'Not extracted',
         examId: s.examId,
         examTitle: s.exam.title,

@@ -25,6 +25,10 @@ export async function GET(request: NextRequest) {
     if (scriptId) {
       const result = await prisma.result.findFirst({
         where: { scriptId, gradedById: session.userId },
+        // Always return the most recent grading for this script. (Re-grading
+        // now replaces prior results, but this ordering also protects any
+        // legacy duplicates from being shown non-deterministically.)
+        orderBy: { gradedAt: "desc" },
         include: {
           script: {
             select: {

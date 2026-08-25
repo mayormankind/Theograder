@@ -38,6 +38,8 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingRubric, setDeletingRubric] = useState<string | null>(null);
+  const [linking, setLinking] = useState(false);
+  const [unlinkingRubricId, setUnlinkingRubricId] = useState<string | null>(null);
   const [showLinkModal, setShowLinkModal] = useState(false);
   const [linkingRubric, setLinkingRubric] = useState<Rubric | null>(null);
   const [selectedExamId, setSelectedExamId] = useState<string>('');
@@ -123,9 +125,10 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
   };
 
   const handleLink = async () => {
-    if (!linkingRubric || !selectedExamId) return;
+    if (!linkingRubric || !selectedExamId || linking) return;
 
     try {
+      setLinking(true);
       const response = await fetch(`/api/rubrics/${linkingRubric.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -140,8 +143,12 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
       setLinkingRubric(null);
       setSelectedExamId('');
       await fetchRubrics();
+      toast.success('Rubric linked successfully');
     } catch (err) {
       setError('Failed to link rubric to exam');
+      toast.error('Failed to link rubric to exam');
+    } finally {
+      setLinking(false);
     }
   };
 
@@ -153,6 +160,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
       isDestructive: false,
       onConfirm: async () => {
         try {
+          setUnlinkingRubricId(rubricId);
           const response = await fetch(`/api/rubrics/${rubricId}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -168,6 +176,8 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
         } catch (err) {
           setError('Failed to unlink rubric');
           toast.error('Failed to unlink rubric');
+        } finally {
+          setUnlinkingRubricId(null);
         }
       },
     });
@@ -264,10 +274,15 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
                       {rubric.examId ? (
                         <button
                           onClick={() => handleUnlink(rubric.id)}
-                          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 border border-slate-200 hover:bg-amber-50 hover:text-amber-600 transition-colors"
+                          disabled={unlinkingRubricId === rubric.id}
+                          className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 border border-slate-200 hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50 transition-colors"
                           title="Unlink from Exam"
                         >
-                          <Link2Off size={15} />
+                          {unlinkingRubricId === rubric.id ? (
+                            <Loader2 size={15} className="animate-spin" />
+                          ) : (
+                            <Link2Off size={15} />
+                          )}
                         </button>
                       ) : (
                         <button
@@ -376,11 +391,15 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
               </button>
               <button
                 onClick={handleLink}
-                disabled={!selectedExamId}
+                disabled={!selectedExamId || linking}
                 className="flex-1 flex items-center justify-center gap-2 rounded-lg bg-[#0f1f3d] px-4 py-2.5 text-sm font-medium text-white hover:bg-[#162b52] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                <Link size={14} />
-                Link
+                {linking ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <Link size={14} />
+                )}
+                {linking ? 'Linking…' : 'Link'}
               </button>
             </div>
           </div>

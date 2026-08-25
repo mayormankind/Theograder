@@ -87,6 +87,9 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedExamId, setSelectedExamId] = useState<string>("all");
   const [batchGrading, setBatchGrading] = useState(false);
+  const [gradingScriptIds, setGradingScriptIds] = useState<string[]>([]);
+  const [deletingScriptIds, setDeletingScriptIds] = useState<string[]>([]);
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
@@ -205,6 +208,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       isDestructive: true,
       onConfirm: async () => {
         try {
+          setDeletingScriptIds((prev) => [...prev, scriptId]);
           const response = await fetch(`/api/upload/${scriptId}`, {
             method: "DELETE",
           });
@@ -218,6 +222,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
         } catch (err) {
           console.error("Error deleting script:", err);
           toast.error("Failed to delete script");
+        } finally {
+          setDeletingScriptIds((prev) => prev.filter((id) => id !== scriptId));
         }
       },
     });
@@ -233,6 +239,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       isDestructive: true,
       onConfirm: async () => {
         try {
+          setBulkDeleting(true);
           const response = await fetch("/api/upload", {
             method: "DELETE",
             headers: {
@@ -251,6 +258,8 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
         } catch (err) {
           console.error("Error bulk deleting scripts:", err);
           toast.error("Failed to delete selected scripts");
+        } finally {
+          setBulkDeleting(false);
         }
       },
     });
@@ -263,6 +272,10 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       return;
     }
 
+    // Guard against double submission
+    if (gradingScriptIds.includes(scriptId)) return;
+    setGradingScriptIds((prev) => [...prev, scriptId]);
+
     try {
       const response = await fetch(`/api/scripts/${scriptId}/process`, {
         method: "POST",
@@ -274,12 +287,14 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       }
 
       toast.success("Script graded successfully");
-      fetchScripts();
+      await fetchScripts(currentPage);
     } catch (err) {
       console.error("Error grading script:", err);
       toast.error(
         err instanceof Error ? err.message : "Failed to grade script",
       );
+    } finally {
+      setGradingScriptIds((prev) => prev.filter((id) => id !== scriptId));
     }
   };
 
@@ -577,10 +592,17 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
           {selectedScriptIds.length > 0 && (
             <button
               onClick={handleBulkDelete}
-              disabled={batchGrading}
+              disabled={batchGrading || bulkDeleting}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-red-50 border border-red-200 px-4 py-2.5 text-sm font-medium text-red-600 hover:bg-red-100 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <Trash2 size={14} /> Delete Selected ({selectedScriptIds.length})
+              {bulkDeleting ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Trash2 size={14} />
+              )}
+              {bulkDeleting
+                ? "Deleting..."
+                : `Delete Selected (${selectedScriptIds.length})`}
             </button>
           )}
           <button
@@ -910,11 +932,23 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                         {canGrade && (
                           <button
                             onClick={() => handleGradeScript(script.id)}
-                            disabled={batchGrading}
+                            disabled={
+                              batchGrading ||
+                              gradingScriptIds.includes(script.id)
+                            }
                             className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-white bg-teal-600 hover:bg-teal-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                             title="Grade this script"
                           >
-                            <Zap size={12} /> Grade
+                            {gradingScriptIds.includes(script.id) ? (
+                              <>
+                                <Loader2 size={12} className="animate-spin" />{" "}
+                                Grading...
+                              </>
+                            ) : (
+                              <>
+                                <Zap size={12} /> Grade
+                              </>
+                            )}
                           </button>
                         )}
                         {(script.status === "GRADED" ||
@@ -932,11 +966,24 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                         )}
                         <button
                           onClick={() => handleDelete(script.id)}
-                          disabled={batchGrading}
+                          disabled={
+                            batchGrading ||
+                            gradingScriptIds.includes(script.id) ||
+                            deletingScriptIds.includes(script.id)
+                          }
                           className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                           title="Delete script"
                         >
-                          <Trash2 size={12} /> Delete
+                          {deletingScriptIds.includes(script.id) ? (
+                            <>
+                              <Loader2 size={12} className="animate-spin" />{" "}
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 size={12} /> Delete
+                            </>
+                          )}
                         </button>
                       </div>
                     </td>

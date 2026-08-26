@@ -54,17 +54,17 @@ export async function POST(
       return NextResponse.json({ error: "Script not found" }, { status: 404 });
     }
 
-    if (!script.exam.rubrics || script.exam.rubrics.length === 0) {
+    const rubric = script.exam.rubrics?.[0];
+
+    if (!rubric || !rubric.questions || rubric.questions.length === 0) {
       return NextResponse.json(
         {
           error:
-            "No rubric found for this exam. Create a rubric before grading.",
+            "No rubric questions found for this exam. Add questions to the rubric before grading.",
         },
         { status: 400 },
       );
     }
-
-    const rubric = script.exam.rubrics[0];
 
     // Fetch user preferences for auto-flagging and confidence threshold
     const userSettings = await prisma.user.findUnique({
@@ -260,6 +260,21 @@ export async function POST(
 
     const gradeData = await gradeResponse.json();
 
+    if (!gradeData.questions || gradeData.questions.length === 0) {
+      await prisma.script.update({
+        where: { id: scriptId },
+        data: { status: "UPLOADED" },
+      });
+      return NextResponse.json(
+        {
+          error:
+            "Grading produced no question results. This usually means the rubric is empty or the OCR text could not be matched to any rubric questions. The script was NOT graded and can be retried.",
+          transient: false,
+        },
+        { status: 422 },
+      );
+    }
+
     // ── APPLY ANSWER SELECTION ──────────────────────
     const instruction = script.exam.parsedInstruction as 
       ParsedInstruction | null;
@@ -401,6 +416,47 @@ export async function POST(
               },
             });
           }
+        }
+      }
+
+      // Safety net: ensure every rubric question has a QuestionResult row.
+      // The AI may return fewer questions than the rubric defines (e.g. when
+      // segmentation misses an answer). Missing questions get an explicit
+      // zero-score row so the Review page always shows a complete picture.
+      const returnedQuestionIds = new Set(
+        (gradeData.questions || [])
+          .map((q: any) => normalizeQuestionLabel(q.question))
+      );
+
+      for (const rq of rubric.questions) {
+        const normId = normalizeQuestionLabel(rq.questionId);
+        if (!returnedQuestionIds.has(normId)) {
+          const isCounted = selectedQuestionIds.has(rq.questionId);
+          const excludedReason = exclusionReasons.get(rq.questionId) || null;
+          const answerFromSegments = Object.entries(segments).find(
+            ([k]) => normalizeQuestionLabel(k) === normId,
+          )?.[1] || "";
+
+          await tx.questionResult.create({
+            data: {
+              resultId: newResult.id,
+              questionId: rq.questionId,
+              question: rq.questionId,
+              answer: answerFromSegments || "",
+              score: 0,
+              maxScore: rq.maxScore,
+              confidence: 0,
+              breakdown: {
+                similarities: [],
+                matchedConcepts: [],
+                partialConcepts: [],
+                missingConcepts: rq.points.map((p) => p.point),
+              },
+              countedInTotal: isCounted,
+              excludedReason: excludedReason,
+              rubricQuestionId: rq.id,
+            },
+          });
         }
       }
 

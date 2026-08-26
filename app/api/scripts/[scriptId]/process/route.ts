@@ -433,7 +433,7 @@ export async function POST(
         if (!returnedQuestionIds.has(normId)) {
           const isCounted = selectedQuestionIds.has(rq.questionId);
           const excludedReason = exclusionReasons.get(rq.questionId) || null;
-          const answerFromSegments = Object.entries(segments).find(
+          const answerFromSegments: string = Object.entries(segments).find(
             ([k]) => normalizeQuestionLabel(k) === normId,
           )?.[1] || "";
 

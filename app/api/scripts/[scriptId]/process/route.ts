@@ -211,7 +211,7 @@ export async function POST(
       throw new Error(`Segmentation failed: ${segmentResponse.statusText}`);
     }
 
-    const segments = await segmentResponse.json();
+    const segments = (await segmentResponse.json()) as Record<string, string>;
 
     // ── STAGE 3: GRADING ──────────────────────────────────
     // Build rubric payload in the shape FastAPI /grade expects

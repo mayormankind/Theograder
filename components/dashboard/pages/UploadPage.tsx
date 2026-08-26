@@ -63,7 +63,7 @@ const formatSize = (bytes: number) => {
 
 const statusConfig: Record<
   FileStatus,
-  { label: string; color: string; bg: string; ring: string; icon: any; spin?: boolean }
+  { label: string; color: string; bg: string; ring: string; icon: React.ComponentType<{ size?: number; className?: string }>; spin?: boolean }
 > = {
   queued:    { label: 'Queued',      color: 'text-slate-600',  bg: 'bg-slate-50',  ring: 'ring-slate-200',  icon: FolderOpen },
   uploading: { label: 'Uploading…',  color: 'text-blue-600',   bg: 'bg-blue-50',   ring: 'ring-blue-200',   icon: Loader2, spin: true },

@@ -12,6 +12,11 @@ interface PDFQuestionResult {
   studentAnswer?: string;
 }
 
+interface ExtendedPDFDoc extends jsPDF {
+  lastAutoTable: { finalY: number };
+  internal: jsPDF["internal"] & { getNumberOfPages(): number };
+}
+
 interface PDFGradingResult {
   totalScore?: number;
   maxScore?: number;
@@ -189,7 +194,7 @@ export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => 
   currentY += 4;
 
   const tableColumns = ["Part", "Score", "Similarity Score", "Confidence"];
-  const tableRows = (gradingResult.questions || []).map((q: any, i: number) => {
+  const tableRows = (gradingResult.questions || []).map((q: PDFQuestionResult, i: number) => {
     return [
       q.questionId || q.questionNumber || `Q${i + 1}`,
       `${q.score} / ${q.maxScore}`,
@@ -210,7 +215,7 @@ export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => 
   });
 
   // Get bottom position after table
-  currentY = (doc as any).lastAutoTable.finalY + 12;
+  currentY = (doc as ExtendedPDFDoc).lastAutoTable.finalY + 12;
 
   // 5. Question Detailed Breakdown Section
   // Check if we need to add a page first
@@ -231,7 +236,7 @@ export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => 
 
   currentY += 9;
 
-  (gradingResult.questions || []).forEach((q: any, i: number) => {
+  (gradingResult.questions || []).forEach((q: PDFQuestionResult, i: number) => {
     const qLabel = q.questionId || q.questionNumber || `Q${i + 1}`;
 
     // Height estimation of this block to handle page break
@@ -289,7 +294,7 @@ export const generateIndividualReportPDF = (gradingResult: PDFGradingResult) => 
   });
 
   // 6. Draw Footer Page Numbers
-  const totalPagesCount = (doc as any).internal.getNumberOfPages();
+  const totalPagesCount = (doc as ExtendedPDFDoc).internal.getNumberOfPages();
   for (let pageNum = 1; pageNum <= totalPagesCount; pageNum++) {
     doc.setPage(pageNum);
 

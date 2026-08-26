@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
   Save,
@@ -18,6 +18,7 @@ import {
 import { cn } from "@/lib/utils";
 import type { Page } from "@/types";
 import { toast } from "sonner";
+import Image from "next/image";
 import { useUser } from "@/hooks/useUser";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -97,15 +98,7 @@ export default function SettingsPage({}: SettingsPageProps) {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    const tab = searchParams.get("tab") as Tab;
-    if (tab && TABS.some(t => t.id === tab)) {
-      setActiveTab(tab);
-    }
-    fetchSettings();
-  }, [searchParams]);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -114,14 +107,22 @@ export default function SettingsPage({}: SettingsPageProps) {
         throw new Error("Failed to fetch settings");
       }
       const data = await response.json();
-      setSettings(data.settings || settings);
+      setSettings(prev => data.settings || prev);
     } catch (err) {
       console.error("Error fetching settings:", err);
       setError("Failed to load settings");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab") as Tab;
+    if (tab && TABS.some(t => t.id === tab)) {
+      setActiveTab(tab);
+    }
+    fetchSettings();
+  }, [searchParams, fetchSettings]);
 
   const handleSave = async () => {
     try {
@@ -226,7 +227,7 @@ export default function SettingsPage({}: SettingsPageProps) {
         try {
           await fetch("/api/auth/logout", { method: "POST" });
           router.push("/auth/login?message=Password changed successfully. Please log in again.");
-        } catch (error) {
+        } catch {
           router.push("/auth/login");
         }
       }, 2000);
@@ -295,16 +296,17 @@ export default function SettingsPage({}: SettingsPageProps) {
           <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex flex-col sm:flex-row sm:items-center gap-6 mb-8 text-center sm:text-left">
               <div className="relative group mx-auto sm:mx-0">
-                <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-blue-500 text-2xl font-bold text-white shadow-md overflow-hidden">
-                  {avatarUploading ? (
-                    <Loader2 className="animate-spin" size={24} />
-                  ) : settings.avatar ? (
-                    <img 
-                      src={settings.avatar} 
-                      alt="Avatar" 
-                      className="h-full w-full object-cover"
-                    />
-                  ) : settings.firstName ? (
+                 <div className="flex h-20 w-20 items-center justify-center rounded-full bg-linear-to-br from-teal-400 to-blue-500 text-2xl font-bold text-white shadow-md overflow-hidden relative">
+                   {avatarUploading ? (
+                     <Loader2 className="animate-spin" size={24} />
+                   ) : settings.avatar ? (
+                     <Image 
+                       src={settings.avatar} 
+                       alt="Avatar" 
+                       fill
+                       className="object-cover"
+                     />
+                   ) : settings.firstName ? (
                     <div className="flex h-full w-full items-center justify-center">
                       {settings.firstName?.[0]}
                       {settings.lastName?.[0] || ""}

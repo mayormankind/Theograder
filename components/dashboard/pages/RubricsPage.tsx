@@ -69,7 +69,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
       } else {
         setError(result.error || 'Failed to fetch rubrics');
       }
-    } catch {
+    } catch (err) {
       console.error('Error fetching rubrics:', err);
       setError('Failed to fetch rubrics');
     } finally {

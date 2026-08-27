@@ -71,12 +71,45 @@ const gradeFromPct = (pct: number) => {
   };
 };
 
+interface ReportGradingResult {
+  totalScore: number;
+  maxScore: number;
+  overallConfidence: number;
+  gradedAt: string;
+  script?: {
+    studentId: string;
+  };
+  exam?: {
+    title: string;
+    courseCode: string;
+    courseName: string;
+  };
+  questions: Array<{
+    questionId: string;
+    questionNumber: string;
+    partLabel: string;
+    studentAnswer: string;
+    expectedAnswer: string;
+    score: number;
+    maxScore: number;
+    similarityScore: number;
+    confidence: number;
+    matchedConcepts: string[];
+    partialConcepts?: string[];
+    missingConcepts: string[];
+    overrideScore?: number;
+    questionText?: string;
+    countedInTotal?: boolean;
+    excludedReason?: string | null;
+  }>;
+}
+
 export default function ReportPage({ onNavigate }: ReportPageProps) {
   const searchParams = useSearchParams();
   const resultId = searchParams.get("resultId");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [gradingResult, setGradingResult] = useState<unknown>(null);
+  const [gradingResult, setGradingResult] = useState<ReportGradingResult | null>(null);
   const [downloading, setDownloading] = useState(false);
 
   const handleDownloadReport = () => {
@@ -154,9 +187,9 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
   const avgConf = Math.round((gradingResult.overallConfidence || 0.8) * 100);
   const { grade, color, bg, ring } = gradeFromPct(pct);
   const radarData =
-    gradingResult.questions?.map((q: unknown, i: number) => ({
-      subject: (q as { questionId?: string; questionNumber?: string })?.questionId || (q as { questionNumber?: string })?.questionNumber || `Q${i + 1}`,
-      score: Math.round(((q as { score?: number; maxScore?: number })?.score || 0) / ((q as { maxScore?: number })?.maxScore || 1) * 100),
+    gradingResult.questions?.map((q, i: number) => ({
+      subject: q.questionId || q.questionNumber || `Q${i + 1}`,
+      score: Math.round((q.score || 0) / (q.maxScore || 1) * 100),
     })) || [];
 
   return (
@@ -337,11 +370,10 @@ export default function ReportPage({ onNavigate }: ReportPageProps) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {(gradingResult.questions as unknown[] || []).map((q: unknown, i: number) => {
-                  const qData = q as { score?: number; maxScore?: number; missingConcepts?: unknown[] };
-                  const pct = Math.round((qData.score || 0) / (qData.maxScore || 1) * 100);
+                {(gradingResult.questions || []).map((q, i: number) => {
+                  const pct = Math.round((q.score || 0) / (q.maxScore || 1) * 100);
                   const hasMissing =
-                    qData.missingConcepts && qData.missingConcepts.length > 0;
+                    q.missingConcepts && q.missingConcepts.length > 0;
                   return (
                     <tr
                       key={i}

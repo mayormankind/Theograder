@@ -4,6 +4,7 @@
 export const maxDuration = 300;
 
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 import { downloadFileFromSupabase } from "@/lib/supabase";
@@ -175,7 +176,7 @@ export async function POST(
       script.studentId !== "Not extracted" &&
       script.studentId !== "Unknown";
 
-    const dataToUpdate: any = {
+    const dataToUpdate: Prisma.ScriptUpdateInput = {
       extractedText: extractedText,
       extractionMethod: ocrData.extraction_method || "hybrid",
       confidenceFlag: ocrData.confidence_flag || "acceptable",
@@ -286,12 +287,12 @@ export async function POST(
       (gradeData.questions || []).map(
         (q: Record<string, unknown>, index: number) => {
           const rubricQ = rubric.questions.find(rq =>
-            normalizeQuestionLabel(rq.questionId) === normalizeQuestionLabel(q.question)
+            normalizeQuestionLabel(rq.questionId) === normalizeQuestionLabel(q.question as string)
           );
           return {
-            id: q.question,        // temp id for selection
-            questionId: q.question,
-            score: q.score || 0,
+            id: q.question as string,        // temp id for selection
+            questionId: q.question as string,
+            score: (q.score as number) || 0,
             maxScore: rubricQ?.maxScore || 0,
             documentOrder: index
           };

@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 
 import {
-  FileText,
   CheckCircle2,
   Clock,
   TrendingUp,
@@ -12,7 +11,6 @@ import {
   ArrowUpRight,
   Activity,
   BookOpen,
-  ChevronRight,
   Loader2,
 } from "lucide-react";
 import {

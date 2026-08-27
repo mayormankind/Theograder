@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 
@@ -12,7 +13,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(url.searchParams.get("page") || "1");
     const unreadOnly = url.searchParams.get("unreadOnly") === "true";
 
-    const whereClause: any = { userId: session.userId };
+    const whereClause = { userId: session.userId };
     if (unreadOnly) {
       whereClause.read = false;
     }

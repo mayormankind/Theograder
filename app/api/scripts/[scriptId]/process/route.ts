@@ -6,7 +6,7 @@ export const maxDuration = 300;
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
-import { downloadFileFromSupabase, getSignedUrl } from "@/lib/supabase";
+import { downloadFileFromSupabase } from "@/lib/supabase";
 import { notificationService } from "@/lib/services/notification-service";
 import { selectAnswers, GradedQuestion } from '@/lib/utils/answer-selector';
 import { ParsedInstruction } from '@/lib/utils/instruction-parser';
@@ -175,7 +175,7 @@ export async function POST(
       script.studentId !== "Not extracted" &&
       script.studentId !== "Unknown";
 
-    const dataToUpdate: any = {
+    const dataToUpdate = {
       extractedText: extractedText,
       extractionMethod: ocrData.extraction_method || "hybrid",
       confidenceFlag: ocrData.confidence_flag || "acceptable",
@@ -215,7 +215,7 @@ export async function POST(
 
     // ── STAGE 3: GRADING ──────────────────────────────────
     // Build rubric payload in the shape FastAPI /grade expects
-    const rubricPayload: Record<string, any> = {};
+    const rubricPayload: Record<string, unknown> = {};
 
     for (const question of rubric.questions) {
       const questionKey = question.questionId;
@@ -252,7 +252,7 @@ export async function POST(
         const transientErr = new Error(
           "AI grading service is temporarily unavailable. The script was NOT graded — please retry in a moment.",
         );
-        (transientErr as any).transient = true;
+        (transientErr as unknown as { transient: boolean }).transient = true;
         throw transientErr;
       }
       throw new Error(`Grading failed: ${errorText}`);
@@ -282,9 +282,9 @@ export async function POST(
       'BEST_SCORE') as 'BEST_SCORE' | 'FIRST_N';
 
     // Build GradedQuestion array from gradeData
-    const gradedQuestions: GradedQuestion[] = 
+    const gradedQuestions: GradedQuestion[] =
       (gradeData.questions || []).map(
-        (q: any, index: number) => {
+        (q: Record<string, unknown>, index: number) => {
           const rubricQ = rubric.questions.find(rq =>
             normalizeQuestionLabel(rq.questionId) === normalizeQuestionLabel(q.question)
           );
@@ -335,11 +335,11 @@ export async function POST(
     const totalScore = selectionResult.totalScore;
     const avgConfidence = gradeData.questions?.length > 0
       ? gradeData.questions
-          .filter((q: any) => 
-            selectedQuestionIds.has(q.question)
+          .filter((q: Record<string, unknown>) =>
+            selectedQuestionIds.has(q.question as string)
           )
           .reduce(
-            (sum: number, q: any) => sum + (q.confidence || 0),
+            (sum: number, q: Record<string, unknown>) => sum + (q.confidence as number || 0),
             0
           ) / Math.max(selectionResult.selected.length, 1)
       : 0.5;
@@ -425,7 +425,7 @@ export async function POST(
       // zero-score row so the Review page always shows a complete picture.
       const returnedQuestionIds = new Set(
         (gradeData.questions || [])
-          .map((q: any) => normalizeQuestionLabel(q.question))
+          .map((q: Record<string, unknown>) => normalizeQuestionLabel(q.question as string))
       );
 
       for (const rq of rubric.questions) {
@@ -507,7 +507,7 @@ export async function POST(
       excludedCount: selectionResult.excluded.length,
       grades: gradeData.questions,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Processing failed for script ${scriptId}:`, error);
 
     // Mark script as UPLOADED so it can be retried. We deliberately do NOT
@@ -520,9 +520,10 @@ export async function POST(
       })
       .catch(() => {});
 
-    const isTransient = error?.transient === true;
+    const isTransient = (error as { transient?: boolean })?.transient === true;
+    const errorMessage = error instanceof Error ? error.message : "Processing failed";
     return NextResponse.json(
-      { error: error.message || "Processing failed", transient: isTransient },
+      { error: errorMessage, transient: isTransient },
       { status: isTransient ? 503 : 500 },
     );
   }

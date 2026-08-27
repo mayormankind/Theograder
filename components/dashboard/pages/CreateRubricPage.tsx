@@ -270,7 +270,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
       } else {
         setError(result.error || 'Failed to extract rubric from document');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred while extracting rubric');
     } finally {
       setLoading(false);
@@ -304,7 +304,7 @@ export default function CreateRubricPage({ onNavigate }: CreateRubricPageProps) 
       } else {
         setError(result.error || 'Failed to extract rubric from text');
       }
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred while extracting rubric');
     } finally {
       setLoading(false);

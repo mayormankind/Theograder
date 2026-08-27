@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
 
       toast.success(res.message);
       setIsSuccess(true);
-    } catch (err) {
+    } catch {
       toast.error("An unexpected error occurred. Please try again.");
     }
   };

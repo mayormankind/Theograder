@@ -162,12 +162,12 @@ export async function GET(request: NextRequest) {
     const examId = searchParams.get('examId');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50'); // Increased default limit
-    const status = searchParams.get('status') as any;
+    const status = searchParams.get('status');
 
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {};
+    const where: Record<string, unknown> = {};
 
     if (examId) {
       where.examId = examId;

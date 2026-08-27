@@ -54,7 +54,7 @@ const formatDate = (dateStr?: string) => {
     const hours = pad(d.getHours());
     const minutes = pad(d.getMinutes());
     return `${year}-${month}-${day} ${hours}:${minutes}`;
-  } catch (e) {
+  } catch {
     return dateStr;
   }
 };
@@ -66,7 +66,7 @@ const formatInputDate = (dateStr?: string) => {
     if (isNaN(d.getTime())) return '';
     const pad = (n: number) => String(n).padStart(2, '0');
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  } catch (e) {
+  } catch {
     return '';
   }
 };
@@ -490,7 +490,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
               <Label>Selection Strategy</Label>
               <select
                 value={formData.selectionStrategy}
-                onChange={(e) => setFormData({ ...formData, selectionStrategy: e.target.value as any })}
+                onChange={(e) => setFormData({ ...formData, selectionStrategy: e.target.value as 'BEST_SCORE' | 'FIRST_N' })}
                 className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring"
               >
                 <option value="BEST_SCORE">
@@ -503,7 +503,7 @@ export default function ExamsPage({ onNavigate }: ExamsPageProps) {
             </div>
             <div className="flex flex-col gap-1.5">
               <Label>Status</Label>
-              <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as any })} className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring">
+              <select value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as 'DRAFT' | 'ACTIVE' | 'COMPLETED' | 'ARCHIVED' })} className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring">
                 <option value="DRAFT">Draft</option>
                 <option value="ACTIVE">Active</option>
                 <option value="COMPLETED">Completed</option>

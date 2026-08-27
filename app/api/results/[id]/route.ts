@@ -65,7 +65,7 @@ export async function GET(
 
     // Map the breakdown JSON for easier consumption in the frontend
     const mappedQuestions = result.questions.map(q => {
-      const breakdown = (q.breakdown as any) || {};
+      const breakdown = (q.breakdown as unknown as Record<string, unknown>) || {};
       const similarities = (breakdown.similarities as number[]) || [];
       const avgSimilarity = similarities.length > 0
         ? similarities.reduce((sum: number, s: number) => sum + s, 0) / similarities.length

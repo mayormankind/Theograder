@@ -121,7 +121,7 @@ export async function PUT(
     const validatedData = updateRubricSchema.parse(body);
 
     // Prepare update data
-    const updateData: any = {
+    const updateData = {
       title: validatedData.title,
       description: validatedData.description,
       examId: validatedData.examId,

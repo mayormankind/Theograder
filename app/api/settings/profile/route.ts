@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, updateSession } from '@/lib/session';
-import bcrypt from 'bcryptjs';
 
 const updateProfileSchema = z.object({
   name: z.string().min(1, 'Name is required').optional(),

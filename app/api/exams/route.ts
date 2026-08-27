@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 import { parseExamInstruction } from '@/lib/utils/instruction-parser';
@@ -18,9 +19,7 @@ const createExamSchema = z.object({
   selectionStrategy: z.enum(['BEST_SCORE', 'FIRST_N']).optional(),
 });
 
-const updateExamSchema = createExamSchema.partial().extend({
-  status: z.enum(['DRAFT', 'ACTIVE', 'COMPLETED', 'ARCHIVED']).optional(),
-});
+
 
 // GET /api/exams - List exams for the authenticated user
 export async function GET(request: NextRequest) {
@@ -31,18 +30,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '10');
-    const status = searchParams.get('status') as any;
+    const status = searchParams.get('status');
     const search = searchParams.get('search');
 
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where: any = {
+    const where: Prisma.ExamWhereInput = {
       createdById: session.userId,
     };
 
     if (status && status !== 'ALL') {
-      where.status = status;
+      where.status = status as Prisma.EnumExamStatusFilter;
     }
 
     if (search) {

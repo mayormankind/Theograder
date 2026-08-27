@@ -7,10 +7,6 @@ import {
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Edit3,
-  ChevronDown,
-  ChevronUp,
-  Save,
   Flag,
   ArrowRight,
   ArrowLeft,
@@ -35,40 +31,6 @@ import { toast } from "sonner";
 interface ResultsPageTwoProps {
   onNavigate: (page: Page, params?: Record<string, string>) => void;
 }
-
-const confidenceColor = (c: number) => {
-  if (c >= 85)
-    return {
-      bar: "bg-teal-500",
-      text: "text-teal-700",
-      bg: "bg-teal-50",
-      ring: "ring-teal-200",
-      label: "High",
-    };
-  if (c >= 70)
-    return {
-      bar: "bg-blue-400",
-      text: "text-blue-700",
-      bg: "bg-blue-50",
-      ring: "ring-blue-200",
-      label: "Good",
-    };
-  if (c >= 55)
-    return {
-      bar: "bg-amber-400",
-      text: "text-amber-700",
-      bg: "bg-amber-50",
-      ring: "ring-amber-200",
-      label: "Moderate",
-    };
-  return {
-    bar: "bg-red-400",
-    text: "text-red-700",
-    bg: "bg-red-50",
-    ring: "ring-red-200",
-    label: "Low",
-  };
-};
 
 export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
   const searchParams = useSearchParams();
@@ -475,7 +437,7 @@ export default function ResultsPageTwo({ onNavigate }: ResultsPageTwoProps) {
               <div className="rounded-xl border border-slate-200 p-5 mb-6 bg-white shadow-sm hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3 border-b border-slate-100 pb-2">
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                    Student's Written Answer
+                    Student&apos;s Written Answer
                   </h4>
                   <span className="rounded-full bg-slate-100 text-slate-600 border border-slate-200/50 px-3 py-0.5 text-xs font-semibold flex items-center gap-1.5 font-mono">
                     <RefreshCw size={10} className="text-slate-400" />

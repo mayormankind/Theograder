@@ -51,7 +51,7 @@ export default function LoginPage() {
         if (response.ok) {
           router.push("/dashboard");
         }
-      } catch (error) {
+      } catch {
         // User is not logged in, continue to login page
       }
     };
@@ -74,7 +74,7 @@ export default function LoginPage() {
         onDismiss: () => router.push("/dashboard"),
         onAutoClose: () => router.push("/dashboard"),
       });
-    } catch (err) {
+    } catch {
       toast.error("An unexpected error occurred. Please try again.");
     }
   });
@@ -91,7 +91,7 @@ export default function LoginPage() {
       toast.success(res.message || "OTP sent! Check your email.");
       otpVerifyForm.setValue("email", data.email);
       setOtpSent(true);
-    } catch (err) {
+    } catch {
       toast.error("An unexpected error occurred. Please try again.");
     }
   });
@@ -110,7 +110,7 @@ export default function LoginPage() {
         onDismiss: () => router.push("/dashboard"),
         onAutoClose: () => router.push("/dashboard"),
       });
-    } catch (err) {
+    } catch {
       toast.error("An unexpected error occurred. Please try again.");
     }
   });

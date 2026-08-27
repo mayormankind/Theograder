@@ -10,10 +10,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  GraduationCap,
-  Cpu,
   X,
-  Menu,
   LogOut,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -114,7 +111,7 @@ export default function Sidebar({
           setExamsCount(data.pagination?.total || data.exams?.length || 0);
           const totalScripts =
             data.exams?.reduce(
-              (sum: number, exam: any) => sum + (exam._count?.scripts || 0),
+              (sum: number, exam: { _count?: { scripts?: number } }) => sum + (exam._count?.scripts || 0),
               0,
             ) || 0;
           setScriptsCount(totalScripts);

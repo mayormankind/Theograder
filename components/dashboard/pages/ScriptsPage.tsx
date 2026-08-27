@@ -7,7 +7,6 @@ import {
   Upload,
   Filter,
   Eye,
-  BarChart3,
   Loader2,
   Trash2,
   Zap,
@@ -112,6 +111,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   useEffect(() => {
     fetchExams();
     fetchScripts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Debounce search input — update searchQuery after 300 ms of no typing
@@ -125,10 +125,12 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
 
   useEffect(() => {
     fetchScripts(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedExamId, searchQuery]);
 
   useEffect(() => {
     if (currentPage > 1) fetchScripts(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   const fetchExams = async () => {

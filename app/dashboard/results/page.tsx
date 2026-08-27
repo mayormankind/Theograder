@@ -2,7 +2,6 @@
 "use client";
 
 import { Suspense, useEffect } from "react";
-import ResultsPage from "@/components/dashboard/pages/ResultsPage";
 import { useRouter } from "next/navigation";
 import type { Page } from "@/types";
 import ResultsPageTwo from "@/components/dashboard/pages/ResultsPageTwo";
@@ -13,7 +12,6 @@ function ResultsPageWrapper({
   onNavigate: (page: Page, params?: Record<string, string>) => void;
 }) {
   return <ResultsPageTwo onNavigate={onNavigate} />;
-  // return <ResultsPage onNavigate={onNavigate} />;
 }
 
 export default function Page() {

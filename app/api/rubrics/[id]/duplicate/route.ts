@@ -41,7 +41,7 @@ export async function POST(
         createdById: session.userId,
         examId: originalRubric.examId,
         questions: {
-          create: originalRubric.questions.map((q: any) => ({
+          create: originalRubric.questions.map((q: { questionId: string; question: string; maxScore: number; points: { point: string; weight: number; maxScore: number }[] }) => ({
             questionId: q.questionId,
             question: q.question,
             maxScore: q.maxScore,

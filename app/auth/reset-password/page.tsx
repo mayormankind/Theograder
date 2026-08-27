@@ -63,7 +63,7 @@ function ResetPasswordContent() {
       setSuccess(res.message);
       toast.success('Password reset successfully!');
       setTimeout(() => router.push('/auth/login'), 2000);
-    } catch (err) {
+    } catch {
       setError('An unexpected error occurred. Please try again.');
     }
   };

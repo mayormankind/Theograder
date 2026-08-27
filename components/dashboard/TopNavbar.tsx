@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   Bell,
-  ChevronDown,
   LogOut,
   User,
   Settings as SettingsIcon,

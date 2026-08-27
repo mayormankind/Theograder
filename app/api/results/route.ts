@@ -12,7 +12,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const examId = searchParams.get("examId");
-    const status = searchParams.get("status") as any;
+    const status = searchParams.get("status");
     const scoreMin = searchParams.get("scoreMin");
     const scoreMax = searchParams.get("scoreMax");
     const studentId = searchParams.get("studentId");
@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
 
       // Map to GradingResult shape expected by frontend
       const mappedResults = result.questions.map((q) => {
-        const breakdown = (q.breakdown as any) || {};
+        const breakdown = (q.breakdown as unknown as Record<string, unknown>) || {};
         const similarities = (breakdown.similarities as number[]) || [];
 
         const avgSimilarity =
@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause
-    const where: any = {
+    const where = {
       gradedById: session.userId,
     };
 
@@ -178,7 +178,7 @@ export async function GET(request: NextRequest) {
         // Map the breakdown JSON for easier consumption in the frontend
         const mappedResults = results.map((result) => {
           const mappedQuestions = result.questions.map((q) => {
-            const breakdown = (q.breakdown as any) || {};
+            const breakdown = (q.breakdown as unknown as Record<string, unknown>) || {};
             const similarities = (breakdown.similarities as number[]) || [];
             const avgSimilarity =
               similarities.length > 0
@@ -301,7 +301,7 @@ export async function GET(request: NextRequest) {
 }
 
 // Helper function to generate CSV export
-function generateCSVExport(results: any[]) {
+function generateCSVExport(results: unknown[]) {
   const headers = [
     "Matric Number",
     "Exam Title",
@@ -342,7 +342,7 @@ function generateCSVExport(results: any[]) {
 }
 
 // Helper function to generate PDF export
-async function generatePDFExport(results: any[]) {
+async function generatePDFExport(results: unknown[]) {
   const { jsPDF } = await import('jspdf');
   await import('jspdf-autotable');
   const doc = new jsPDF();
@@ -365,7 +365,7 @@ async function generatePDFExport(results: any[]) {
     result.status,
   ]);
 
-  (doc as any).autoTable({
+  (doc as unknown as { autoTable: (opts: unknown) => void }).autoTable({
     startY: 36,
     head: [
       ["Matric Number", "Exam", "Score", "%", "Confidence", "Status"],

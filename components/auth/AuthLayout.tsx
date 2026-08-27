@@ -3,7 +3,6 @@
 import { ReactNode } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useTheme } from "@/components/providers/ThemeProvider";
 
 interface IllustrationItem {
   type: "card" | "score" | "progress";

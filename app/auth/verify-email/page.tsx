@@ -16,7 +16,6 @@ function VerifyEmailContent() {
   const [isVerified, setIsVerified] = useState(false);
 
   useEffect(() => {
-    // Check for verification token in URL
     const token = searchParams.get("token");
     const emailParam = searchParams.get("email");
 
@@ -25,36 +24,35 @@ function VerifyEmailContent() {
     }
 
     if (token) {
-      verifyEmail(token);
+      const verifyEmailToken = async (token: string) => {
+        setLoading(true);
+        setError(null);
+
+        try {
+          const response = await fetch(`/api/auth/verify?token=${token}`);
+          const data = await response.json();
+
+          if (!response.ok) {
+            setError(data.error || "Verification failed");
+            return;
+          }
+
+          setSuccess(data.message);
+          setIsVerified(true);
+
+          setTimeout(() => {
+            router.push("/auth/login");
+          }, 3000);
+        } catch {
+          setError("An unexpected error occurred. Please try again.");
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      verifyEmailToken(token);
     }
-  }, [searchParams]);
-
-  const verifyEmail = async (token: string) => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetch(`/api/auth/verify?token=${token}`);
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Verification failed");
-        return;
-      }
-
-      setSuccess(data.message);
-      setIsVerified(true);
-
-      // Redirect to login after successful verification
-      setTimeout(() => {
-        router.push("/auth/login");
-      }, 3000);
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchParams, router]);
 
   const resendVerification = async () => {
     if (!email) {
@@ -82,7 +80,7 @@ function VerifyEmailContent() {
       }
 
       setSuccess(data.message);
-    } catch (err) {
+    } catch {
       setError("An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);

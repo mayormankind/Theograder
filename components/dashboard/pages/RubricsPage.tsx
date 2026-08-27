@@ -5,7 +5,6 @@ import {
   Plus,
   CheckCircle2,
   HelpCircle,
-  Copy,
   Edit3,
   X,
   AlertCircle,
@@ -17,7 +16,6 @@ import {
   Link2Off,
 } from 'lucide-react';
 import type { Page } from '@/types';
-import { cn } from '@/lib/utils';
 import { rubricsApi, type Rubric } from '@/lib/api/rubrics';
 import { toast } from 'sonner';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
@@ -71,7 +69,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
       } else {
         setError(result.error || 'Failed to fetch rubrics');
       }
-    } catch (err) {
+    } catch {
       console.error('Error fetching rubrics:', err);
       setError('Failed to fetch rubrics');
     } finally {
@@ -108,7 +106,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
             setError(result.error || 'Failed to delete rubric');
             toast.error(result.error || 'Failed to delete rubric');
           }
-        } catch (err) {
+        } catch {
           setError('An unexpected error occurred');
           toast.error('An unexpected error occurred');
         } finally {
@@ -144,7 +142,7 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
       setSelectedExamId('');
       await fetchRubrics();
       toast.success('Rubric linked successfully');
-    } catch (err) {
+    } catch {
       setError('Failed to link rubric to exam');
       toast.error('Failed to link rubric to exam');
     } finally {
@@ -171,12 +169,12 @@ export default function RubricPage({ onNavigate }: RubricPageProps) {
             throw new Error('Failed to unlink rubric');
           }
 
-          toast.success('Rubric unlinked successfully');
-          await fetchRubrics();
-        } catch (err) {
-          setError('Failed to unlink rubric');
-          toast.error('Failed to unlink rubric');
-        } finally {
+           toast.success('Rubric unlinked successfully');
+           await fetchRubrics();
+         } catch {
+           setError('Failed to unlink rubric');
+           toast.error('Failed to unlink rubric');
+         } finally {
           setUnlinkingRubricId(null);
         }
       },

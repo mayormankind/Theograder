@@ -30,26 +30,6 @@ function getPasswordStrength(password: string): 0 | 1 | 2 | 3 {
   return 3; // strong
 }
 
-// ─── Single-field validator ───────────────────────────────────────────────────
-
-function validateField(
-  name: keyof SignupFormData,
-  formData: SignupFormData,
-): string | undefined {
-  if (name === "confirmPassword") {
-    const result = signupSchema.safeParse(formData);
-    if (result.success) return undefined;
-    const issue = result.error.issues.find(
-      (i) => i.path[0] === "confirmPassword",
-    );
-    return issue?.message;
-  }
-
-  const result = signupSchema.shape[name].safeParse(formData[name]);
-  if (result.success) return undefined;
-  return result.error.issues[0]?.message;
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function SignupPage() {

@@ -1,6 +1,7 @@
 // app/api/rubrics/[id]/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 
@@ -121,11 +122,15 @@ export async function PUT(
     const validatedData = updateRubricSchema.parse(body);
 
     // Prepare update data
-    const updateData = {
+    const updateData: Prisma.RubricUpdateInput = {
       title: validatedData.title,
       description: validatedData.description,
-      examId: validatedData.examId,
       isTemplate: validatedData.isTemplate,
+      ...(validatedData.examId !== undefined && {
+        exam: validatedData.examId
+          ? { connect: { id: validatedData.examId } }
+          : { disconnect: true },
+      }),
     };
 
     // If questions are provided, we need to handle the complex update

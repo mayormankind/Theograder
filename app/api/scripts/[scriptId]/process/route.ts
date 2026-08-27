@@ -175,7 +175,7 @@ export async function POST(
       script.studentId !== "Not extracted" &&
       script.studentId !== "Unknown";
 
-    const dataToUpdate = {
+    const dataToUpdate: any = {
       extractedText: extractedText,
       extractionMethod: ocrData.extraction_method || "hybrid",
       confidenceFlag: ocrData.confidence_flag || "acceptable",

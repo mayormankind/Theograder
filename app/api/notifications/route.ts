@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     const page = parseInt(url.searchParams.get("page") || "1");
     const unreadOnly = url.searchParams.get("unreadOnly") === "true";
 
-    const whereClause = { userId: session.userId };
+    const whereClause: Prisma.NotificationWhereInput = { userId: session.userId };
     if (unreadOnly) {
       whereClause.read = false;
     }

@@ -1,6 +1,7 @@
 // app/api/rubrics/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/session';
 
@@ -38,7 +39,7 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Build where clause
-    const where = {};
+    const where: Prisma.RubricWhereInput = {};
 
     if (includeTemplates) {
       where.OR = [

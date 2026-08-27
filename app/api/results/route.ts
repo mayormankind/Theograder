@@ -1,5 +1,6 @@
 // src/app/api/results/route.ts
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireAuth } from "@/lib/session";
 // GET /api/results - List results with filtering and pagination
@@ -108,7 +109,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Build where clause
-    const where = {
+    const where: Prisma.ResultWhereInput = {
       gradedById: session.userId,
     };
 
@@ -117,7 +118,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (status && status !== "ALL") {
-      where.status = status;
+      where.status = status as Prisma.EnumResultStatusFilter;
     }
 
     if (scoreMin || scoreMax) {
@@ -300,8 +301,29 @@ export async function GET(request: NextRequest) {
   }
 }
 
+// Shape returned by the CSV/PDF prisma query
+interface ExportResult {
+  totalScore: number;
+  maxScore: number;
+  confidence: number | null;
+  status: string;
+  gradedAt: Date;
+  script: {
+    studentId: string | null;
+    studentName: string | null;
+    originalName: string | null;
+  };
+  exam: {
+    id: string;
+    title: string;
+    courseCode: string | null;
+    courseName: string | null;
+    totalMarks: number;
+  };
+}
+
 // Helper function to generate CSV export
-function generateCSVExport(results: unknown[]) {
+function generateCSVExport(results: ExportResult[]) {
   const headers = [
     "Matric Number",
     "Exam Title",
@@ -342,7 +364,7 @@ function generateCSVExport(results: unknown[]) {
 }
 
 // Helper function to generate PDF export
-async function generatePDFExport(results: unknown[]) {
+async function generatePDFExport(results: ExportResult[]) {
   const { jsPDF } = await import('jspdf');
   await import('jspdf-autotable');
   const doc = new jsPDF();

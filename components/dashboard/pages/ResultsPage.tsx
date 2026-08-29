@@ -217,6 +217,19 @@ export default function ResultsPage({ onNavigate }: ResultsPageProps) {
     groupedByQ[r.questionNumber].push(r);
   });
 
+  // Only show questions the student actually attempted.
+  // Unanswered questions (empty answer + not counted) are hidden
+  // to match the "answer any 3 of 5" exam format.
+  Object.keys(groupedByQ).forEach((qNum) => {
+    const parts = groupedByQ[qNum];
+    const hasContent = parts.some(
+      (p) => p.countedInTotal || (p.studentAnswer && p.studentAnswer.trim().length > 0)
+    );
+    if (!hasContent) {
+      delete groupedByQ[qNum];
+    }
+  });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-100">

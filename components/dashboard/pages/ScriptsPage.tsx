@@ -15,6 +15,7 @@ import {
   AlertTriangle,
   Download,
   Hash,
+  RefreshCw,
 } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
@@ -87,6 +88,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
   const [selectedExamId, setSelectedExamId] = useState<string>("all");
   const [batchGrading, setBatchGrading] = useState(false);
   const [gradingScriptIds, setGradingScriptIds] = useState<string[]>([]);
+  const [regradingScriptIds, setRegradingScriptIds] = useState<string[]>([]);
   const [deletingScriptIds, setDeletingScriptIds] = useState<string[]>([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [downloadingAll, setDownloadingAll] = useState(false);
@@ -267,7 +269,7 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
     });
   };
 
-  const handleGradeScript = async (scriptId: string) => {
+   const handleGradeScript = async (scriptId: string) => {
     const selectedExam = exams.find((e) => e.id === selectedExamId);
     if (selectedExamId !== "all" && !selectedExam?.hasRubric) {
       toast.error("Please create a rubric for this exam before grading");
@@ -297,6 +299,33 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
       );
     } finally {
       setGradingScriptIds((prev) => prev.filter((id) => id !== scriptId));
+    }
+  };
+
+  const handleRegradeScript = async (scriptId: string) => {
+    // Guard against double submission
+    if (regradingScriptIds.includes(scriptId)) return;
+    setRegradingScriptIds((prev) => [...prev, scriptId]);
+
+    try {
+      const response = await fetch(`/api/scripts/${scriptId}/process`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to regrade script");
+      }
+
+      toast.success("Script regraded successfully");
+      await fetchScripts(currentPage);
+    } catch (err) {
+      console.error("Error regrading script:", err);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to regrade script",
+      );
+    } finally {
+      setRegradingScriptIds((prev) => prev.filter((id) => id !== scriptId));
     }
   };
 
@@ -962,11 +991,34 @@ export default function ScriptsPage({ onNavigate }: ScriptsPageProps) {
                             disabled={batchGrading}
                             className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
                             title="Review grading"
-                          >
-                            <Eye size={12} /> Review
-                          </button>
-                        )}
-                        <button
+                           >
+                             <Eye size={12} /> Review
+                           </button>
+                         )}
+                         {(script.status === "GRADED" ||
+                           script.status === "PENDING_REVIEW") && (
+                           <button
+                             onClick={() => handleRegradeScript(script.id)}
+                             disabled={
+                               batchGrading ||
+                               regradingScriptIds.includes(script.id)
+                             }
+                             className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 border border-amber-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap"
+                             title="Regrade this script"
+                           >
+                             {regradingScriptIds.includes(script.id) ? (
+                               <>
+                                 <Loader2 size={12} className="animate-spin" />{" "}
+                                 Regrading...
+                               </>
+                             ) : (
+                               <>
+                                 <RefreshCw size={12} /> Regrade
+                               </>
+                             )}
+                           </button>
+                         )}
+                         <button
                           onClick={() => handleDelete(script.id)}
                           disabled={
                             batchGrading ||

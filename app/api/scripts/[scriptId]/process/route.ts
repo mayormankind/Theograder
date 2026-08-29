@@ -135,12 +135,23 @@ export async function POST(
       };
     }
 
-    // Fallback Identity Extraction from the OCR'd text (matric number only)
-    const matricMatch = extractedText.match(
-      /(?:Matric|ID)\s*(?:No|Number|\.)?\s*[:\-]?\s*([^\n]+)/i,
-    );
+    // Fallback Identity Extraction from the OCR'd text (matric number only).
+    // Broaden the regex to catch variations like "Candidate's Number: ..."
+    // and "Matric No: ..." that appear in FUTA exam scripts.
+    const matricPatterns = [
+      /(?:Matric|ID|Candidates?\s*Number|Number)\s*(?:No|Number|\.)?\s*[:\-]?\s*([^\n]+)/i,
+      /([A-Z]{2,5}\s*\/\s*\d{2,4}\s*\/\s*\d{3,6})/i,
+      /([A-Z]{2,5}\d{6,10})/i,
+    ];
 
-    let fallbackMatric = matricMatch ? matricMatch[1].trim() : undefined;
+    let fallbackMatric: string | undefined;
+    for (const pattern of matricPatterns) {
+      const m = extractedText.match(pattern);
+      if (m) {
+        fallbackMatric = m[1]?.trim() || m[0].trim();
+        break;
+      }
+    }
 
     // Try to correct common OCR errors in matric numbers (e.g. 1FS/2014986 -> IFS/20/4986)
     if (fallbackMatric) {
@@ -165,7 +176,7 @@ export async function POST(
       }
 
       // Ensure the final format somewhat matches expected (allow some leniency but prevent extreme garbage)
-      if (!/^[A-Z]{2,5}\/\d{2}\/\d{3,5}$/.test(fallbackMatric)) {
+      if (!/^[A-Z]{2,5}\/\d{2}\/\d{3,5}$/.test(fallbackMatric) && !/^[A-Z]{2,5}\d{6,10}$/.test(fallbackMatric)) {
         fallbackMatric = undefined; // Discard if it still doesn't look like a matric number
       }
     }

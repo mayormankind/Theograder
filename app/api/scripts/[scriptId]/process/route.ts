@@ -14,6 +14,51 @@ import { ParsedInstruction } from '@/lib/utils/instruction-parser';
 import { normalizeQuestionLabel } from '@/lib/utils/question-label';
 import { logActivity } from '@/lib/services/activity-log';
 
+// ---------------------------------------------------------------------------
+// Lenient matric normaliser (mirrors ai-service identity.py)
+// ---------------------------------------------------------------------------
+// Canonical form: LLL/DD/DDDD
+// Handles: spaces inside components, missing slashes, I/1/S/5 confusion,
+//          lowercase, dash-in-serial ("92-93" -> "9279").
+function normalizeMatric(raw: string): string | undefined {
+  if (!raw) return undefined;
+
+  const upper = raw.toUpperCase();
+
+  // 1. Find the matric area near a label
+  const labelMatch = upper.match(
+    /(?:CANDIDATE['S?]*\s*NUMBER|MATRIC|ID|NO\.?)\s*[:\-]?\s*([^\n]+)/i,
+  );
+  let candidate = labelMatch ? labelMatch[1].trim() : upper.trim();
+
+  // 2. Strip spaces around separators and remove all spaces
+  candidate = candidate.replace(/\s*\/\s*/g, "/").replace(/\s+/g, "");
+
+  // 3. Try slash-separated form first
+  const slashParts = candidate.split("/");
+  let dept: string | undefined;
+  let year: string | undefined;
+  let serial: string | undefined;
+
+  if (slashParts.length >= 3) {
+    dept = slashParts[0].replace(/[^A-Z]/g, "").slice(0, 5);
+    year = (slashParts[1] || "").replace(/\D/g, "").slice(-2);
+    serial = (slashParts.slice(2).join("") || "").replace(/\D/g, "").slice(0, 5);
+  } else {
+    // 4. Concatenated form: try to split by pattern LLL + DD + DDDD
+    const m = candidate.match(/^([A-Z]{2,5})(\d{2})(\d{3,5})$/);
+    if (m) {
+      dept = m[1];
+      year = m[2];
+      serial = m[3];
+    }
+  }
+
+  if (!dept || !year || !serial) return undefined;
+
+  return `${dept}/${year}/${serial}`;
+}
+
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
 export async function POST(
   request: NextRequest,
@@ -135,51 +180,10 @@ export async function POST(
       };
     }
 
-    // Fallback Identity Extraction from the OCR'd text (matric number only).
-    // Broaden the regex to catch variations like "Candidate's Number: ..."
-    // and "Matric No: ..." that appear in FUTA exam scripts.
-    const matricPatterns = [
-      /(?:Matric|ID|Candidates?\s*Number|Number)\s*(?:No|Number|\.)?\s*[:\-]?\s*([^\n]+)/i,
-      /([A-Z]{2,5}\s*\/\s*\d{2,4}\s*\/\s*\d{3,6})/i,
-      /([A-Z]{2,5}\d{6,10})/i,
-    ];
-
-    let fallbackMatric: string | undefined;
-    for (const pattern of matricPatterns) {
-      const m = extractedText.match(pattern);
-      if (m) {
-        fallbackMatric = m[1]?.trim() || m[0].trim();
-        break;
-      }
-    }
-
-    // Try to correct common OCR errors in matric numbers (e.g. 1FS/2014986 -> IFS/20/4986)
-    if (fallbackMatric) {
-      // Strip out spaces and any trailing punctuation
-      fallbackMatric = fallbackMatric.toUpperCase().replace(/[^A-Z0-9/]/g, "");
-      fallbackMatric = fallbackMatric.replace(/^1([A-Z])/i, "I$1"); // Replace leading 1 with I if followed by letter
-
-      // If it has only one slash, e.g., IFS/2014986, inject a slash after the 2-digit year
-      if ((fallbackMatric.match(/\//g) || []).length === 1) {
-        // Often OCR reads the second slash as a '1', e.g. /2014986 instead of /20/4986
-        if (/\/(\d{2})1(\d{3,4})$/.test(fallbackMatric)) {
-          fallbackMatric = fallbackMatric.replace(
-            /\/(\d{2})1(\d{3,4})$/,
-            "/$1/$2",
-          );
-        } else {
-          fallbackMatric = fallbackMatric.replace(
-            /\/(\d{2})(\d{3,5})$/,
-            "/$1/$2",
-          );
-        }
-      }
-
-      // Ensure the final format somewhat matches expected (allow some leniency but prevent extreme garbage)
-      if (!/^[A-Z]{2,5}\/\d{2}\/\d{3,5}$/.test(fallbackMatric) && !/^[A-Z]{2,5}\d{6,10}$/.test(fallbackMatric)) {
-        fallbackMatric = undefined; // Discard if it still doesn't look like a matric number
-      }
-    }
+    // Fallback Identity Extraction from the OCR'd text.
+    // Use the lenient parser to handle spaces, missing slashes, and
+    // common OCR confusions (I/1, S/5, O/0).
+    const fallbackMatric = normalizeMatric(extractedText);
 
     // Check if we already have a valid student ID from the upload phase
     const hasValidIdentity =

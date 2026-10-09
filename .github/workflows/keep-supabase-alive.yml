@@ -1,0 +1,17 @@
+name: Keep Supabase Alive
+
+on:
+  schedule:
+    # Runs at 00:00 UTC every Monday and Thursday (twice a week to comfortably beat the 7-day pause limit)
+    - cron: '0 0 * * 1,4'
+  workflow_dispatch: # Allows you to manually trigger the ping whenever you want
+
+jobs:
+  ping-db:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Heartbeat Ping to Supabase API
+        run: |
+          curl --fail-with-body -i -X GET "${{ secrets.SUPABASE_URL }}/rest/v1/" \
+          -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+          -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}"

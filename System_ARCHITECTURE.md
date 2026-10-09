@@ -19,41 +19,43 @@
 
 TheoGrader is an intelligent assessment system for automated grading of theoretical examination scripts in Nigerian universities. The system consists of:
 
-- **Frontend**: Next.js 16 with App Router, React 19, TypeScript, Tailwind CSS, ShadCN UI
-- **Backend**: Python FastAPI (AI service) + Next.js API routes (authentication)
-- **Database**: PostgreSQL with Prisma ORM
-- **Authentication**: Custom implementation with email verification, OTP support, and password reset
+- **Frontend**: Next.js 15 with App Router, React 19, TypeScript, Tailwind CSS, ShadCN UI
+- **Backend**: Python FastAPI (AI service, separate repo) + Next.js API routes
+- **Database**: PostgreSQL (Supabase) with Prisma ORM
+- **Authentication**: Custom implementation — sealed-cookie sessions via iron-session, email verification, OTP support, and password reset
 
 ### Technology Stack
 
 ```yaml
 Frontend:
-  - Next.js 16 (App Router)
+  - Next.js 15 (App Router)
   - React 19
   - TypeScript
   - Tailwind CSS v4
-  - ShadCN UI
+  - ShadCN UI / Radix UI
   - Sonner (Toast notifications)
+  - Recharts, jspdf (reports)
 
-Backend (Auth):
+Backend (App):
   - Next.js API Routes
-  - Prisma ORM
+  - Prisma ORM (pool bounded per serverless function)
+  - iron-session (sealed-cookie sessions)
   - bcryptjs (Password hashing)
   - crypto (Token generation)
+  - zod (Validation)
   - nodemailer (Email service)
 
-Backend (AI Service):
+Backend (AI Service — separate repo, Render):
   - Python FastAPI
   - GPT-4o-mini Vision OCR
   - OpenAI text-embedding-3-small (with local caching)
-  - NLTK
 
 Database:
-  - PostgreSQL
+  - PostgreSQL (Supabase)
   - Prisma ORM
 
 Storage:
-  - Supabase Storage (Bucket: 'uploads')
+  - Supabase Storage (Bucket: 'uploads', signed upload/download URLs)
 ```
 
 ---
@@ -71,14 +73,21 @@ TheoGrader uses **Supabase Storage** for persisting examination scripts and othe
 Storage operations are centralized in `lib/supabase.ts` using the following helpers:
 - `uploadFileToSupabase(file, bucket, path)`: Handles multipart uploads.
 - `getPublicUrl(bucket, path)`: Retrieves the CDN URL for a file.
+- `getSignedUrl(bucket, path, expiresIn)`: Time-limited URL for private file access.
+- `downloadFileFromSupabase(bucket, path)`: Server-side download (used by the grading pipeline).
 - `deleteFileFromSupabase(bucket, path)`: Removes files from the bucket.
 
 ### Data Flow for Uploads
+The primary path is **direct-to-storage** via signed URLs so large files never transit the serverless function:
+
 1. User selects files in the **Upload Page**.
-2. Frontend calls `POST /api/upload` for each file.
-3. Backend uploads the file to Supabase Storage.
-4. Backend stores the **storage path** (not the URL) in the `Script` table's `filePath` column.
-5. AI service retrieves the file using the Supabase path or public URL for processing.
+2. Frontend calls `POST /api/upload/presign` with file metadata.
+3. Backend validates type/size (≤ 20 MB, PDF/JPG/PNG) and returns a `createSignedUploadUrl` per file under `[userId]/[examId]/[uuid][ext]`.
+4. Browser uploads bytes **directly to Supabase Storage**.
+5. Frontend calls `POST /api/upload/confirm`; backend creates `Script` rows with the **storage path** in `filePath`.
+6. At grading time the process route calls `downloadFileFromSupabase` to fetch the file server-side.
+
+`POST /api/upload` (server-proxied upload) remains for small/single-file flows.
 
 ---
 
@@ -94,7 +103,7 @@ The authentication system implements a multi-layered security approach:
    - Password-based authentication
    - OTP-based authentication (email-sent one-time codes)
 4. **Password Recovery**: Token-based password reset
-5. **Session Management**: JWT-based sessions (NextAuth.js integration ready)
+5. **Session Management**: Sealed-cookie sessions via **iron-session** (`lib/session.ts`) — httpOnly, `sameSite=lax`, `secure` in production, 7-day rolling expiry. `requireAuth` guards routes; `requireAuthWithFreshRole` re-reads role/isActive from the DB for role-sensitive decisions.
 
 ### Authentication Components
 
@@ -136,7 +145,7 @@ The authentication system implements a multi-layered security approach:
 ├─────────────────────────────────────────────────────────────┤
 │  - PostgreSQL Database                                       │
 │  - Prisma ORM                                                │
-│  - User, VerificationToken, Session models                   │
+│  - User, VerificationToken models                            │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
@@ -182,9 +191,8 @@ model User {
   // Relations
   exams     Exam[]
   rubrics   Rubric[]
-  sessions  Session[]
   results   Result[]
-  accounts  Account[]
+  notifications Notification[]
   verificationTokens VerificationToken[]
 
   @@map("users")
@@ -207,17 +215,7 @@ model VerificationToken {
 ```
 
 #### Session Model
-```prisma
-model Session {
-  id           String   @id @default(cuid())
-  sessionToken String   @unique
-  userId       String
-  expires      DateTime
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("sessions")
-}
-```
+There is **no database `Session` model**. Sessions are stateless sealed cookies managed by `iron-session` (`lib/session.ts`, cookie name `theograder-session`). The sealed payload carries `{ userId, email, name, role, avatar, isLoggedIn }`; `requireAuthWithFreshRole` re-reads `role`/`isActive` from the DB when a decision depends on them, so cookie staleness can't grant stale privileges.
 
 ### Security Features
 
@@ -535,10 +533,11 @@ PUT /api/auth/forgot-password
 - **XSS**: React's built-in XSS protection
 
 ### Session Security
-- **JWT Strategy**: NextAuth.js with JWT sessions
-- **Secure Cookies**: Recommended for production
-- **HTTP Only**: Recommended for session cookies
-- **CSRF Protection**: Recommended to implement
+- **Sealed cookies**: iron-session encrypts and signs the session payload — no server-side session store, nothing for clients to tamper with
+- **httpOnly + sameSite=lax**: set on the `theograder-session` cookie; `secure` enabled in production
+- **7-day rolling expiry**: `maxAge` refreshed on each write
+- **Fresh-role checks**: `requireAuthWithFreshRole` bypasses cookie-stale role data for sensitive routes
+- **CSRF Protection**: sameSite=lax mitigates most cross-site POSTs; explicit tokens recommended for future hardening
 
 ---
 
@@ -908,10 +907,9 @@ catch (error) {
    - Prevent brute force attacks
    - Use Redis or in-memory storage
 
-2. **Session Management**
-   - Integrate NextAuth.js fully
-   - Implement JWT session storage
-   - Add session refresh logic
+2. **Session Management** ~~(done)~~
+   - ~~Integrate NextAuth.js~~ → implemented with `iron-session` sealed cookies instead (stateless, no session table)
+   - Add session revocation list (logout-all-devices) — would require a server-side token version
 
 3. **Two-Factor Authentication (2FA)**
    - Add TOTP (Time-based One-Time Password)
@@ -938,8 +936,8 @@ catch (error) {
    - Email analytics
 
 7. **User Profile**
-   - Profile picture upload
-   - Profile editing
+   - ~~Profile picture upload~~ → implemented (`/api/settings/avatar`)
+   - ~~Profile editing~~ → implemented (`/api/settings/profile`)
    - Account deletion
    - Data export (GDPR compliance)
 
@@ -1038,13 +1036,14 @@ This authentication system provides a secure, user-friendly foundation for the T
 
 ### Next Steps
 1. Implement rate limiting
-2. Integrate NextAuth.js for session management
-3. Add comprehensive testing
-4. Set up monitoring and error tracking
-5. Deploy to production environment
+2. Add comprehensive testing
+3. Set up monitoring and error tracking
+4. Harden session revocation (logout-all-devices)
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: May 4, 2026  
+**Document Version**: 1.1  
+**Last Updated**: October 9, 2026  
 **Maintained By**: TheoGrader Development Team
+
+> v1.1 corrections: Next.js 15 (not 16); sessions are iron-session sealed cookies, not NextAuth/JWT; removed the nonexistent `Session` model; upload flow documented as presign → direct-to-Supabase → confirm; grading pipeline and data model now live in `README.md`.

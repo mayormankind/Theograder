@@ -31,7 +31,7 @@ function normalizeMatric(raw: string): string | undefined {
   const labelMatch = upper.match(
     /(?:CANDIDATE['S?]*\s*NUMBER|MATRIC|ID|NO\.?)\s*[:\-]?\s*([^\n]+)/i,
   );
-  let candidate = labelMatch ? labelMatch[1].trim() : upper.trim();
+  const candidate = labelMatch ? labelMatch[1].trim() : upper.trim();
 
   // 2. Strip spaces around separators and remove all spaces
   const cleaned = candidate.replace(/\s*\/\s*/g, "/").replace(/\s+/g, "");

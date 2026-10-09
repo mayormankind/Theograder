@@ -20,6 +20,8 @@ import { logActivity } from '@/lib/services/activity-log';
 // Canonical form: LLL/DD/DDDD
 // Handles: spaces inside components, missing slashes, I/1/S/5 confusion,
 //          lowercase, dash-in-serial ("92-93" -> "9279").
+// Falls back to raw OCR text when normalization is impossible, so the
+// lecturer always has something editable instead of a blank field.
 function normalizeMatric(raw: string): string | undefined {
   if (!raw) return undefined;
 
@@ -32,10 +34,10 @@ function normalizeMatric(raw: string): string | undefined {
   let candidate = labelMatch ? labelMatch[1].trim() : upper.trim();
 
   // 2. Strip spaces around separators and remove all spaces
-  candidate = candidate.replace(/\s*\/\s*/g, "/").replace(/\s+/g, "");
+  const cleaned = candidate.replace(/\s*\/\s*/g, "/").replace(/\s+/g, "");
 
   // 3. Try slash-separated form first
-  const slashParts = candidate.split("/");
+  const slashParts = cleaned.split("/");
   let dept: string | undefined;
   let year: string | undefined;
   let serial: string | undefined;
@@ -46,7 +48,7 @@ function normalizeMatric(raw: string): string | undefined {
     serial = (slashParts.slice(2).join("") || "").replace(/\D/g, "").slice(0, 5);
   } else {
     // 4. Concatenated form: try to split by pattern LLL + DD + DDDD
-    const m = candidate.match(/^([A-Z]{2,5})(\d{2})(\d{3,5})$/);
+    const m = cleaned.match(/^([A-Z]{2,5})(\d{2})(\d{3,5})$/);
     if (m) {
       dept = m[1];
       year = m[2];
@@ -54,9 +56,12 @@ function normalizeMatric(raw: string): string | undefined {
     }
   }
 
-  if (!dept || !year || !serial) return undefined;
+  if (dept && year && serial) {
+    return `${dept}/${year}/${serial}`;
+  }
 
-  return `${dept}/${year}/${serial}`;
+  // 5. Fallback: return the raw candidate text so the lecturer can edit it
+  return candidate.trim() || undefined;
 }
 
 // POST /api/scripts/[scriptId]/process - Process a single script (OCR, segment, grade)
